@@ -379,14 +379,18 @@
         body: JSON.stringify({ sender: SESSION_ID, message: msg }),
       });
 
-      // 502/503 = Rasa still starting up — retry up to 6 times (30s)
+      // 502/503 = Rasa still loading model — retry for up to 2 minutes
       if (res.status === 502 || res.status === 503) {
         setLoading(false);
-        if (_retries === 0) appendMessage("bot", "⏳ Assistant is warming up, please wait…");
-        if (_retries < 6) {
+        if (_retries === 0) appendMessage("bot", "⏳ Assistant is loading — this takes about a minute on first start. Retrying…");
+        if (_retries < 24) {
+          const remaining = Math.round((24 - _retries) * 5);
+          if (_retries > 0 && _retries % 4 === 0) {
+            appendMessage("bot", `⏳ Still loading… (~${remaining}s remaining)`);
+          }
           setTimeout(() => send(msg, _retries + 1), 5000);
         } else {
-          appendMessage("bot", "⚠️ Assistant took too long to start. Please refresh and try again.");
+          appendMessage("bot", "⚠️ Assistant took too long to start. Please refresh the page and try again in a minute.");
         }
         return;
       }
