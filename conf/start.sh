@@ -10,5 +10,8 @@ rasa run actions --port 5055 > /tmp/actions.log 2>&1 &
 echo "[start] Starting Rasa API server..."
 rasa run --enable-api --cors "*" --port 5005 --endpoints /app/endpoints.yml > /tmp/rasa.log 2>&1 &
 
+echo "[start] Testing nginx config..."
+nginx -t
+
 echo "[start] Starting nginx on port $PORT..."
 exec nginx -g "daemon off;"
