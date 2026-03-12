@@ -26,4 +26,6 @@ ENV ACTION_SERVER_URL=http://localhost:5055/webhook
 
 EXPOSE 8080
 
+# Override rasa/rasa's default ENTRYPOINT ["rasa"]
+ENTRYPOINT []
 CMD ["/start.sh"]
