@@ -363,11 +363,13 @@
   }
 
   // ── Send ────────────────────────────────────────────────────────────────────
-  async function send(text) {
+  async function send(text, _retries = 0) {
     const msg = (text || inputEl.value).trim();
     if (!msg) return;
-    inputEl.value = "";
-    appendMessage("user", msg);
+    if (_retries === 0) {
+      inputEl.value = "";
+      appendMessage("user", msg);
+    }
     setLoading(true);
 
     try {
@@ -376,6 +378,19 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sender: SESSION_ID, message: msg }),
       });
+
+      // 502/503 = Rasa still starting up — retry up to 6 times (30s)
+      if (res.status === 502 || res.status === 503) {
+        setLoading(false);
+        if (_retries === 0) appendMessage("bot", "⏳ Assistant is warming up, please wait…");
+        if (_retries < 6) {
+          setTimeout(() => send(msg, _retries + 1), 5000);
+        } else {
+          appendMessage("bot", "⚠️ Assistant took too long to start. Please refresh and try again.");
+        }
+        return;
+      }
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const replies = await res.json();
       setLoading(false);
