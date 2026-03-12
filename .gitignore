@@ -15,12 +15,13 @@ env/
 
 # Rasa
 .rasa/
-models/*.tar.gz
-!models/20260312-130807-serious-paste.tar.gz
 
 # Test artifacts
 test_results/
 *.log
+
+# Claude Code
+.claude/
 
 # macOS
 .DS_Store
