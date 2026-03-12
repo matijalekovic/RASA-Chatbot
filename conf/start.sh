@@ -9,8 +9,8 @@ ls /app/models/ 2>&1
 echo "[start] Injecting port $PORT into nginx config..."
 sed -i "s/NGINX_PORT/$PORT/g" /etc/nginx/conf.d/chatbot.conf
 
-echo "[start] Starting action server..."
-$RASA run actions --port 5055 2>&1 | sed 's/^/[actions] /' &
+echo "[start] Starting action server (lightweight — rasa_sdk only, no TensorFlow)..."
+/opt/venv/bin/python -m rasa_sdk --actions actions --port 5055 2>&1 | sed 's/^/[actions] /' &
 
 echo "[start] Starting Rasa API server (model load takes ~60s on this hardware)..."
 $RASA run --enable-api --cors "*" --port 5005 --endpoints /app/endpoints.yml 2>&1 | sed 's/^/[rasa] /' &
