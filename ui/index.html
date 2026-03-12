@@ -278,7 +278,10 @@
 </div>
 
 <script>
-  const RASA_URL = "";  // same origin — nginx proxies /webhooks/ to Rasa
+  // Locally: hit Rasa directly on 5005. On Railway: relative URL via nginx proxy.
+  const RASA_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:5005"
+    : "";
   const SESSION_ID = "user_" + Math.random().toString(36).slice(2, 10);
 
   const messagesEl = document.getElementById("messages");

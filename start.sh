@@ -1,29 +1,30 @@
 #!/bin/bash
 # ── 1PAX Chatbot Startup Script ────────────────────────────────────────────
-# Starts the action server + rasa shell with a single command.
+# Starts the action server + rasa API + local UI server.
 # Usage: ./start.sh
-
-set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-source .venv/bin/activate
+PYTHON="$SCRIPT_DIR/.venv/bin/python3"
 
 echo ""
 echo "  Starting 1PAX chatbot..."
 echo ""
 
-# Kill anything already on port 5055
+# Kill anything already on relevant ports
 lsof -ti:5055 | xargs kill -9 2>/dev/null || true
+lsof -ti:5005 | xargs kill -9 2>/dev/null || true
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+sleep 1
 
 # Start the action server in the background
-rasa run actions --port 5055 > /tmp/rasa_actions.log 2>&1 &
+"$PYTHON" -m rasa run actions --port 5055 > /tmp/rasa_actions.log 2>&1 &
 ACTION_PID=$!
 
 # Wait for action server to be ready
 echo "  Waiting for action server..."
-for i in {1..15}; do
+for i in {1..20}; do
     if grep -q "Action endpoint is up and running" /tmp/rasa_actions.log 2>/dev/null; then
         echo "  Action server ready."
         break
@@ -31,10 +32,17 @@ for i in {1..15}; do
     sleep 1
 done
 
+# Serve the chat UI on port 8080
+"$PYTHON" -m http.server 8080 --directory "$SCRIPT_DIR/ui" > /tmp/rasa_ui.log 2>&1 &
+UI_PID=$!
+
+echo ""
+echo "  ✅ Chat UI → http://localhost:8080"
+echo "  ✅ API     → http://localhost:5005"
 echo ""
 
-# Start rasa shell in the foreground
-# When user exits (Ctrl+C or /stop), kill the action server too
-trap "kill $ACTION_PID 2>/dev/null; echo ''; echo '  Servers stopped.'; exit 0" INT TERM EXIT
+# Kill all servers on exit
+trap "kill $ACTION_PID $UI_PID 2>/dev/null; echo ''; echo '  Servers stopped.'; exit 0" INT TERM EXIT
 
-rasa shell
+# Start Rasa API in the foreground
+"$PYTHON" -m rasa run --enable-api --cors "*" --port 5005 --endpoints endpoints.yml
