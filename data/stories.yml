@@ -1,0 +1,206 @@
+version: "3.1"
+
+stories:
+
+# ── 1. User introduces themselves to a specific project ─────────────────────
+
+- story: ask about project by name then get overview
+  steps:
+    - intent: ask_about_project
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+- story: user greets then asks about a project
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: ask_about_project
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+# ── 2. Direct detail questions with project name ────────────────────────────
+
+- story: ask project cost with entity
+  steps:
+    - intent: ask_project_cost
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+- story: ask project location with entity
+  steps:
+    - intent: ask_project_location
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+- story: ask project video with entity
+  steps:
+    - intent: ask_project_video
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+- story: ask project challenge with entity
+  steps:
+    - intent: ask_project_challenge
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+- story: ask project approach with entity
+  steps:
+    - intent: ask_project_approach
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+
+# ── 3. Slot-carried follow-ups (no project name repeated) ───────────────────
+
+- story: follow-up cost question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_cost
+    - action: action_answer_project_query
+
+- story: follow-up timeline question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_year
+    - action: action_answer_project_query
+
+- story: follow-up area question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_area
+    - action: action_answer_project_query
+
+- story: follow-up capacity question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_capacity
+    - action: action_answer_project_query
+
+- story: follow-up partners question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_partners
+    - action: action_answer_project_query
+
+- story: follow-up 5star question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_5star
+    - action: action_answer_project_query
+
+- story: follow-up video request after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_video
+    - action: action_answer_project_query
+
+- story: follow-up sustainability question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_sustainability
+    - action: action_answer_project_query
+
+- story: follow-up architect question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_architect
+    - action: action_answer_project_query
+
+- story: follow-up client question after project context is set
+  steps:
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_client
+    - action: action_answer_project_query
+
+# ── 4. Full deep-dive conversation ──────────────────────────────────────────
+
+- story: full project deep dive
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: ask_about_project
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_challenge
+    - action: action_answer_project_query
+    - intent: ask_project_approach
+    - action: action_answer_project_query
+    - intent: ask_project_video
+    - action: action_answer_project_query
+    - intent: goodbye
+    - action: utter_goodbye
+
+- story: project facts conversation
+  steps:
+    - intent: ask_about_project
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_cost
+    - action: action_answer_project_query
+    - intent: ask_project_area
+    - action: action_answer_project_query
+    - intent: ask_project_capacity
+    - action: action_answer_project_query
+
+- story: design-focused conversation
+  steps:
+    - intent: ask_project_overview
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query
+    - slot_was_set:
+        - project_name: "sofia_airport"
+    - intent: ask_project_challenge
+    - action: action_answer_project_query
+    - intent: ask_project_approach
+    - action: action_answer_project_query
+    - intent: ask_project_5star
+    - action: action_answer_project_query
+
+# ── 6. Out of scope ─────────────────────────────────────────────────────────
+
+- story: out of scope then redirected to project
+  steps:
+    - intent: out_of_scope
+    - action: action_handle_out_of_scope
+    - intent: ask_about_project
+      entities:
+        - project: "sofia_airport"
+    - action: action_answer_project_query

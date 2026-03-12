@@ -1,0 +1,278 @@
+--- Page 1 ---
+Patent Number
+(CN) 202530610079.9
+The modular vertiport for future-ready mobility
+contact@1pax.com
+.1pax.com contact@1pax.com
+
+--- Page 2 ---
+Photo by Gaoyu Zhao
+
+--- Page 5 ---
+Compact · Scalable · Sustainable
+Ecoport is a patented multimodal vertiport system designed to
+address one of today's most urgent challenges: how to deploy
+advanced air mobility infrastructure quickly, sustainably and
+efficiently, while ensuring passenger comfort and operational
+performance.
+Ecoport is not an abstract concept. 
+
+It is a robust, modular and phased solution, ready to adapt to
+real geographies, real regulations and real demand growth.
+
+--- Page 7 ---
+A new paradigm in mobility infrastructure
+Today's mobility systems face growing challenges: territorial isolation, airport
+congestion, inefficient passenger flows, and high CO₂ emissions. Addressing these
+issues requires a fundamentally different approach to infrastructure.
+At the same time, the emergence of advanced air mobility is opening new
+possibilities for regional connectivity. Vertiports are beginning to appear around the
+world, yet many current proposals rely on complex, site-specific solutions that slow
+deployment, limit scalability, and restrict implementation across diverse geographic
+conditions.
+Ecoport introduces a compact, vertically organized, modular terminal, designed to:
+
+
+Reduce walking distances and passenger processing times
+
+Efficiently separate passenger flows
+
+Integrate multiple transport modes within a single hub
+
+Minimize environmental impact
+
+
+All while remaining scalable, adaptable, and economically viable.
+
+--- Page 9 ---
+Connecting people where distance once divided
+Expanding vertiport networks with our ecoport solution has the potential to transform everyday life.
+By dramatically shortening travel times, Ecoport enables faster access to healthcare, education,
+commerce, and essential services, particularly in geographically complex regions such as islands,
+mountainous territories, dense urban corridors, and remote rural areas.
+What once required hours -or even days- of travel by road or water can be reduced to minutes
+through low-altitude electric mobility. Beyond efficiency, this means greater social inclusion, stronger
+regional integration, and improved quality of life for communities historically limited by distance and
+infrastructure constraints.
+25km
+54km
+30km
+50km
+A network of Ecoports could significantly shorten travel times,
+even in remote regions such as the Amazon, where current
+infrastructure only allows for long and complex journeys.
+Diagram. Travel Time and Connectivity Gaps - IIRSA Corridor Case Study
+
+--- Page 10 ---
+Designed for efficient passenger flow
+Ecoport is structured around clear, measurable circulation logic, aligned with
+international standards (IATA, ADRM, ICAO).
+Key principles:
+
+
+
+
+
+
+
+
+
+
+
+Clear separation of flows (departures, arrivals, transfers)
+
+Reduced walking distances
+
+Independent vertical circulation cores
+
+Decentralized boarding by level
+
+Intuitive wayfinding and spatial legibility
+
+The result is a terminal that reduces congestion, shortens processing times and
+improves passenger comfort, even during peak demand.
+Diagram. Passenger Flow
+Logic between Vertiport and
+Airport (L0)
+2 2 INMIGRATION CONTROL 1 CHECK-IN
+VERTIPORT
+
+D: 73.42 m
+
+GATES Wt: 1 min 24 s D: 61.23 m
+ D: 67.44 m
+
+Qt: 6 min
+ Qt: 15 min
+
+Pt: 2 min
+Pt: 2 min Pt: 2 min
+ACCESS
+
+1 CONTROL POINT
+Pt: 1 min
+L3
+D: 71.36 m
+
+Wt: 1 min 11 s
+L3
+D: 75.91 m
+ D: 156.50 m
+ D: 166.13 m
+
+Wt: 1 min 16 s Wt: 2 min 37 s Wt: 2 min 46 s
+D: 156.50 m
+
+Wt: 1 min 6 s
+D: 93.74 m
+
+Wt: 1 min 34 s
+1 INMIGRATION CONTROL
+D: 58.29 m
+
+Qt: 6 min
+
+Pt: 2 min
+1
+BAGGAGE
+
+D: 207.97 m
+
+Wt: 3 min 28 s RECLAIM
+Pt: 10 min
+D: 0 m
+
+Wt: 1 min 6 s
+Legend:
+
+D: Distance
+
+Wt: Walking Time
+
+Qt: Queuing Time
+
+Pt: Process Time
+.1.m ntt1.m
+
+--- Page 11 ---
+Organized, Secure and Intuitive Circulation
+Short walking distances and improved process times
+Diagram. Separated Passenger Flows at Level 0
+
+--- Page 12 ---
+Modular growth, phase by phase
+
+
+
+Ecoport allows operators to start small and scale intelligently, using a 30 × 30 m modular
+grid:
+
+
+Phase 00 – Compact vertiport base for drone logistics and light eVTOL operations
+
+Phase 01 – Expanded single-level eVTOL terminal
+
+Phase 02 – Integration with regional aircraft or multimodal ground transport
+
+Phase 03–04 – Vertical expansion with independent circulation cores and increased
+gate capacity
+
+
+Each phase builds on the previous one, ensuring continuity of operations and long-term
+flexibility.
+
+--- Page 14 ---
+Adaptable to any geography and climate
+
+
+Ecoport is designed to perform in diverse environments:
+
+Dense urban contexts
+
+Coastal and waterfront locations
+
+Remote territories and islands
+
+Forests, deserts, tropical or cold climates
+Materials, building envelopes, and layouts adapt to local conditions while preserving the
+same functional and operational DNA, creating a replicable yet context-sensitive system
+suitable for global deployment.
+
+
+
+One system. Multiple contexts.
+
+--- Page 15 ---
+Multimodal by design
+
+
+Ecoport goes beyond eVTOL.
+ 
+It integrates air, land and water mobility into a single coherent hub:
+
+eVTOL, helicopters and general aviation aircraft
+
+Electric buses and ground transport
+
+Electric boats and seaplanes
+
+
+This multimodal approach ensures territorial connectivity, reduces travel times and
+enables low-carbon mobility networks — from cities to remote regions.
+
+--- Page 16 ---
+Sustainability at the core
+
+
+
+Sustainability in Ecoport is not an add-on.
+ 
+
+It is embedded in:
+
+
+
+
+
+
+
+
+
+Reduced footprint and compact vertical design
+
+Prefabrication and modular construction
+
+Optimized energy use
+
+Integration with electric and low-emission transport
+
+Biodiversity-aware site strategies
+
+Ecoport aligns with ESG goals, decarbonization targets and future mobility regulations.
+
+
+--- Page 22 ---
+Designed by
+Ecoport is developed by 1PAX, an international architecture and innovation studio
+specialized in airport design, future mobility infrastructure and passenger experience.
+
+With decades of experience in passenger terminals and large-scale transport systems,
+1PAX brings operational realism, architectural clarity and innovation discipline to
+visionary infrastructure.
+
+--- Page 23 ---
+Why choose a modular Ecoport?
+
+Ecoport transforms vertiports into scalable, efficient and
+sustainable mobility hubs — ready to connect territories,
+reduce emissions and shape the future of flight.
+
+--- Page 24 ---
+Scan for Video
+contact@1pax.com
+
+
+www.1pax.com
+.1pax.com contact@1pax.com
+contact@1pax.com
+

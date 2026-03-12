@@ -1,0 +1,154 @@
+version: "3.1"
+
+intents:
+  # ── Core conversation ─────────────────────────────────────────────────────
+  - greet
+  - goodbye
+  - bot_challenge
+  # ── Project discovery ─────────────────────────────────────────────────────
+  - ask_projects_list
+  - ask_project_category
+  - ask_about_project
+  # ── Project detail (all handled by action_answer_project_query) ───────────
+  - ask_project_overview
+  - ask_project_location
+  - ask_project_year
+  - ask_project_client
+  - ask_project_cost
+  - ask_project_area
+  - ask_project_capacity
+  - ask_project_architect
+  - ask_project_partners
+  - ask_project_challenge
+  - ask_project_approach
+  - ask_project_5star
+  - ask_project_video
+  - ask_project_sustainability
+  - ask_project_concept
+  - ask_project_status
+  - ask_project_tender
+  - ask_project_scope
+  - ask_project_program
+  - ask_project_facts
+  # ── Company info (all handled by action_answer_company_query) ────────────
+  - ask_company_overview
+  - ask_company_name
+  - ask_company_mission
+  - ask_company_history
+  - ask_company_founder
+  - ask_company_offices
+  - ask_company_team
+  - ask_company_expertise
+  - ask_company_approach
+  - ask_company_human_centered
+  - ask_company_sustainability
+  - ask_company_innovation
+  - ask_company_urbanism
+  - ask_company_methodology
+  - ask_company_clients
+  - ask_company_difference
+  - ask_company_why
+  - ask_company_careers
+  - ask_company_culture
+  - ask_company_mentorship
+  - ask_company_open_roles
+  - ask_company_values
+  # ── Company ethics & pillars (all handled by action_answer_company_query) ─
+  - ask_company_ethics
+  - ask_company_social
+  - ask_company_heritage
+  - ask_company_people_values
+  - ask_company_diversity
+  - ask_company_governance
+  - ask_company_suppliers
+  - ask_company_ip
+  - ask_company_plan
+  - ask_company_pax_cart
+  - ask_company_ecoport
+  # ── Team (all handled by action_answer_team_query) ───────────────────────
+  - ask_team_overview
+  - ask_team_leadership
+  - ask_team_architects
+  - ask_team_specialists
+  - ask_team_operations
+  - ask_about_team_member
+  # ── Services (all handled by action_answer_services_query) ───────────────
+  - ask_services_list
+  - ask_service_airports
+  - ask_service_urbanism
+  - ask_service_innovation
+  - ask_service_future_mobility
+  - ask_service_control_towers
+  - ask_service_interior
+  - ask_service_working_living
+  - ask_service_bim
+  # ── Other ─────────────────────────────────────────────────────────────────
+  - out_of_scope
+
+entities:
+  - project
+  - person
+
+slots:
+  project_name:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: project
+  person_name:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: person
+
+responses:
+  utter_greet:
+    - text: "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — or you can explore our 58 architectural projects. What would you like to know?"
+    - text: "Hi there! I'm here to help you learn about 1PAX. Ask about the studio, our founder, design philosophy, sustainability commitment, or explore our project portfolio. Where would you like to start?"
+    - text: "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — or dive into any of our 58 projects across airports, mobility infrastructure, and more. What's on your mind?"
+    - text: "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' to browse the full portfolio."
+
+  utter_goodbye:
+    - text: "Thank you for your interest in 1PAX. Feel free to come back anytime!"
+    - text: "It was a pleasure — hope to see you again. Goodbye!"
+    - text: "Thanks for exploring 1PAX's work. Have a great day!"
+    - text: "Goodbye! Don't hesitate to reach out if you have more questions about our projects."
+
+  utter_iamabot:
+    - text: "I'm the 1PAX virtual assistant, here to help you explore our architectural portfolio. I'm powered by Rasa."
+    - text: "I'm a chatbot built to answer questions about 1PAX's projects — airports, mobility infrastructure, interior design, and more."
+    - text: "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 58 architectural projects."
+
+  utter_ask_which_project:
+    - text: "Which project are you asking about? You can name a city, airport, or project — like **Sofia Airport**, **Belgrade Metro**, or **Lima Food Hall**."
+    - text: "Sure! Which project did you have in mind? Try saying **Tahiti airport**, **Paris Heliport**, or type 'list projects' for the full catalogue."
+    - text: "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects."
+    - text: "Which one are you asking about? Name a location or project — like **Almaty Airport**, **Cergy Vertiport**, or **AIK Bank**."
+
+  utter_project_not_found:
+    - text: "I don't have data on that project yet. Try 'list projects' to see all 58 projects in our portfolio."
+    - text: "Hmm, I can't find that one. Ask 'what projects do you have?' to browse the full catalogue."
+
+  utter_out_of_scope:
+    - text: "I'm the 1PAX assistant — I can tell you about the studio, our projects, team, design approach, careers, and more. What would you like to know?"
+    - text: "That's outside my scope, but I'm happy to help with anything about 1PAX — our mission, projects, offices, or how to join the team."
+    - text: "That's not something I'm set up for here. To get in contact with 1PAX directly, visit **1pax.com** — I'm here to help with questions about the studio, projects, and team."
+
+  utter_default_fallback:
+    - text: "I didn't quite catch that. You can ask me about 1PAX as a studio, our design approach, team, offices, or explore our projects — try _'Tell me about 1PAX'_ or _'show me all projects'_."
+    - text: "Hmm, I'm not sure what you mean. Try: _'Who founded 1PAX?'_, _'What does 1PAX specialize in?'_, or _'Tell me about Sofia Airport'_."
+    - text: "I couldn't understand that. I can help with questions about the 1PAX studio, our mission, values, careers, or any of our 58 architectural projects."
+
+actions:
+  - action_answer_project_query
+  - action_list_projects
+  - action_handle_out_of_scope
+  - action_answer_company_query
+  - action_answer_services_query
+  - action_answer_team_query
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

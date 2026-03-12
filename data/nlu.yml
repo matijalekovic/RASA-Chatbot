@@ -1,0 +1,5038 @@
+version: "3.1"
+
+nlu:
+
+# ── Core conversation ───────────────────────────────────────────────────────
+
+- intent: greet
+  examples: |
+    - hey
+    - hello
+    - hi
+    - hi there
+    - hello there
+    - good morning
+    - good afternoon
+    - good evening
+    - hey there
+    - greetings
+    - howdy
+    - what's up
+    - hey, I need some info
+    - hi, can you help me?
+    - hello, I have a question
+    - yo
+    - yoo
+    - yooo
+    - hey!
+    - hiya
+    - sup
+    - wassup
+    - what's good
+    - hola
+    - heya
+    - yo what's up
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you
+    - see you later
+    - have a nice day
+    - take care
+    - that's all thanks
+    - thanks, bye
+    - I'm done
+    - ok thanks
+    - cheers
+    - talk later
+    - all good, thanks
+    - that'll do
+    - thanks for the info
+    - thanks for your help
+    - I got what I needed
+    - great thanks
+    - I'm good thanks
+    - that's enough
+    - ciao
+    - later
+    - bye bye
+    - I'll be back
+    - catch you later
+    - I think that's everything
+
+- intent: bot_challenge
+  examples: |
+    - are you a bot?
+    - are you a human?
+    - am I talking to a bot?
+    - am I talking to a real person?
+    - are you an AI?
+    - is this automated?
+    - who am I talking to?
+    - are you real?
+    - is this a chatbot?
+    - are you a robot?
+    - is there a real person behind this
+    - are you powered by AI
+    - what AI are you using
+    - what are you exactly
+    - is this a machine or a person
+    - is anyone there
+    - who built you
+    - are you ChatGPT
+    - are you built on GPT
+    - are you a virtual assistant
+    - is this automated customer service
+    - you're a bot right
+
+# ── Project discovery ───────────────────────────────────────────────────────
+
+- intent: ask_projects_list
+  examples: |
+    - what projects do you have?
+    - show me your projects
+    - list your projects
+    - what's in your portfolio?
+    - what have you built?
+    - what work has 1PAX done?
+    - tell me about your projects
+    - can I see all your projects?
+    - what are your current projects?
+    - show me your work
+    - give me an overview of all projects
+    - which projects have you completed?
+    - what projects are you working on?
+    - 1PAX portfolio
+    - I want to see your portfolio
+    - what architectural projects have you done?
+    - show me everything
+    - all projects
+    - show me something cool
+    - got any cool projects
+    - what have you built lately
+    - what cool projects do you have
+    - show me your best work
+    - any interesting projects
+    - I'm curious what you've done
+    - what's your work like
+    - what other project did you do
+    - what other projects did you do
+    - how many projects has 1PAX completed?
+    - how many projects have you done?
+    - how many buildings has 1PAX designed?
+    - how many projects has 1PAX delivered?
+    - how many projects has 1PAX built?
+    - how many projects does 1PAX have in total?
+    - how many total projects has 1PAX completed?
+    - can you provide references — what have you delivered?
+    - how many completed projects do you have?
+    - what other work have you done?
+    - any other projects?
+    - show me another project
+    - what else have you done?
+    - what other things did you build?
+    - what else is in your portfolio?
+    - show me other projects
+    - any other work?
+    - what other project do you have?
+    - what other commissions have you had?
+    - what else did 1PAX design?
+    - what other buildings have you done?
+    - show me what else you've done
+    - what's another project you worked on?
+    - got anything else?
+    - what else have you built?
+    - show me a different project
+    - can you show me more projects?
+    - what are your other projects?
+    - I'd like to see more
+    - browse your catalogue
+    - I want to browse your work
+    - show me your catalogue
+    - show me the full catalogue
+    - I'm exploring your portfolio
+    - what's your biggest project
+    - what's your most famous project
+    - what projects are you most proud of
+    - what's your signature project
+    - any completed projects
+    - what projects have you delivered
+    - show me your completed work
+    - what commissions have you had
+    - what have you designed
+    - what have you been working on
+    - show me what you've done
+    - I want to explore your work
+    - any impressive projects
+    - what buildings have you designed
+    - any international projects
+    - how many projects have you done
+    - what projects does 1PAX do?
+    - what projects does 1PAX work on?
+    - what is 1PAX's track record with large-scale projects?
+    - what is 1PAX's track record on major projects?
+    - what does 1PAX's project track record look like?
+    - what is 1PAX's experience with large projects?
+    - what is 1PAX's delivery record?
+
+- intent: ask_project_category
+  examples: |
+    - what airport projects do you have?
+    - show me your transportation projects
+    - do you have any airport work?
+    - what projects are in the airports category?
+    - airports and transportation portfolio
+    - show me airport design projects
+    - what transport infrastructure projects do you have?
+    - tell me about your airport work
+    - any transportation designs?
+    - what aviation projects have you completed?
+    - do you specialize in airports?
+    - airport projects
+    - transport sector work
+    - what categories of projects do you cover?
+    - airport stuff
+    - any airport stuff?
+    - show me airport stuff
+    - got anything with airports?
+    - airport things
+    - you do airports?
+    - airport work?
+    - anything airport related?
+    - what types of projects do you do?
+    - do you work on airports in general?
+    - what kind of buildings do you design?
+    - do you do transport infrastructure?
+    - what sectors do you work in?
+    - do you have vertiport projects
+    - do you do eVTOL infrastructure
+    - any electric aviation projects
+    - future of mobility projects
+    - do you work on metro stations
+    - metro or underground projects
+    - show me all the airports you've designed
+    - what airports have you delivered?
+    - can you list all your airport projects?
+    - which airports has 1PAX designed?
+    - tell me about one of the airport projects
+    - show me one of your airport projects
+    - give me an example of an airport project
+    - can you tell me about one of the airports you've designed?
+    - pick one of the airport projects and tell me about it
+    - what is an example of an airport project you've done?
+    - show me all airport projects
+    - what airport work has 1PAX done?
+    - show me a project in Asia
+    - show me projects in Asia
+    - do you have any Asian projects?
+    - what projects do you have in Europe?
+    - show me South American projects
+    - do you have projects in Africa?
+    - any train station work
+    - transit hub projects
+    - do you work on fire stations
+    - industrial building work
+    - control tower projects
+    - any hangar designs
+    - embassy or diplomatic buildings
+    - show me office building projects
+    - any interior design work
+    - commercial space design
+    - wayfinding projects
+    - food court designs
+    - masterplan projects
+    - urban planning work
+    - what categories of work do you do
+    - what do you specialize in by type
+    - show me your mobility projects
+    - show me interior design work
+    - show me industrial buildings
+    - show me future mobility projects
+    - are there airports in Africa?
+    - what airports do you have in Africa?
+    - do you work in francophone Africa?
+    - show me projects in Africa
+    - any Middle East projects?
+    - do you have projects in the Middle East?
+    - show me your work in South America
+    - any Latin American airport projects?
+    - how many airports have you designed?
+    - how many airports has 1PAX designed?
+    - how many airport projects do you have?
+    - what is the total number of airports you've designed?
+
+# ── General project inquiry ─────────────────────────────────────────────────
+
+- intent: ask_about_project
+  examples: |
+    - [Sofia Airport](project)
+    - [sofia airport](project)
+    - [Terminal 3](project)
+    - [T3](project)
+    - [T2](project)
+    - [Terminal 2](project)
+    - [SOF airport](project)
+    - [SOF](project)
+    - tell me about [Sofia Airport](project)
+    - I want to know about [Sofia Airport](project)
+    - what is the [Sofia Airport](project) project?
+    - give me information on [Terminal 3](project)
+    - info on [Terminal 3](project)
+    - [T3 International Terminal](project) project
+    - what did you do at [Sofia Airport](project)?
+    - [Sofia Airport Terminal 3](project) details
+    - tell me about [Terminal 2](project) refurbishment
+    - the [T2](project) project
+    - [Bulgarian airport](project) project
+    - project overview for [Sofia Airport](project)
+    - [Sofia terminal](project) project information
+    - [Sofia Airport](project) details
+    - [Sofia Airport](project) info
+    - [T3](project) project
+    - more about [Sofia Airport](project)
+    - tell me about the airport project
+    - tell me more about the airport project
+    - Sofia Airport project
+    - tell me about [the biggest project](project)
+    - what is [the biggest project](project)?
+    - show me [your flagship project](project)
+    - what's the airport project?
+    - the terminal project
+    - I'm interested in the airport project
+    - airport expansion project
+    - tell me about that project
+    - I want to learn about this project
+    - what project is this?
+    - give me project details
+    - show me the project
+    - tell me about the terminal
+    - project information please
+    - what can you tell me about your projects
+    - show me a specific project
+    - tell me about your airport design
+    - actually, tell me about [velana airport](project) instead
+    - actually tell me about [belgrade airport](project)
+    - wait, I meant [bordeaux airport](project)
+    - actually I want to know about [sofia airport](project)
+    - no wait, tell me about [lima metro](project) instead
+    - tell me bout [Sofia Airport](project)
+    - whats the deal with [Sofia Airport](project)
+    - what's going on with [Sofia Airport](project)
+    - [sofia](project) airport project
+    - the [sofia](project) thing
+    - [sofia](project) project
+    - tell me about [sofia](project)
+    - info about [sofia](project)
+    - [T2 terminal](project)
+    - the [T2 terminal](project) project
+    - [terminal 3](project) info
+    - what about [T3](project)
+    - the [terminal 2](project) thing
+    - more about [T2](project)
+    - fill me in on [Sofia Airport](project)
+    - whats [Sofia Airport](project) about
+    - give me the rundown on [Sofia Airport](project)
+    - [Sofia Airport](project) — tell me everything
+    - walk me through [Sofia Airport](project)
+    - I wanna know about [Sofia Airport](project)
+    - tell me about [belgrade airport](project)
+    - tell me something about [belgrade airport](project)
+    - info on [belgrade airport](project)
+    - [belgrade airport](project)
+    - what about [paris airport](project)?
+    - [dubai airport](project)
+    - tell me about [amsterdam airport](project)
+    - [london airport](project) project
+    - what is the [amsterdam airport](project) project?
+    - tell me about [skopje airport](project)
+    - [zagreb airport](project)
+    - tell me about airport [belgrade](project)
+    - something about [belgrade](project) airport
+    - tell me something about airport [belgrade](project)
+    - what's the [belgrade airport](project) project?
+    - I want to know about [belgrade airport](project)
+    - info about [zagreb airport](project)
+    - [nairobi airport](project) details
+    - tell me about [belgrade metro](project)
+    - what is [belgrade metro](project)?
+    - [belgrade metro network](project)
+    - info on [belgrade metro line 1](project)
+    - tell me about [qatar railways](project)
+    - what is [qatar railways](project)?
+    - [qatar railways](project) project
+    - info on [qatar railways](project)
+    - tell me about [doha west metro](project)
+    - [doha metro](project) depot
+    - what is the [doha metro](project) project?
+    - tell me about [doha west metro](project) depot
+    - [lima metro](project)
+    - tell me about [lima metro line 1](project)
+    - [pachacamac metro](project)
+    - what about [cayenne airport](project)?
+    - [cayenne interior](project) design
+    - tell me about [air guyane hangar](project)
+    - tell me about [Bordeaux Airport](project)
+    - tell me something about [Bordeaux Airport](project)
+    - info on [Bordeaux Airport](project)
+    - [Bordeaux Airport](project)
+    - [Bordeaux Merignac](project)
+    - what about [Bordeaux Airport](project)?
+    - tell me about [Velana Airport](project)
+    - what is [Velana Airport](project)?
+    - [Velana Airport](project)
+    - info on [Velana Airport](project)
+    - tell me about [Maldives airport](project)
+    - [Maldives airport](project)
+    - tell me about [Papeete Airport](project)
+    - [Papeete Airport](project)
+    - info on [Papeete Airport](project)
+    - tell me about [Tahiti airport](project)
+    - [Tahiti airport](project)
+    - what about [Tahiti airport](project)?
+    - tell me about [Nice Airport](project)
+    - [Nice Airport](project)
+    - info on [Nice Airport](project)
+    - what about [Nice Airport](project)?
+    - tell me about [Nice Cote d'Azur](project)
+    - [Nice Cote d'Azur airport](project)
+    - tell me about [Almaty Airport](project)
+    - [Almaty Airport](project)
+    - what about [Kigali Airport](project)?
+    - tell me about [Conakry Airport](project)
+    - [Conakry Airport](project)
+    - tell me about [Cayenne Terminal](project)
+    - [Cayenne Terminal](project)
+    - tell me about [Annecy Airport](project)
+    - [Annecy Airport](project)
+    - tell me about [Lille Airport](project)
+    - [Lille Airport](project)
+    - tell me about [Euroairport](project)
+    - [Euroairport](project)
+    - [Basel Mulhouse airport](project)
+    - tell me about [Basel Airport](project)
+    - tell me about [Fuzhou Airport](project)
+    - [Fuzhou Airport](project)
+    - [fuzhou new airport](project)
+    - tell me about [Lanzhou Airport](project)
+    - [Lanzhou Airport](project)
+    - tell me about [Mashhad Airport](project)
+    - [Mashhad Airport](project)
+    - tell me about [Almaty Airport](project)
+    - [Almaty Airport](project)
+    - tell me about [Kigali Airport](project)
+    - [Kigali Airport](project)
+    - [rwanda airport](project)
+    - tell me about [Tocumen Airport](project)
+    - [Tocumen Airport](project)
+    - [panama airport](project)
+    - tell me about [Cusco Airport](project)
+    - [Cusco Airport](project)
+    - [alejandro velasco astete](project)
+    - tell me about [Jaipur Airport](project)
+    - [Jaipur Airport](project)
+    - tell me about [Ahmedabad Airport](project)
+    - [Ahmedabad Airport](project)
+    - tell me about [Cergy Vertiport](project)
+    - [Cergy Vertiport](project)
+    - [first european vertiport](project)
+    - tell me about [Singapore Vertiport](project)
+    - [Singapore Vertiport](project)
+    - [voloport singapore](project)
+    - tell me about [Paris Heliport](project)
+    - [Paris Heliport](project)
+    - [issy les moulineaux heliport](project)
+    - tell me about [Cabo Verde airports](project)
+    - [Cabo Verde airports](project)
+    - [cape verde airports](project)
+    - tell me about [Amilcar Cabral Airport](project)
+    - [amilcar cabral airport](project)
+    - tell me about [Aristides Pereira Airport](project)
+    - [aristides pereira airport](project)
+    - tell me about [Nelson Mandela Airport](project)
+    - [Nelson Mandela Airport](project)
+    - [praia airport](project)
+    - tell me about [Lima Metro Line 1](project)
+    - [Lima Metro Line 1](project)
+    - [lima metro stations](project)
+    - tell me about [Riga Control Tower](project)
+    - [Riga Control Tower](project)
+    - [riga airport](project)
+    - tell me about [CDG baggage building](project)
+    - [CDG baggage building](project)
+    - [charles de gaulle baggage](project)
+    - tell me about [Le Bourget Fire Station](project)
+    - [Le Bourget Fire Station](project)
+    - tell me about [Belgrade Fire Station](project)
+    - [Belgrade Fire Station](project)
+    - [nikola tesla fire station](project)
+    - tell me about [Belgrade Admin Building](project)
+    - [Belgrade Admin Building](project)
+    - tell me about [Belgrade Wayfinding](project)
+    - [Belgrade Wayfinding](project)
+    - tell me about [Tokyo EU Delegation](project)
+    - [Tokyo EU Delegation](project)
+    - [european delegation tokyo](project)
+    - tell me about [French Embassy Bangkok](project)
+    - [French Embassy Bangkok](project)
+    - tell me about [Greyfoot Paris](project)
+    - [Greyfoot Paris](project)
+    - [greyfoot](project)
+    - tell me about [Montijo Airport](project)
+    - [Montijo Airport](project)
+    - tell me about [Jorge Chavez Food Hall](project)
+    - [Jorge Chavez Food Hall](project)
+    - [lima food hall](project)
+    - tell me about [Peru Plaza Food Court](project)
+    - [Peru Plaza Food Court](project)
+    - what about [Lima Peru Plaza Food Court](project)?
+    - [Lima Peru Plaza Food Court](project)
+    - tell me about [Lima Peru Plaza](project)
+    - tell me about [Marseille Airport](project)
+    - [Marseille Airport](project)
+    - tell me about [Nantes Airport](project)
+    - [Nantes Airport](project)
+    - tell me about [Lyon Airport](project)
+    - [Lyon Airport](project)
+    - [lyon saint exupery](project)
+    - tell me about [Santiago Wayfinding](project)
+    - [Santiago Wayfinding](project)
+    - [arturo merino benitez](project)
+    - tell me about [Nikola Tesla Airport](project)
+    - [Nikola Tesla Airport](project)
+    - [nikola tesla airport](project)
+    - what is [Nikola Tesla Airport](project)?
+    - info on [Nikola Tesla Airport](project)
+    - tell me about [belgrade nikola tesla](project)
+    - [belgrade nikola tesla airport](project)
+    - [tesla airport](project)
+    - tell me about [AIK Bank](project)
+    - [AIK Bank](project)
+    - [aik bank](project)
+    - what is [AIK Bank](project)?
+    - info on [AIK Bank](project)
+    - [aik](project) bank project
+    - tell me about [Greyfoot](project)
+    - [Greyfoot Paris](project)
+    - tell me about [Amilcar Cabral Airport](project)
+    - [amilcar cabral](project)
+    - [sal airport](project)
+    - tell me about [Aristides Pereira Airport](project)
+    - [aristides pereira](project)
+    - tell me about [Chateauroux](project)
+    - [chateauroux airport](project)
+    - tell me about [Riga Control Tower](project)
+    - [Riga Control Tower](project)
+    - tell me about [CDG baggage](project)
+    - tell me about [Singapore Vertiport](project)
+    - [Singapore Vertiport](project)
+    - tell me about [Paris Heliport](project)
+    - [Paris Heliport](project)
+    - tell me about [Cergy Vertiport](project)
+    - [Cergy Vertiport](project)
+    - tell me about [Tokyo EU Delegation](project)
+    - [Tokyo EU Delegation](project)
+    - [french embassy bangkok](project)
+    - tell me about [French Embassy Bangkok](project)
+    - [Mashhad Airport](project)
+    - [mashhad](project)
+    - tell me about [Mashhad](project)
+    - what is [Mashhad Airport](project)?
+    - info on [Mashhad Airport](project)
+    - [issy heliport](project)
+    - [issy les moulineaux heliport](project)
+    - tell me about [issy heliport](project)
+    - what is [issy heliport](project)?
+    - [lima food hall](project)
+    - what is [lima food hall](project)?
+    - tell me about [lima food hall](project)
+    - [jorge chavez food hall](project)
+    - [AIK Bank](project)
+    - [aik bank](project)
+    - [aik](project)
+    - tell me about [aik bank](project)
+    - what is [aik bank](project)?
+    - [aik bank design](project)
+    - I saw [Sofia Airport](project) on your website
+    - I read about [Belgrade Airport](project)
+    - I heard about [Velana Airport](project)
+    - I'm interested in the [Bordeaux Airport](project) project
+    - I came across [Papeete Airport](project)
+    - I found [Cergy Vertiport](project) interesting
+    - tell me about the [Almaty Airport](project) project
+    - what happened with [Lima Metro Line 1](project)
+    - I'm curious about [Greyfoot Paris](project)
+    - what is [Pachacamac Metro](project)?
+    - I want to know more about [Kigali Airport](project)
+    - what's the deal with [Nice Airport](project)
+    - tell me about the [Tokyo EU Delegation](project) building
+    - what's [Chateauroux](project) about
+    - what did you do in [Cayenne](project)
+    - tell me about your [Marseille](project) work
+    - what was the [Nantes](project) project
+    - tell me about the [Lyon](project) project
+    - the [Belgrade Wayfinding](project) project
+    - [Santiago Wayfinding](project) — what was that
+    - what did you do at [Jorge Chavez](project)
+    - the [Lima Food Hall](project) — tell me about it
+    - [AIK Bank](project) — what was that project
+    - have you done phasing at [Belgrade Airport](project)?
+    - what phasing work did you do at [Belgrade Airport](project)?
+    - did you handle phasing for [Belgrade Airport](project)?
+    - what was 1PAX's role in phasing [Belgrade Airport](project)?
+
+# ── Project overview / description ─────────────────────────────────────────
+
+- intent: ask_project_overview
+  examples: |
+    - give me an overview of [Sofia Airport](project)
+    - describe the [Sofia Airport](project) project
+    - what is the [Terminal 3](project) project about?
+    - overview of [T3](project)
+    - project description for [Sofia Airport](project)
+    - summarize the [airport project](project)
+    - describe [Sofia Airport](project)
+    - [Sofia Airport](project) overview
+    - [T3](project) overview
+    - full project description
+    - what is this project about?
+    - describe the project
+    - give me the project summary
+    - what was done on this project?
+    - what does the project involve?
+    - explain the project
+    - tell me the full story of the project
+    - give me the full background
+    - full summary of this project
+    - what is the project story?
+    - tell me everything about it
+    - give me the full picture
+    - deep dive on this project
+    - full background please
+    - explain it to me
+    - walk me through it
+    - go deeper on this
+    - give me the rundown
+    - what's the full story
+    - break it down for me
+    - full overview
+    - everything about this project
+    - executive summary of this project
+    - project brief
+    - what was the scope of engagement
+    - can you summarize the project
+    - give me a comprehensive overview
+    - describe it to me fully
+    - walk me through the whole project
+    - what's it about from start to finish
+    - full project rundown
+    - can you explain it simply
+    - what exactly is this project then
+    - so what's this all about
+    - I don't know much about it, tell me
+    - what did you actually build here
+    - I found this on your site, what is it
+    - what's the story of this one
+
+# ── Location ────────────────────────────────────────────────────────────────
+
+- intent: ask_project_location
+  examples: |
+    - where is [Sofia Airport](project)?
+    - where is the [Sofia Airport](project) project?
+    - where is [Terminal 3](project) located?
+    - which country is [Sofia Airport](project) in?
+    - what city is the [airport project](project) in?
+    - where was this project done?
+    - where did you work on [Sofia Airport](project)?
+    - location of [Sofia Airport](project)
+    - [Sofia Airport](project) location
+    - where is it?
+    - is the project in Bulgaria?
+    - which country is the airport?
+    - project location
+    - what country is it in?
+    - where is the project based?
+    - in which city is the project?
+    - Sofia — is that in Bulgaria?
+    - which region is it in
+    - which continent is this project on
+    - is it in Europe
+    - is it in Africa
+    - is it in Asia
+    - is it in South America
+    - is it in the Middle East
+    - is it in a capital city
+    - where exactly is it
+    - is it near the city center
+    - is it overseas
+    - is it in an island country
+    - what part of the world
+    - which country
+    - what's the nearest major city
+    - is it international
+    - where in the world is this thing
+    - is it somewhere I might know
+    - is it a place I could visit
+    - is it far from Europe
+    - which side of the world
+
+# ── Timeline / year ─────────────────────────────────────────────────────────
+
+- intent: ask_project_year
+  examples: |
+    - when was [Sofia Airport](project)?
+    - when was the [Sofia Airport](project) project?
+    - what year did the [Terminal 3](project) project happen?
+    - when did you start working on [Sofia Airport](project)?
+    - what's the timeline for [Sofia Airport](project)?
+    - when does the [airport project](project) finish?
+    - project dates for [Sofia Airport](project)
+    - [Sofia Airport](project) timeline
+    - [Sofia Airport](project) dates
+    - when was the [Belgrade Airport](project) project?
+    - when was the [Velana Airport](project) project?
+    - 2023 to 2026 — is that right?
+    - project timeline
+    - when was it built?
+    - how long did the project take?
+    - when did the project start?
+    - what year is the project?
+    - what are the project dates?
+    - project duration
+    - when does it finish?
+    - when was it completed?
+    - when did it open?
+    - what year was it inaugurated?
+    - is this a recent project
+    - how new is this
+    - is this an old project
+    - how recent is this
+    - how long ago was this built
+    - was this built recently
+    - when did it open to the public
+    - is this a current project or past
+    - what decade was this
+    - when approximately
+    - recent or older project
+    - was this ages ago
+    - construction programme for this project
+    - what was the delivery schedule
+    - how long was the construction phase
+    - what was the design to handover timeline
+
+# ── Client ──────────────────────────────────────────────────────────────────
+
+- intent: ask_project_client
+  examples: |
+    - who is the client for [Sofia Airport](project)?
+    - who commissioned the [Terminal 3](project) project?
+    - who hired 1PAX for [Sofia Airport](project)?
+    - is SOF Connect the client for [Sofia Airport](project)?
+    - who is behind [Sofia Airport](project)?
+    - [Sofia Airport](project) client
+    - who commissioned this?
+    - project client
+    - who commissioned this project?
+    - who is the client?
+    - who gave you this contract?
+    - who is the project owner?
+    - who paid for the project?
+    - what organization commissioned this?
+    - who is SOF Connect?
+    - the project client
+    - who runs Sofia Airport?
+    - who funded it
+    - who owns the airport
+    - who is the owner
+    - airport authority
+    - government client or private
+    - is it a public or private project
+    - who's the boss on this project
+    - who's the operator
+    - who contracted 1PAX
+    - who hired you for this
+    - who was the buyer
+    - what ministry or authority commissioned it
+    - who is in charge of the airport
+    - who manages this facility
+    - who is the airport operator
+    - what's the concession model
+    - who is the concessionaire
+    - is it state-owned or private
+    - who awarded the design contract
+
+# ── Cost / budget ───────────────────────────────────────────────────────────
+
+- intent: ask_project_cost
+  examples: |
+    - how much did [Sofia Airport](project) cost?
+    - what is the budget for [Terminal 3](project)?
+    - what did the [airport project](project) cost?
+    - total cost of [Sofia Airport](project)
+    - how much was [T3](project)?
+    - what's the project value for [Sofia Airport](project)?
+    - [Sofia Airport](project) cost
+    - [Sofia Airport](project) budget
+    - 200 million euros — is that the budget?
+    - how expensive was the project?
+    - what was the construction budget?
+    - project cost?
+    - what is the investment value?
+    - total project cost
+    - how much was spent?
+    - project budget
+    - financial scope of the project
+    - what is the price tag?
+    - how much did it cost to build?
+    - cost of the Sofia terminal
+    - how expensive was it
+    - is it a big budget project
+    - premium project budget
+    - what's the bill for this
+    - how much investment went into this
+    - what's the contract value
+    - is this a large investment
+    - affordable or high-end
+    - what did it cost to build
+    - hundreds of millions
+    - how much funding was needed
+    - what was the total spend
+    - how much was the construction worth
+    - must cost a fortune to build that
+    - must have been a big investment
+    - is it a premium project
+    - what was the CAPEX
+    - what was the construction cost estimate
+    - what was the contract sum
+    - what is the cost of [Belgrade Airport](project)?
+    - what is the cost of [Sofia Airport](project)?
+    - what is the cost of [Velana Airport](project)?
+    - what is the project cost of [Belgrade Airport](project)?
+
+# ── Area / size ─────────────────────────────────────────────────────────────
+
+- intent: ask_project_area
+  examples: |
+    - how big is [Sofia Airport](project)?
+    - how big is the [Sofia Airport](project) project?
+    - how big is the [Bordeaux Airport](project) project?
+    - how big is the [Belgrade Airport](project) project?
+    - how big is the [Velana Airport](project) project?
+    - what is the area of [Terminal 3](project)?
+    - how many square meters is [Sofia Airport](project)?
+    - size of the [airport project](project)
+    - how large is [T3](project)?
+    - [Sofia Airport](project) area
+    - [Sofia Airport](project) size
+    - 110,000 square meters — is that right?
+    - what is the floor area?
+    - project area
+    - how big is it?
+    - total area of the terminal
+    - what's the square footage?
+    - building size
+    - how large is the airport expansion?
+    - size of Terminal 3
+    - what is the total footprint?
+    - is it a large terminal
+    - is it a compact design
+    - is it a huge building
+    - how sprawling is it
+    - small or large scale
+    - what's the building scale
+    - is it a big project
+    - how much space does it cover
+    - what size terminal is this
+    - tiny or massive
+    - what's the scale of this project
+    - is it a massive building
+    - is it really big or kind of small
+    - what's the GFA
+    - gross floor area
+    - NLA
+    - total GFA of the terminal
+    - how many square meters gross
+
+# ── Capacity ────────────────────────────────────────────────────────────────
+
+- intent: ask_project_capacity
+  examples: |
+    - how many passengers can [Sofia Airport](project) handle?
+    - what is the capacity of [Terminal 3](project)?
+    - how many people can go through [Sofia Airport](project)?
+    - passenger capacity of [Sofia Airport](project)
+    - [Sofia Airport](project) capacity
+    - [T3](project) passenger capacity
+    - how many travelers per year?
+    - 15 million passengers — is that correct?
+    - annual passenger throughput
+    - how many people does it serve?
+    - capacity of the airport?
+    - how many passengers annually?
+    - what is the annual capacity?
+    - how many travelers can it accommodate?
+    - passenger volume
+    - throughput of the terminal
+    - how many people pass through Sofia Airport?
+    - capacity of [Pointe-à-Pitre Terminal 1](project)?
+    - capacity of [Velana Airport](project)?
+    - capacity of [Belgrade Airport](project)?
+    - [Pointe-à-Pitre Terminal 1](project) capacity
+    - [Velana Airport](project) capacity
+    - [Belgrade Airport](project) capacity
+    - what is the passenger capacity of [Velana Airport](project)?
+    - how many passengers does [Pointe-à-Pitre Terminal 1](project) handle?
+    - passenger throughput at [Sofia Airport](project)
+    - what's the annual capacity of [Bordeaux Airport](project)?
+    - how large is [Velana Airport](project) in terms of passengers?
+    - millions of passengers
+    - how many flights per day
+    - busy airport or small
+    - is it a hub
+    - how many travelers
+    - peak hour capacity
+    - high-volume terminal
+    - how many gates
+    - how many people can it process
+    - is it a major hub
+    - annual throughput
+    - how many people use it per year
+    - is it a busy airport
+    - does loads of people go through it
+    - MPPA
+    - design year passenger capacity
+    - peak hour unit
+    - design year capacity
+    - how many MPPA
+    - annual passenger volume at design year
+
+# ── Architect / design team ─────────────────────────────────────────────────
+
+- intent: ask_project_architect
+  examples: |
+    - who designed [Sofia Airport](project)?
+    - who is the architect for [Terminal 3](project)?
+    - who are the architects on [Sofia Airport](project)?
+    - design team for [Sofia Airport](project)
+    - which firm designed [T3](project)?
+    - is 1PAX the architect for [Sofia Airport](project)?
+    - [Sofia Airport](project) architect
+    - [Sofia Airport](project) designer
+    - who is the lead architect?
+    - project architect
+    - who designed it?
+    - who are the designers?
+    - architectural team
+    - which architecture firm worked on it?
+    - who led the design?
+    - 1PAX designed this?
+    - who built it?
+    - who made it?
+    - who constructed it?
+    - who did the design?
+    - who's the architect?
+    - the architects
+    - design firm?
+    - which firm built it?
+    - who was responsible for the design?
+    - who's behind the design?
+    - who drew this up
+    - who conceived the design
+    - who is the design lead
+    - creative director of the project
+    - who is credited for the design
+    - architecture credit
+    - who signed off on the design
+    - which studio did the architecture
+    - who is the lead designer
+    - who's the creative mind here
+    - design credit
+    - who put this together
+    - who drew the blueprints
+    - who came up with the design
+    - architect of record on this project
+    - lead design firm
+    - who is the design architect
+
+# ── Partners ────────────────────────────────────────────────────────────────
+
+- intent: ask_project_partners
+  examples: |
+    - who were the partners on [Sofia Airport](project)?
+    - which firms worked on [Terminal 3](project)?
+    - who collaborated on [Sofia Airport](project)?
+    - is EGIS AVIA involved in [Sofia Airport](project)?
+    - project partners for [T3](project)
+    - who did 1PAX work with on [Sofia Airport](project)?
+    - [Sofia Airport](project) partners
+    - engineering partners
+    - project team
+    - who are your collaborators?
+    - who else worked on it?
+    - any engineering consultants?
+    - who are the partners?
+    - tell me about the project team
+    - EGIS AVIA — what did they do?
+    - project collaborators
+    - joint venture partners
+    - who else was involved
+    - who else was on the team
+    - engineering consultants
+    - MEP engineers
+    - structural engineers
+    - who helped 1PAX on this
+    - was it a consortium
+    - which firms collaborated
+    - any local partners
+    - international collaboration
+    - what consultants were used
+    - team composition on this project
+    - who was in the project team
+    - anyone else working on this
+    - QS on this project
+    - who were the MEP engineers
+    - who did the structural engineering
+    - who was the project manager
+    - who did the cost consultancy
+    - was there a main contractor
+    - design and build or traditional contract
+
+# ── Design challenge ────────────────────────────────────────────────────────
+
+- intent: ask_project_challenge
+  examples: |
+    - what was the challenge on [Sofia Airport](project)?
+    - what problems did you solve at [Terminal 3](project)?
+    - what was difficult about [Sofia Airport](project)?
+    - main challenge for [T3](project)
+    - key design challenge for [Sofia Airport](project)
+    - what obstacles did 1PAX face at [Sofia Airport](project)?
+    - what made [Sofia Airport](project) complex?
+    - [Sofia Airport](project) challenge
+    - [Sofia Airport](project) key challenge
+    - what was the main challenge?
+    - what problems were solved?
+    - design challenges
+    - key challenge
+    - what issues needed to be resolved?
+    - what was difficult about the project?
+    - what was the hardest part?
+    - describe the challenges
+    - what needed to be fixed?
+    - what was wrong before the redesign?
+    - cool, what was hard about it
+    - ok what was hard about it
+    - nice, so what was the challenge?
+    - alright what was difficult?
+    - and what was hard?
+    - so what was tough about it?
+    - what was tricky about it?
+    - what were the tricky parts?
+    - anything difficult?
+    - what made it complex?
+    - hard parts?
+    - what were the pain points?
+    - what gave you headaches?
+    - what gave you the most headaches on this?
+    - what gave you the most headaches?
+    - what was the most painful part?
+    - where did you struggle the most?
+    - what was the friction?
+    - where was the pressure?
+    - what constraints were you working with?
+    - what problems needed solving?
+    - what was the toughest part of this?
+    - what made this job harder than expected?
+    - what were you up against?
+    - what was the biggest obstacle?
+    - what made this one difficult?
+    - what caused the most trouble here?
+    - what made it more difficult than expected technically
+    - what were the technical constraints on this project
+    - what site constraints did you face
+    - what regulatory hurdles were there
+    - did the brief change during the project
+    - what program conflicts did you have to resolve
+    - what were the stakeholder challenges
+    - were there any engineering challenges that affected the design
+    - was it a stressful project
+    - what was the most stressful thing
+    - what almost went wrong
+    - what was the design challenge at [Belgrade fire station](project)?
+    - what was the challenge at [Belgrade fire station](project)?
+    - what was difficult about [Le Bourget fire station](project)?
+    - what was the challenge at [Chateauroux](project)?
+    - what were the constraints at [Riga control tower](project)?
+
+# ── Design approach / strategy ──────────────────────────────────────────────
+
+- intent: ask_project_approach
+  examples: |
+    - what was the design approach for [Sofia Airport](project)?
+    - how did 1PAX approach [Terminal 3](project)?
+    - design strategy for [Sofia Airport](project)
+    - how was [Sofia Airport](project) designed?
+    - methodology for [Sofia Airport](project)
+    - [Sofia Airport](project) design approach
+    - tell me about the design approach
+    - what design strategy did you use?
+    - how was it designed?
+    - design methodology
+    - design thinking applied
+    - how did you solve the design problems?
+    - design philosophy
+    - how did you approach the terminal design?
+    - what was the design process?
+    - walk me through the design methodology
+    - centralized terminal concept — tell me more
+    - what is the centralized terminal concept?
+    - cool, how did you approach it
+    - ok so how did you design it?
+    - and the approach?
+    - nice, so how was it done?
+    - so what was the design like?
+    - how'd you do it?
+    - what was your thinking?
+    - how did you think about this?
+    - how did you tackle it?
+    - what was your creative process?
+    - walk me through the design
+    - how did the design come together?
+    - what was the logic behind the design?
+    - take me through how you designed it
+    - how did 1PAX go about it?
+    - what was the overall direction?
+    - what drove the design decisions?
+    - how did you arrive at the final design?
+    - what was the design intent
+    - what design principles were applied
+    - how did the concept evolve
+    - how did you develop the design narrative
+    - what user research informed the design
+    - how did you manage stakeholder input on design
+    - what drove the spatial planning decisions
+    - how did you balance cost and quality in the design
+    - so basically how did you design it
+    - and how did you go about the whole thing
+    - what was the design approach for [Le Bourget fire station](project)?
+    - what approach did 1PAX take for [Le Bourget](project)?
+    - how did 1PAX approach [Belgrade fire station](project)?
+    - design approach for [Doha metro depot](project)
+    - what approach did 1PAX take at [Papeete Airport](project)?
+    - what approach was taken at [Papeete Airport](project)?
+    - what approach did 1PAX take at [Nice Airport](project)?
+    - what approach did 1PAX take at [Kigali Airport](project)?
+    - what approach was taken at [Chateauroux](project)?
+    - what design approach did 1PAX take at this project?
+    - how did 1PAX approach it at the project level?
+
+# ── 5-Star label ────────────────────────────────────────────────────────────
+
+- intent: ask_project_5star
+  examples: |
+    - what is the 5-star label for [Sofia Airport](project)?
+    - is [Sofia Airport](project) a 5-star airport?
+    - what does 5-star mean for [Sofia Airport](project)?
+    - tell me about the 5-star ambition at [Terminal 3](project)
+    - 5-star certification for [Sofia Airport](project)
+    - [Sofia Airport](project) 5 star
+    - what is a 5-star regional hub?
+    - Sofia Airport 5-star goal
+    - Skytrax rating for Sofia Airport
+    - how does the design achieve 5-star?
+    - what is the 5-star label?
+    - what does it take to be a 5-star airport?
+    - 5-star airport design
+    - what's the 5-star standard?
+    - tell me about 5-star airports
+    - what is a 5-star hub?
+    - 5-star airport certification explained
+    - did this airport win an award
+    - is this an award-winning airport
+    - what recognition did this get
+    - any certifications
+    - what rating does this airport have
+    - Skytrax rating
+    - quality level of the airport
+    - is this a premium airport
+    - is this a luxury airport
+    - top-ranked airport
+    - what standard is this airport
+    - best airports ranking
+    - airport quality classification
+    - how is this rated
+    - what's the passenger experience rating
+    - is it one of those fancy airports
+    - is it a luxury airport
+    - does it feel premium
+    - is it nice inside
+    - ACI ASQ rating
+    - how does it score on passenger satisfaction
+    - which Skytrax category is it in
+    - what is the passenger experience like?
+    - what's the passenger journey like?
+    - describe the passenger experience in this airport
+    - how does the passenger experience work?
+    - what is the passenger flow experience?
+    - how does this airport feel to use?
+    - what was the five star certification about?
+    - tell me about the five star certification for this project
+    - what does the 5-star certification involve?
+    - what's the 5-star certification?
+    - how did this project achieve a 5-star rating?
+    - what is 5-star certification in airports?
+
+# ── Video / media ───────────────────────────────────────────────────────────
+
+- intent: ask_project_video
+  examples: |
+    - is there a video of [Sofia Airport](project)?
+    - can I watch a video of [Terminal 3](project)?
+    - show me media for [Sofia Airport](project)
+    - do you have a video for [T3](project)?
+    - any photos of [Sofia Airport](project)?
+    - Vimeo link for [Sofia Airport](project)
+    - show me [Sofia Airport](project) visually
+    - [Sofia Airport](project) video
+    - [Sofia Airport](project) photos
+    - I want to see a video
+    - is there a video?
+    - show me a video
+    - any media available?
+    - project video
+    - can I watch it?
+    - do you have renderings?
+    - is there a Vimeo link?
+    - any visual material?
+    - project images
+    - I want to see it
+    - any video?
+    - got a video?
+    - video?
+    - show me
+    - pics?
+    - got photos?
+    - can I see it?
+    - link?
+    - cool got a link?
+    - is there a virtual tour
+    - can I see a 3D model
+    - do you have renderings
+    - CGI images
+    - architectural visualization
+    - any footage of the construction
+    - can I see the finished building
+    - what does it look like
+    - any before and after photos
+    - show me what it looks like
+    - any images
+    - visual tour
+    - is there a walkthrough
+    - do you have a film about this
+    - I want to see what it looks like inside
+    - is there a tour I can watch
+    - show me the airport
+    - got any footage
+
+# ── Sustainability ──────────────────────────────────────────────────────────
+
+- intent: ask_project_sustainability
+  examples: |
+    - what about sustainability for [Sofia Airport](project)?
+    - is [Terminal 3](project) sustainable?
+    - green design at [Sofia Airport](project)
+    - environmental objectives for [T3](project)
+    - sustainable design in [Sofia Airport](project)
+    - [Sofia Airport](project) sustainability
+    - what's the sustainability strategy for [Velana Airport](project)?
+    - what's the sustainability strategy for [Sofia Airport](project)?
+    - what's the sustainability approach for [Belgrade Airport](project)?
+    - sustainability strategy for [Bordeaux Airport](project)
+    - sustainability strategy for this project
+    - eco-friendly aspects of the project
+    - what are the sustainability goals?
+    - sustainability features
+    - is this a green project?
+    - environmental design
+    - how sustainable is it?
+    - green building features
+    - environmental impact
+    - what sustainable materials were used?
+    - energy efficiency of the terminal
+    - what's the environmental strategy for this project?
+    - how does this project address sustainability?
+    - how green is this project
+    - is it eco-friendly
+    - environmentally conscious design
+    - does it have a BREEAM rating
+    - does it have LEED certification
+    - low carbon design
+    - bioclimatic design
+    - does it use renewable energy
+    - how does it reduce its carbon footprint
+    - is this a zero-emission building
+    - does it have green features
+    - is it climate-conscious
+    - sustainable materials used
+    - energy-efficient design
+    - passive design features
+    - what's the embodied carbon on this project
+    - lifecycle carbon assessment
+    - what BREEAM rating does it target
+    - LEED certification on this project
+    - is it bioclimatic design
+    - what's the energy performance
+    - is it a net zero building
+    - does it use passive cooling or heating
+    - is this a green building
+    - eco-friendly airport
+    - how does it deal with the island environment?
+    - how does the project handle the local environment?
+    - how does it cope with the climate here?
+    - how does the design respond to the natural environment?
+    - does the design take into account the local climate?
+
+# ── Design concept / tagline ─────────────────────────────────────────────────
+
+- intent: ask_project_concept
+  examples: |
+    - what's the design concept for [Sofia Airport](project)?
+    - what's the main idea behind [Terminal 3](project)?
+    - describe [Sofia Airport](project) in one sentence
+    - what's the architectural vision for [Sofia Airport](project)?
+    - what's the tagline for [Sofia Airport](project)?
+    - what is the concept of [Belgrade Airport](project)?
+    - what was the guiding idea for [Velana Airport](project)?
+    - sum up [Sofia Airport](project) in a few words
+    - what's the design concept for [Belgrade Airport](project)?
+    - what's the architectural vision of [Velana Airport](project)?
+    - what's the concept behind [Pointe-à-Pitre](project)?
+    - what's the design vision?
+    - what's the core concept?
+    - what's the concept in a nutshell?
+    - what was the main idea?
+    - elevator pitch for this project
+    - what's the project in a nutshell?
+    - what was the driving idea?
+    - what's 1PAX's vision for this?
+    - what is the architectural vision?
+    - describe the project briefly
+    - give me the one-line concept
+    - what's the big idea?
+    - what was the central idea?
+    - brief concept?
+    - what's the concept?
+    - concept
+    - in a nutshell?
+    - how would you pitch this project?
+    - what is this project all about in a sentence?
+    - what's the main idea here?
+    - what's the story in a nutshell?
+    - how would you describe it in a word?
+    - give me the short version
+    - give me the gist
+    - give me a one-liner
+    - what's the gist?
+    - what's this project really about?
+    - sum it up for me
+    - and the design concept?
+    - and the concept?
+    - what's the essence of this?
+    - how would you describe this to someone who doesn't know it?
+    - what sparked this design
+    - what was the inspiration
+    - what idea drives this project
+    - what's the poetic vision
+    - what metaphor guides the design
+    - what is the design intent
+    - is there a design narrative
+    - what's the emotional idea behind this
+    - what feeling was the design going for
+    - what experience does it create
+    - what was the brief
+    - what was the client asking for conceptually
+    - what's the soul of this design
+    - what's the big idea in a nutshell
+    - how would you explain this to someone who doesn't know airports
+    - what feeling does this design try to create
+    - what was the architectural language chosen
+    - what was the concept behind it?
+    - what was the concept behind this project?
+    - what was the concept behind this?
+
+# ── Project status ───────────────────────────────────────────────────────────
+
+- intent: ask_project_status
+  examples: |
+    - was this project built?
+    - is this project complete?
+    - is this under construction?
+    - what is the current state of this project?
+    - has this been built yet?
+    - is [Sofia Airport](project) finished?
+    - what is the status of [Belgrade Airport](project)?
+    - was [Velana Airport](project) completed?
+    - is the [Bordeaux Airport](project) project done?
+    - is the [Belgrade Airport](project) project complete?
+    - is [Belgrade Airport](project) complete?
+    - has [Belgrade Airport](project) been completed?
+    - is [Nice Airport](project) finished?
+    - was [Tahiti airport](project) built?
+    - is [Papeete Airport](project) open?
+    - was [Almaty Airport](project) realized?
+    - is [Kigali Airport](project) complete?
+    - has [Conakry Airport](project) been built?
+    - is [Sofia Airport](project) under construction?
+    - is [Bordeaux Airport](project) open to passengers?
+    - was [Lima Metro Line 1](project) delivered?
+    - is [Belgrade Metro](project) complete?
+    - is [Cergy Vertiport](project) built yet?
+    - has [Paris Heliport](project) been constructed?
+    - is this project still ongoing?
+    - is it open?
+    - has the project been delivered?
+    - is construction finished?
+    - was this project realized?
+    - did this project get built?
+    - is this complete or still in progress?
+    - what phase is this project in?
+    - is this built or still planned?
+    - is this open to passengers?
+    - was this project completed?
+    - is it still ongoing?
+    - is this an ongoing project?
+    - is it still under construction?
+    - has it been inaugurated?
+    - is this open to the public?
+    - is this a live project?
+    - has work started?
+    - current status
+    - project status
+    - is it done?
+    - is it finished?
+    - was it realized?
+    - was [Velana Airport](project) inaugurated?
+    - has [Sofia Airport](project) been inaugurated?
+    - when was [Belgrade Airport](project) inaugurated?
+    - was [Bordeaux Airport](project) opened?
+    - is [Almaty Airport](project) operational?
+    - has [Lima Metro Line 1](project) been inaugurated?
+    - was [Kigali Airport](project) opened to the public?
+    - has this been delivered
+    - is it open to the public
+    - is it a live building
+    - is passengers using it now
+    - is it functional
+    - is it operational
+    - has construction started
+    - is it in planning
+    - how far along is the project
+    - is it completed or upcoming
+    - is it a concept or real building
+    - is this a built project
+    - design phase or under construction
+    - can I go there now
+    - is it open to travelers
+    - is this airport operating
+    - practical completion date
+    - when was practical completion
+    - has it been handed over
+    - is it in the snagging phase
+    - is construction concluded
+
+# ── Tender / competition ─────────────────────────────────────────────────────
+
+- intent: ask_project_tender
+  examples: |
+    - was this a competition?
+    - did 1PAX win a tender for this?
+    - how did 1PAX get this project?
+    - was this a competition entry?
+    - did you win the competition for this?
+    - was this a direct commission?
+    - how was the contract awarded?
+    - was this won through a tender?
+    - was this project awarded through competition?
+    - is this a competition win?
+    - was there a bid for this project?
+    - did 1PAX win the bid?
+    - was this a concession?
+    - how was 1PAX selected for this?
+    - was this project commissioned directly?
+    - was this won through an international competition?
+    - how did you get this contract?
+    - was there a design competition?
+    - how was this project procured?
+    - was this tendered?
+    - how was 1PAX chosen?
+    - was this an invited competition?
+    - competition or commission?
+    - how did the firm get selected?
+    - was 1PAX shortlisted for this?
+    - was this a public tender?
+    - did 1PAX compete for this project?
+    - was there a shortlist?
+    - open competition or invited?
+    - how did you end up winning this project?
+    - how did you win this one?
+    - how did you land this project?
+    - how did 1PAX get selected?
+    - what made 1PAX win this?
+    - how did the project come to 1PAX?
+    - how did you get the job?
+    - did you win a competition for this?
+    - how was 1PAX brought in?
+    - how did 1PAX get the [Sofia Airport](project) project?
+    - how did 1PAX get the [Belgrade Airport](project) project?
+    - how did 1PAX get the [Velana Airport](project) project?
+    - how did 1PAX win the [Sofia Airport](project) contract?
+    - how did 1PAX win the [Belgrade Airport](project) contract?
+    - how was 1PAX selected for [Sofia Airport](project)?
+    - how was 1PAX chosen for [Belgrade Airport](project)?
+    - how did 1PAX land the [Sofia Airport](project) project?
+    - how was 1PAX brought in on [Velana Airport](project)?
+    - was [Sofia Airport](project) a tender win?
+    - was [Belgrade Airport](project) a competition?
+    - how did 1PAX get the [Bordeaux Airport](project) commission?
+    - was this put out to bid
+    - was there a shortlist process
+    - is this a negotiated contract
+    - how do you typically get projects
+    - do you enter competitions often
+    - was this a design-and-build tender
+    - how did 1PAX find out about this project
+    - did a client approach 1PAX directly
+    - how was the architect selected
+    - was there an RFP
+    - was it a competitive process
+    - was this an OJEU notice
+    - competitive dialogue procedure
+    - was there an invitation to tender
+    - was this a design-build contract
+    - how did you win the pitch
+    - how did you get the gig
+    - did the client come to you directly or did you pitch for it
+    - how was the [Chateauroux](project) project awarded?
+    - how was [Chateauroux ATCT](project) procured?
+    - how did 1PAX get the [Chateauroux](project) project?
+    - how was [Riga control tower](project) project awarded?
+    - was [Le Bourget fire station](project) a competition?
+    - how was [Nice Airport](project) awarded?
+    - how did 1PAX win [Kigali Airport](project)?
+
+# ── 1PAX scope / role ────────────────────────────────────────────────────────
+
+- intent: ask_project_scope
+  examples: |
+    - what was 1PAX's role in this project?
+    - what exactly did 1PAX do?
+    - what was your specific contribution?
+    - what did 1PAX design on this project?
+    - what was 1PAX responsible for?
+    - what was 1PAX's involvement?
+    - what did your team do specifically?
+    - what was the scope of work?
+    - what part did 1PAX play?
+    - what was 1PAX's mission on this project?
+    - what services did 1PAX provide?
+    - what was the design scope?
+    - what exactly was done by 1PAX?
+    - tell me about 1PAX's role
+    - what was 1PAX hired to do?
+    - what did 1PAX contribute?
+    - what is the remit of 1PAX here?
+    - what does 1PAX cover in this project?
+    - what was the architectural mandate?
+    - 1PAX involvement
+    - your role
+    - scope of work
+    - what was 1PAX's remit?
+    - what work did 1PAX carry out?
+    - what did 1PAX deliver?
+    - what was 1PAX asked to do?
+    - how was 1PAX involved?
+    - what was 1PAX's role at [Belgrade Airport](project)?
+    - what was 1PAX's role at [Sofia Airport](project)?
+    - what was 1PAX's role at [Velana Airport](project)?
+    - what was 1PAX's role at [Bordeaux Airport](project)?
+    - what was 1PAX's role on this project?
+    - what was 1PAX's role here?
+    - what specifically did 1PAX design
+    - which parts did 1PAX do
+    - did 1PAX do the full design or just part
+    - what was 1PAX's contribution exactly
+    - what phases did 1PAX cover
+    - was 1PAX the lead architect
+    - was 1PAX doing concept or construction
+    - what was 1PAX responsible for
+    - was 1PAX the primary designer
+    - what did 1PAX actually build or design
+    - full service or consultancy
+    - was 1PAX doing masterplan or detailed design
+    - was 1PAX in charge of the interiors too
+    - did 1PAX do everything from concept to construction
+    - what RIBA stages did 1PAX cover
+    - was 1PAX the architect of record
+    - did 1PAX do the feasibility or just the design
+    - what was the nature of 1PAX's appointment
+    - was 1PAX the design architect or executive architect
+    - full design service or just concept
+    - did you do everything or just part of it
+
+# ── Building programme ───────────────────────────────────────────────────────
+
+- intent: ask_project_program
+  examples: |
+    - what does this building include?
+    - what facilities are there?
+    - what was built exactly?
+    - what is in the terminal?
+    - what does the project contain?
+    - what spaces are included?
+    - what functions does it have?
+    - what is the building programme?
+    - what areas are included in the project?
+    - what facilities does the terminal have?
+    - what did the project deliver?
+    - what does the airport include?
+    - what are the main components of this project?
+    - what was included in the design?
+    - what buildings are part of this?
+    - what spaces were designed?
+    - what are the functional areas?
+    - what does it contain?
+    - what elements make up this project?
+    - what is in the design?
+    - programme
+    - what's inside
+    - what's in it
+    - what facilities does it have
+    - is there retail
+    - are there restaurants
+    - are there lounges
+    - are there departure gates
+    - is there a check-in hall
+    - what can passengers do there
+    - breakdown of spaces
+    - what amenities are there
+    - what floors or levels are there
+    - what types of spaces
+    - what functions does the building serve
+    - is there a VIP area
+    - is there a business lounge
+    - what shops are there
+    - what food options are available
+    - any special facilities
+    - is there a transit hotel
+    - what public spaces are designed
+    - what is the programme of those stations?
+    - what is the programme of these stations?
+    - what is the programme for the [food hall](project)?
+    - what spaces are in [food hall](project)?
+    - what's in those stations?
+    - what does that station include?
+    - what areas are in the station programme?
+    - is there food there
+    - are there any shops
+    - what can you do in the airport
+    - is there anywhere to eat
+    - any lounges for business travelers
+    - what's the airside offer
+    - what's the landside offer
+    - is there a duty free
+    - what are the terminal zones
+    - describe the terminal layout
+    - how is the terminal organized
+    - what zones are there
+    - how many check-in desks
+    - are there gate lounges
+    - hold rooms — how many
+    - concourse layout
+    - is there a pier
+
+# ── Interesting facts / highlights ───────────────────────────────────────────
+
+- intent: ask_project_facts
+  examples: |
+    - tell me something interesting about this project
+    - what makes this project special?
+    - any interesting facts about this?
+    - what is unique about this project?
+    - what's notable about this project?
+    - what are the highlights?
+    - what makes this stand out?
+    - any fun facts?
+    - what's interesting here?
+    - what should I know about this?
+    - what's remarkable about this project?
+    - tell me a quick fact
+    - what's the most impressive aspect?
+    - any cool details about this project?
+    - what's worth knowing about this?
+    - give me a highlight
+    - what's special here?
+    - what's distinctive about it?
+    - tell me something cool
+    - any highlights?
+    - what's interesting?
+    - what is this project known for?
+    - what's the most impressive thing about this?
+    - why is this project notable?
+    - what makes this a reference project?
+    - what's a key fact about this?
+    - any interesting facts about [Velana Airport](project)?
+    - what's interesting about [Velana Airport](project)?
+    - what makes [Sofia Airport](project) special?
+    - any highlights for [Belgrade Airport](project)?
+    - what's notable about [Bordeaux Airport](project)?
+    - tell me something interesting about [Belgrade Metro](project)
+    - any fun facts about [Papeete Airport](project)?
+    - what is [Nice Airport](project) known for?
+    - what's remarkable about [Kigali Airport](project)?
+    - what makes [Cergy Vertiport](project) unique?
+    - any cool details about [Lima Metro Line 1](project)?
+    - what should I know about [Qatar Railways](project)?
+    - give me highlights on [Almaty Airport](project)
+    - what are the interesting facts about [Doha metro depot](project)?
+    - any interesting facts about [Doha depot](project)?
+    - what's interesting about [Belgrade fire station](project)?
+    - any fun facts about [Le Bourget fire station](project)?
+    - what's notable about [Chateauroux](project)?
+    - what would you like to point out on that project
+    - what would you point out about this
+    - what would you highlight about this project
+    - what stands out to you about this
+    - what would you draw attention to
+    - what do you find most impressive about this
+    - what's your take on this project
+    - anything you'd want to highlight
+    - what catches your eye here
+    - what's worth mentioning
+    - what should I pay attention to
+    - what do you think is the best part
+    - share something interesting
+    - point something out
+    - what would you show off about this
+    - got any good nuggets on this
+    - what's the most impressive bit
+    - anything noteworthy
+    - what do you like about this project
+    - what's most interesting here
+    - anything that jumps out at you
+    - what else can you tell me
+    - what else can you tell me about this
+    - what more do you know about it
+    - what other things do you know about this
+    - tell me something else about it
+    - anything else on this
+    - what other info do you have on this
+    - tell me more interesting things
+    - got anything else on this one
+    - keep going
+    - what else is there to know
+    - what other details do you have
+
+# ── Company: general overview ────────────────────────────────────────────────
+
+- intent: ask_company_overview
+  examples: |
+    - tell me about 1PAX
+    - what is 1PAX?
+    - who is 1PAX?
+    - give me an overview of 1PAX
+    - describe 1PAX
+    - what kind of company is 1PAX?
+    - what is 1PAX all about?
+    - can you tell me about the studio?
+    - give me a summary of 1PAX
+    - who are you?
+    - what's 1PAX?
+    - tell me more about your company
+    - I'd like to know about 1PAX
+    - give me a quick intro to 1PAX
+    - what is your studio?
+    - describe your firm
+    - what's the firm about?
+    - what kind of studio is this?
+    - how would you describe 1PAX?
+    - give me the elevator pitch for 1PAX
+    - what's the story behind 1PAX?
+    - pitch me on 1PAX
+    - I just heard about 1PAX, what is it?
+    - sum up what 1PAX is
+    - what's 1PAX in a nutshell?
+    - tell me what you're about
+    - describe the company
+    - what is 1PAX as a studio?
+    - so what do you guys do
+    - what does 1PAX do
+    - what do you do
+    - what's your thing
+    - what's 1PAX known for
+    - what are you about
+    - what's your background
+    - what field are you in
+    - what industry is 1PAX
+    - are you an architecture firm
+    - I haven't heard of you before — who are you
+    - quick overview please
+    - brief me on 1PAX
+    - quick intro to 1PAX please
+    - tell me about one pax
+    - what is one pax?
+    - who is one pax?
+    - what is 1 pax?
+    - describe one pax
+    - what exactly is 1PAX
+    - can you explain what 1PAX is
+    - is 1PAX a design firm
+    - so you guys design airports yeah
+    - so basically you build airports
+    - oh cool so what does your company make
+    - I came across you online, what do you do
+    - saw your name somewhere, what's 1PAX
+    - someone told me about you, what is 1PAX
+    - you design buildings right
+    - who is the company behind this?
+    - who's behind this project?
+    - what company is behind this work?
+    - give me a company overview
+    - give me an overview of the company
+    - give me the overview of 1PAX
+    - 1PAX overview
+    - company overview please
+    - brief company overview
+
+# ── Company: name meaning ─────────────────────────────────────────────────────
+
+- intent: ask_company_name
+  examples: |
+    - what does 1PAX mean?
+    - where does the name 1PAX come from?
+    - what is the meaning of 1PAX?
+    - why is the company called 1PAX?
+    - what's behind the name 1PAX?
+    - what does PAX stand for?
+    - explain the name 1PAX
+    - what does your name mean?
+    - where does your name come from?
+    - why 1PAX?
+    - what does "1PAX" mean?
+    - can you explain the company name?
+    - what's the origin of the name 1PAX?
+    - why did you choose the name 1PAX?
+    - what is the significance of 1PAX?
+    - what does one passenger mean?
+    - why one passenger?
+    - 1PAX — what does it stand for?
+    - is PAX an acronym?
+    - what's the meaning behind your name?
+    - tell me about the company name
+    - what does the name mean?
+    - why did you name it 1PAX?
+    - is "1PAX" an acronym
+    - where did you get your name from
+    - curious about your company name
+    - 1PAX — is that a word
+    - what language is PAX from
+    - does your name mean something
+    - is your name related to airports
+    - what is PAX short for
+
+# ── Company: mission ──────────────────────────────────────────────────────────
+
+- intent: ask_company_mission
+  examples: |
+    - what is 1PAX's mission?
+    - what is the mission of 1PAX?
+    - what is your mission statement?
+    - what does 1PAX stand for?
+    - what is the purpose of 1PAX?
+    - what is 1PAX trying to achieve?
+    - what drives 1PAX?
+    - what is your purpose?
+    - what is the vision of 1PAX?
+    - tell me about 1PAX's mission
+    - what are you here to do?
+    - what is 1PAX's goal?
+    - what is the company mission?
+    - what does 1PAX aim to accomplish?
+    - what is your overarching goal?
+    - why does 1PAX exist?
+    - what's the big picture ambition?
+    - what does the studio aspire to do?
+    - what is 1PAX's core purpose?
+    - what do you believe in?
+    - what's the mission here?
+    - mission statement
+    - what is your core mission?
+    - what is 1PAX's reason for being?
+    - what are you trying to accomplish
+    - what's the point of 1PAX
+    - what is your north star
+    - what problem are you solving
+    - what's your WHY
+    - why was 1PAX set up
+    - what does the company aim to do
+    - what gets 1PAX up in the morning
+    - what change is 1PAX trying to make
+
+# ── Company: history / founding ───────────────────────────────────────────────
+
+- intent: ask_company_history
+  examples: |
+    - when was 1PAX founded?
+    - how long has 1PAX been around?
+    - what is the history of 1PAX?
+    - when did 1PAX start?
+    - how was 1PAX created?
+    - tell me about 1PAX's history
+    - when did the studio open?
+    - how old is 1PAX?
+    - where did 1PAX start?
+    - what year was 1PAX founded?
+    - when was the company established?
+    - how did 1PAX begin?
+    - what is the backstory of 1PAX?
+    - how did the studio get started?
+    - tell me the history of the firm
+    - when was 1PAX created?
+    - who started 1PAX and when?
+    - how long has the studio been active?
+    - how did the firm grow?
+    - what is the background of 1PAX?
+    - describe the growth of 1PAX
+    - how did 1PAX evolve over the years?
+    - what's the company background?
+    - tell me a bit of background on 1PAX
+    - how did it start?
+    - when was it founded?
+    - how long has it been around?
+    - how long have you been doing this
+    - are you a new company
+    - is 1PAX old or new
+    - when did you open your doors
+    - what year did you launch
+    - give me the background story
+    - are you a young studio
+    - is 1PAX an established firm
+
+# ── Company: founder ──────────────────────────────────────────────────────────
+
+- intent: ask_company_founder
+  examples: |
+    - who founded 1PAX?
+    - who is the founder of 1PAX?
+    - who started 1PAX?
+    - tell me about the founder of 1PAX
+    - who created 1PAX?
+    - who is behind 1PAX?
+    - who set up 1PAX?
+    - who is the principal of 1PAX?
+    - tell me about the woman who founded 1PAX
+    - who started the company?
+    - is 1PAX founder-led?
+    - founder of 1PAX
+    - tell me about the founder's story
+    - what is the founder's background?
+    - tell me the story of how 1PAX was founded
+    - what drove the founder to start 1PAX?
+    - who established 1PAX?
+    - who founded it?
+    - who started it?
+    - who set it up?
+    - who's the founder?
+    - who created the studio?
+    - who's the boss
+    - who's in charge
+    - who started all this
+    - who's the visionary behind 1PAX
+    - who's the person behind the studio
+    - is 1PAX woman-owned
+    - is 1PAX owned by a woman
+    - who is the architect in charge
+    - who conceived 1PAX
+    - who's the creative director
+
+# ── Company: offices / locations ──────────────────────────────────────────────
+
+- intent: ask_company_offices
+  examples: |
+    - where are 1PAX's offices?
+    - where is 1PAX located?
+    - where does 1PAX operate?
+    - where is the 1PAX studio?
+    - what are the office locations?
+    - does 1PAX have offices in Paris?
+    - where is the headquarters?
+    - where is 1PAX based?
+    - where is your head office?
+    - what cities does 1PAX have offices in?
+    - how many offices does 1PAX have?
+    - do you have an office in Belgrade?
+    - is there a 1PAX office in Lima?
+    - where does the team work from?
+    - is 1PAX in Shanghai?
+    - do you have a Barcelona office?
+    - how many countries is 1PAX in?
+    - where can I find 1PAX?
+    - where are your offices located?
+    - global offices of 1PAX
+    - what is the address of 1PAX?
+    - 1PAX office locations
+    - where are you based?
+    - where are you located?
+    - which cities does 1PAX have a presence in?
+    - do you work globally?
+    - are you an international firm?
+    - where can I visit you
+    - where do you work
+    - what countries are you in
+    - where is your team based
+    - are you a European firm
+    - are you a French company
+    - do you have a presence in Asia
+    - where are you physically located
+    - how do I find you
+    - where are they based?
+    - where is the company based?
+    - where are they located?
+
+# ── Company: team ─────────────────────────────────────────────────────────────
+
+- intent: ask_company_team
+  examples: |
+    - what is the team like at 1PAX?
+    - how big is 1PAX?
+    - how many people work at 1PAX?
+    - is 1PAX a large firm?
+    - what kind of professionals work at 1PAX?
+    - how diverse is the team?
+    - how many languages does 1PAX speak?
+    - what disciplines are in the team?
+    - is 1PAX interdisciplinary?
+    - what's the makeup of the team?
+    - what professions are at 1PAX?
+    - is 1PAX a big studio?
+    - how international is the team?
+    - what's the team composition?
+    - architects and engineers — is that the team?
+    - what makes up the 1PAX team?
+    - how does the team work together?
+    - is 1PAX a multicultural company?
+    - what languages does the team speak?
+    - how many employees does 1PAX have
+    - how many people are on the team
+    - what's the headcount
+    - is 1PAX a small firm
+    - is it a boutique studio
+    - what backgrounds do your people come from
+    - do you have civil engineers
+    - do you work with consultants
+    - what's the size of the team
+    - is it a big or small team
+    - how international is 1PAX?
+    - is 1PAX an international company?
+    - how global is 1PAX?
+    - how many nationalities work at 1PAX?
+
+# ── Company: expertise / specialties ─────────────────────────────────────────
+
+- intent: ask_company_expertise
+  examples: |
+    - what does 1PAX specialize in?
+    - what are 1PAX's areas of expertise?
+    - what type of projects does 1PAX do?
+    - what does 1PAX design?
+    - what kind of buildings does 1PAX work on?
+    - does 1PAX do airports?
+    - what is 1PAX known for professionally?
+    - what does 1PAX focus on?
+    - what are the main project types at 1PAX?
+    - does 1PAX do urban mobility?
+    - what is 1PAX's specialty?
+    - does 1PAX work on vertiports?
+    - does 1PAX do interior design?
+    - what sectors does 1PAX work in?
+    - does 1PAX do eVTOL terminals?
+    - what kind of infrastructure does 1PAX design?
+    - do you work on metro stations?
+    - what types of transportation projects does 1PAX do?
+    - what is 1PAX's area of expertise?
+    - what architectural services does 1PAX offer?
+    - what is 1PAX's core business?
+    - what architectural services does 1PAX offer?
+    - do you do greenfield airport design
+    - do you work on brownfield retrofit projects
+    - do you do airside masterplanning
+    - what is your experience with terminal design
+    - do you do feasibility studies for airports
+    - have you worked on new airport projects from scratch
+    - do you do aviation masterplans
+    - do you work on both the terminal and the airside
+    - what is your track record in aviation architecture
+    - do you work on international terminal expansions
+    - have you worked in West Africa
+    - do you have experience in Latin America
+    - what building types do you design
+    - what's your main business
+    - do you build hospitals
+    - do you design transit hubs
+    - what projects do you usually work on
+    - what is your niche
+    - what type of architecture do you do
+    - do you do residential
+    - does 1PAX design buildings beyond airports?
+    - has 1PAX designed any office buildings?
+    - has 1PAX worked on embassies?
+
+# ── Company: design approach / principles ────────────────────────────────────
+
+- intent: ask_company_approach
+  examples: |
+    - what is 1PAX's design approach?
+    - how does 1PAX design?
+    - what are the design principles of 1PAX?
+    - what is the design philosophy of 1PAX?
+    - how does 1PAX approach design?
+    - describe 1PAX's design philosophy
+    - what guides the design at 1PAX?
+    - what are 1PAX's design values?
+    - how does 1PAX think about design?
+    - what drives the design process at 1PAX?
+    - what are the core principles at 1PAX?
+    - how do you approach your projects?
+    - what is the 1PAX way of designing?
+    - tell me about your design process
+    - what principles underpin 1PAX's work?
+    - how does 1PAX create spaces?
+    - what is unique about 1PAX's design approach?
+    - what design philosophy does 1PAX follow?
+    - describe your approach to architecture
+    - how do you think about architecture?
+    - what are your five design principles?
+    - what's your design process like?
+    - how do you design airports?
+    - how do you create your designs
+    - what inspires your architecture
+    - what's the thinking behind your work
+    - how do you solve design problems
+    - what lens do you use when designing
+    - how do you start a design
+    - what's your creative process
+    - what do you prioritize in design
+    - form or function — which do you prioritize
+    - what comes first in your design process
+    - what is the design intent at 1PAX
+    - how do you approach value engineering
+    - how do you incorporate user research into design
+    - how do you engage stakeholders in the design process
+    - what is 1PAX's philosophy on passenger flow
+    - how do you balance aesthetics and functionality
+    - what architectural language does 1PAX prefer
+    - how do you approach wayfinding and legibility
+    - how do you adapt design to local context
+
+# ── Company: human-centered design ───────────────────────────────────────────
+
+- intent: ask_company_human_centered
+  examples: |
+    - is 1PAX human-centered?
+    - what does human-centered design mean at 1PAX?
+    - how does 1PAX put people first?
+    - tell me about 1PAX's human-centered approach
+    - what does it mean to design for people?
+    - how does 1PAX prioritize the user?
+    - what is the human-centered philosophy at 1PAX?
+    - does 1PAX care about the passenger experience?
+    - how does 1PAX think about users?
+    - user experience at 1PAX
+    - passenger experience design
+    - what does one passenger mean in your design?
+    - how does 1PAX design for people?
+    - people-first design
+    - what is human centered design?
+    - how do you keep users at the center of design?
+    - why is human-centered design important to 1PAX?
+    - tell me about putting people first
+    - designing for people — how does 1PAX do it?
+    - accessibility in 1PAX's design
+    - how does 1PAX improve the user experience?
+    - do you care about users
+    - do you design for the actual people using the space
+    - how do you think about the end user
+    - do you do user research
+    - is your design user-friendly
+    - how do passengers experience your airports
+    - do you think about who uses your buildings
+    - are your buildings easy to use
+    - how do you make spaces comfortable
+    - does user experience matter to 1PAX
+    - what is 1PAX's approach to public space design?
+    - how does 1PAX approach public spaces?
+    - what principles guide 1PAX's public space design?
+    - how does 1PAX design for shared public spaces?
+
+# ── Company: sustainability ───────────────────────────────────────────────────
+
+- intent: ask_company_sustainability
+  examples: |
+    - how sustainable is 1PAX?
+    - what is 1PAX's sustainability commitment?
+    - does 1PAX care about the environment?
+    - what does 1PAX do for sustainability?
+    - is 1PAX a green company?
+    - how does 1PAX approach sustainability?
+    - does 1PAX design sustainable buildings?
+    - what is the environmental approach at 1PAX?
+    - tell me about sustainability at 1PAX
+    - does 1PAX use renewable energy?
+    - does 1PAX prioritize local materials?
+    - what is 1PAX's carbon footprint commitment?
+    - sustainable design at 1PAX
+    - does 1PAX have sustainability goals?
+    - what green design practices does 1PAX use?
+    - how does 1PAX reduce environmental impact?
+    - is sustainability a priority at 1PAX?
+    - what does 1PAX do to be sustainable?
+    - 1PAX environmental commitment
+    - what is 1PAX's approach to reducing carbon impact?
+    - is 1PAX committed to net zero?
+    - green architecture at 1PAX
+    - how does 1PAX think about climate?
+    - does 1PAX design net zero buildings?
+    - are you eco-friendly
+    - do you care about the planet
+    - are your buildings green
+    - do you think about climate change
+    - is 1PAX environmentally conscious
+    - do you use low-carbon materials
+    - how do you reduce waste in construction
+    - are your projects climate-friendly
+    - do you design with the environment in mind
+    - tell me about a sustainable project
+    - can you show me a sustainable project example?
+    - what is a good example of 1PAX's sustainable design?
+    - tell me about a sustainable project 1PAX has done
+    - can you give me an example of a green project you've built?
+    - what are some examples of sustainable projects 1PAX has delivered?
+    - give me an example of an eco-friendly project 1PAX worked on
+    - what's a good sustainable project from 1PAX?
+    - do you have any examples of green design in your portfolio?
+    - are you an environmentally responsible firm
+    - does 1PAX build sustainably
+    - what is 1PAX doing for sustainability?
+    - what is 1PAX doing about climate change?
+    - what is 1PAX doing to reduce emissions?
+    - what are you doing to be more sustainable?
+    - what steps is 1PAX taking on sustainability?
+    - what green certifications do your buildings have?
+    - do your buildings have BREEAM or LEED certification?
+    - what sustainability ratings do 1PAX buildings achieve?
+    - what's their sustainability philosophy?
+    - do you design for energy efficiency?
+    - does 1PAX consider climate in their designs?
+    - do you design for climate resilience?
+    - is environmental performance a factor in your designs?
+    - is energy efficiency part of your design brief?
+    - how do you deal with climate in airport design?
+
+# ── Company: innovation ───────────────────────────────────────────────────────
+
+- intent: ask_company_innovation
+  examples: |
+    - how innovative is 1PAX?
+    - what innovations has 1PAX developed?
+    - what proprietary innovations does 1PAX have?
+    - what patents does 1PAX hold?
+    - how does 1PAX innovate?
+    - tell me about innovation at 1PAX
+    - what new technologies does 1PAX use?
+    - does 1PAX invent things?
+    - what is 1PAX's innovation strategy?
+    - how does 1PAX stay ahead of the curve?
+    - what is 1PAX's approach to technology?
+    - does 1PAX use cutting-edge materials?
+    - proprietary solutions at 1PAX
+    - does 1PAX develop new solutions?
+    - how does 1PAX push boundaries?
+    - does 1PAX use AI in its work?
+    - is AI part of 1PAX's workflow?
+    - how does 1PAX use artificial intelligence?
+    - how do you approach innovation in architecture?
+    - what is 1PAX's approach to innovation in design?
+    - what makes 1PAX innovative?
+    - does 1PAX work with new mobility technologies?
+    - what is 1PAX's approach to future mobility?
+    - how does 1PAX approach research?
+    - are there 1PAX inventions?
+    - what proprietary tech does 1PAX have?
+    - how does 1PAX lead innovation in aviation?
+    - are you a tech-forward studio
+    - what sectors does 1PAX innovate in?
+    - in which sectors does 1PAX innovate?
+    - what areas does 1PAX innovate in?
+    - which fields does 1PAX innovate across?
+    - where does 1PAX apply its innovation?
+    - what industries does 1PAX innovate in?
+    - do you use new tech in your projects
+    - how cutting-edge is 1PAX
+    - do you use AI in design
+    - do you use parametric design
+    - are you forward-thinking
+    - do you research new building methods
+    - what new things are you working on
+    - do you test new materials
+    - what's innovative about your work
+
+# ── Company: urbanism / regenerative design ───────────────────────────────────
+
+- intent: ask_company_urbanism
+  examples: |
+    - what is 1PAX's approach to urbanism?
+    - does 1PAX do urban planning?
+    - what is regenerative urbanism?
+    - tell me about regenerative urbanism at 1PAX
+    - how does 1PAX approach city design?
+    - what is the urbanism methodology?
+    - does 1PAX do masterplanning?
+    - how does 1PAX design cities?
+    - what is the urban approach at 1PAX?
+    - tell me about 1PAX's city-level thinking
+    - does 1PAX design urban mobility?
+    - what is regenerative design?
+    - how does 1PAX contribute to urban sustainability?
+    - what does 1PAX do in cities?
+    - urban planning at 1PAX
+    - masterplanning approach
+    - how does 1PAX think about the city?
+    - what is urban regeneration?
+    - circular urbanism at 1PAX
+    - does 1PAX work on regional mobility?
+    - urban ecosystems — how does 1PAX design for them?
+    - do you think about the city as a whole
+    - does 1PAX work beyond individual buildings
+    - do you do city-scale projects
+    - how does a building connect to its neighborhood
+    - transit and cities — is that your domain
+    - how does 1PAX think about movement in cities
+    - do you work on transport corridors
+    - do you plan neighborhoods
+    - what's your city-level thinking
+
+# ── Company: work methodology ─────────────────────────────────────────────────
+
+- intent: ask_company_methodology
+  examples: |
+    - how does 1PAX work?
+    - what is 1PAX's working methodology?
+    - how does 1PAX operate?
+    - how does 1PAX run its projects?
+    - what is the process at 1PAX?
+    - how does 1PAX collaborate with clients?
+    - what is 1PAX's way of working?
+    - how do you manage projects?
+    - how does 1PAX maintain quality?
+    - what is the studio's process?
+    - how does 1PAX work with partners?
+    - does 1PAX work across time zones?
+    - how does the borderless studio work?
+    - what makes 1PAX's process special?
+    - how does 1PAX manage global projects?
+    - tell me about how 1PAX delivers projects
+    - how does 1PAX collaborate across offices?
+    - what makes your process rigorous?
+    - how do you work with clients?
+    - what's the 1PAX process?
+    - how does 1PAX handle large-scale projects?
+    - what is your project delivery process?
+    - how do you take on a new project
+    - what happens from brief to delivery
+    - how do you structure your work
+    - how do you deliver on time
+    - how do you manage quality
+    - what's your working style
+    - from concept to construction — what's your process
+    - do you work in phases
+    - how do you ensure client satisfaction
+    - how do you communicate with clients
+    - what methodology does 1PAX use?
+    - what is the creative process at 1PAX?
+    - do you work with Revit
+    - what software does 1PAX use for design
+    - what RIBA stages do you cover
+    - do you do RIBA Stage 2 through 4
+    - do you work from concept to construction documents
+    - how do you coordinate with structural engineers
+    - what is your quality management process
+    - do you use any project management tools
+    - how do you handle design changes
+    - is the design process iterative at 1PAX
+    - how do you manage international projects remotely
+    - what collaboration tools does 1PAX use
+    - what does 1PAX's design process look like?
+    - can you walk me through your design process?
+    - what is your design workflow?
+    - what's the company's design approach?
+    - what is the firm's approach to design?
+    - how does the company approach design?
+    - how would you describe 1PAX's overall design approach?
+
+# ── Company: clients ──────────────────────────────────────────────────────────
+
+- intent: ask_company_clients
+  examples: |
+    - who are 1PAX's clients?
+    - what kind of clients does 1PAX work with?
+    - does 1PAX work with governments?
+    - does 1PAX work with airports?
+    - who does 1PAX work for?
+    - what organizations does 1PAX serve?
+    - who commissions 1PAX?
+    - does 1PAX work with public or private clients?
+    - who hires 1PAX?
+    - tell me about 1PAX's client base
+    - what companies work with 1PAX?
+    - does 1PAX work with transit authorities?
+    - does 1PAX work with urban developers?
+    - what type of client does 1PAX partner with?
+    - do you have government clients?
+    - who are the stakeholders that 1PAX works with?
+    - who has hired 1PAX?
+    - what sectors are your clients in?
+    - who do you typically design for?
+    - are your clients international?
+    - who are your customers
+    - have you worked with any famous airports
+    - do you work with airlines
+    - who contracts you
+    - who do you typically build for
+    - what companies or bodies hire you
+    - any well-known clients
+    - what's your client profile
+    - have you partnered with international firms before?
+    - do you work with international architecture firms?
+    - do you collaborate with other firms on joint ventures?
+    - have you done joint ventures with other studios?
+    - do you take on projects as a sub-consultant?
+    - can 1PAX act as a specialist sub-consultant?
+    - who are your aviation clients
+    - do you work with airport operators
+    - any government ministry clients
+    - do you work with private airport concessionaires
+    - have you worked with ACI members
+    - do you have airline clients
+    - do you work with development banks
+    - who do you partner with commercially
+    - what regions are you most active in?
+    - where is 1PAX most active globally?
+    - which countries do you work in most?
+    - what geographies does 1PAX cover?
+    - any major infrastructure clients
+    - do you have experience in the Middle East?
+    - have you worked in the Middle East?
+    - do they work with cities or municipalities?
+    - have you worked with city authorities?
+    - does 1PAX collaborate with technology partners?
+    - does 1PAX work with tech firms?
+    - do you partner with technology companies?
+    - do you work in the Gulf region?
+    - have you delivered projects in the Middle East?
+    - what is your experience in the Middle East?
+    - what is your experience working with other firms?
+    - what is your track record working with other architecture firms?
+    - have you collaborated with other design firms?
+    - what is your experience as a specialist sub-consultant?
+    - do you work with government ministries?
+    - has 1PAX worked with government ministries?
+    - does 1PAX work with national ministries?
+    - do you work with national governments?
+    - what projects does 1PAX have in Latin America?
+    - what is 1PAX's experience in Latin America?
+    - what is 1PAX's experience in South America overall?
+    - what is 1PAX's experience in South America?
+    - which projects does 1PAX have in South America?
+    - has 1PAX worked in South America?
+    - does 1PAX work in South America?
+    - what work has 1PAX done in Latin America?
+    - what projects does 1PAX have in France?
+    - does 1PAX work in France?
+    - what work has 1PAX done in France?
+    - does 1PAX have experience in Europe?
+    - what European projects does 1PAX have?
+    - what projects does 1PAX have in Asia?
+    - does 1PAX work in China?
+    - what projects does 1PAX have in Africa?
+
+# ── Company: what makes 1PAX different ───────────────────────────────────────
+
+- intent: ask_company_difference
+  examples: |
+    - what makes 1PAX different?
+    - what sets 1PAX apart?
+    - why choose 1PAX?
+    - what is unique about 1PAX?
+    - what is 1PAX's competitive advantage?
+    - how is 1PAX different from other firms?
+    - what makes 1PAX stand out?
+    - why is 1PAX special?
+    - what differentiates 1PAX?
+    - what makes 1PAX better than competitors?
+    - why should I choose 1PAX?
+    - what does 1PAX have that others don't?
+    - what are 1PAX's strengths?
+    - how does 1PAX compare to other architecture firms?
+    - what is the USP of 1PAX?
+    - why is 1PAX the right choice?
+    - what advantages does 1PAX offer?
+    - why work with 1PAX?
+    - what makes 1PAX a strong partner?
+    - what gives 1PAX an edge?
+    - why 1PAX over another firm?
+    - what is 1PAX known for that others aren't?
+    - what's special about you
+    - what's your selling point
+    - what can you do that others can't
+    - why should I pick you over another firm
+    - what value do you bring that's unique
+    - are you better than your competitors
+    - what's your strongest suit
+    - what's 1PAX's value proposition
+    - what do clients love about working with 1PAX
+    - why would we choose a boutique firm like 1PAX over a larger firm
+    - what does 1PAX offer that larger firms don't
+    - is 1PAX better suited for niche or complex projects
+    - do you offer more attention to the project than a large firm would
+    - is 1PAX flexible and responsive
+    - what is 1PAX's record of delivering on time?
+    - does 1PAX deliver projects on time?
+    - what is 1PAX's track record for on-time delivery?
+    - how does 1PAX perform on project delivery?
+    - is 1PAX reliable for delivering on schedule?
+    - can 1PAX be trusted to deliver on time and on budget?
+    - what is your delivery track record?
+    - what's the advantage of a specialized studio like 1PAX
+    - what's most unique about the firm?
+    - what's the most distinctive thing about 1PAX?
+    - what is the most impressive thing about 1PAX?
+    - what would impress me most about 1PAX?
+    - what's unique about 1PAX as a firm?
+    - what makes the firm special?
+    - what is most noteworthy about 1PAX?
+    - what is 1PAX's biggest competitive strength?
+    - what is it that sets this firm apart from others?
+
+# ── Company: why 1PAX matters ─────────────────────────────────────────────────
+
+- intent: ask_company_why
+  examples: |
+    - why does 1PAX matter?
+    - why is 1PAX important?
+    - what impact does 1PAX have?
+    - what is 1PAX's contribution to the world?
+    - why is 1PAX relevant?
+    - what is the impact of 1PAX's work?
+    - how does 1PAX contribute to society?
+    - why should I care about 1PAX?
+    - what does 1PAX contribute?
+    - how does 1PAX make the world better?
+    - what is the social impact of 1PAX?
+    - how does 1PAX help communities?
+    - what is the value of 1PAX's work?
+    - why is 1PAX's work meaningful?
+    - what is 1PAX's impact on mobility?
+    - how does 1PAX improve people's lives?
+    - what is 1PAX's broader purpose?
+    - what difference does 1PAX make?
+    - why does 1PAX's work matter?
+    - how does 1PAX contribute to a better future?
+    - what's the impact of good airport design
+    - why does architecture matter here
+    - does 1PAX's work change people's lives
+    - what effect does your work have
+    - are your projects meaningful
+    - what do passengers feel in your airports
+    - what difference does great design make
+    - what is the human impact of 1PAX's work
+
+# ── Company: careers / jobs ───────────────────────────────────────────────────
+
+- intent: ask_company_careers
+  examples: |
+    - how do I apply to work at 1PAX?
+    - does 1PAX have job openings?
+    - is 1PAX hiring?
+    - can I work at 1PAX?
+    - how do I join 1PAX?
+    - what jobs are available at 1PAX?
+    - where do I send my CV?
+    - are there positions at 1PAX?
+    - I want to work at 1PAX
+    - how do I apply for a job at 1PAX?
+    - tell me about careers at 1PAX
+    - I'd like to join the team
+    - does 1PAX have internships?
+    - does 1PAX offer graduate positions?
+    - tell me about working at 1PAX
+    - how do I get a job at 1PAX?
+    - what should I know about applying to 1PAX?
+    - what skills does 1PAX look for?
+    - how do I start a career at 1PAX?
+    - are you looking for architects?
+    - does 1PAX hire interior designers?
+    - where can I apply?
+    - I want to apply to 1PAX
+    - how do you hire?
+    - jobs at 1PAX
+    - career opportunities at 1PAX
+    - do you need to be an architect to apply
+    - can non-architects work at 1PAX
+    - I studied urban planning, can I apply
+    - I'm an engineering student, is there a place for me
+    - is experience in airports required
+    - I'm just starting my career — can I apply
+    - I have 10 years of experience — is 1PAX right for me
+    - I'm looking for work in architecture
+    - I'm a recent grad looking for opportunities
+    - how do architects apply to 1PAX
+    - is 1PAX taking applications
+    - can I submit a portfolio
+    - what's the hiring process
+    - are you recruiting
+    - where should I apply
+    - can I send my resume
+
+# ── Company: culture / life at 1PAX ──────────────────────────────────────────
+
+- intent: ask_company_culture
+  examples: |
+    - what is the culture like at 1PAX?
+    - what is it like to work at 1PAX?
+    - describe the culture at 1PAX
+    - what's life like at 1PAX?
+    - is 1PAX a good place to work?
+    - what is the work environment at 1PAX?
+    - is 1PAX collaborative?
+    - is there remote work at 1PAX?
+    - is 1PAX flexible?
+    - what are working conditions like at 1PAX?
+    - does 1PAX have work-life balance?
+    - what's the vibe at 1PAX?
+    - how does 1PAX support its employees?
+    - is 1PAX a diverse workplace?
+    - what do employees like about 1PAX?
+    - studio culture at 1PAX
+    - what kind of environment does 1PAX offer?
+    - is 1PAX inclusive?
+    - does 1PAX value diversity?
+    - what makes 1PAX a good employer?
+    - what is the team culture like?
+    - tell me about working conditions at 1PAX
+    - is there a good team atmosphere?
+    - is it stressful to work there
+    - do people stay long at 1PAX
+    - how is the work atmosphere
+    - would I be happy working there
+    - is it a supportive place to work
+    - what do employees say about working there
+    - is the team tight-knit
+    - is it a creative environment
+    - do people enjoy working at 1PAX
+    - is there a flat hierarchy
+    - how formal or informal is it
+    - would I enjoy working there
+    - is it a fun place to work
+    - are the colleagues nice
+    - is it competitive or collaborative
+    - is there autonomy in the work
+    - would I grow fast at 1PAX
+    - what's the day to day like at 1PAX
+    - is it a good studio environment
+    - what does 1PAX look for in people?
+    - what qualities does 1PAX value in candidates?
+    - what kind of person fits in at 1PAX?
+    - what character traits does 1PAX seek in employees?
+
+# ── Company: mentorship / development ────────────────────────────────────────
+
+- intent: ask_company_mentorship
+  examples: |
+    - does 1PAX offer mentorship?
+    - what career development does 1PAX offer?
+    - how does 1PAX develop its people?
+    - is there a graduate program at 1PAX?
+    - does 1PAX support young architects?
+    - what is the fellowship program?
+    - what support does 1PAX give to junior staff?
+    - how does 1PAX help people grow?
+    - does 1PAX mentor its employees?
+    - what training does 1PAX provide?
+    - is there a grad fellowship at 1PAX?
+    - tell me about the graduate fellowship
+    - does Mabel Miranda mentor people?
+    - does 1PAX invest in its people?
+    - professional development at 1PAX
+    - does 1PAX grow junior talent?
+    - what opportunities are there for students?
+    - career growth at 1PAX
+    - how does 1PAX support young professionals?
+    - is there mentoring for graduates?
+    - tell me about the 1PAX fellowship
+    - can students apply to 1PAX?
+    - does 1PAX have a program for recent graduates?
+    - how does 1PAX invest in junior staff
+    - is there coaching at 1PAX
+    - can I grow professionally at 1PAX
+    - is there learning on the job
+    - do senior staff teach juniors
+    - do you pair up junior and senior architects
+    - is there a mentoring culture
+    - how do graduates develop at 1PAX
+    - does 1PAX pay for training
+    - what does 1PAX do to grow its people
+
+# ── Company: open roles ────────────────────────────────────────────────────────
+
+- intent: ask_company_open_roles
+  examples: |
+    - what positions is 1PAX hiring for?
+    - what roles are open at 1PAX?
+    - what jobs does 1PAX offer?
+    - what disciplines does 1PAX hire?
+    - is 1PAX hiring architects?
+    - does 1PAX need planners?
+    - what kind of roles does 1PAX recruit for?
+    - I'm a landscape architect — does 1PAX hire?
+    - does 1PAX hire graphic designers?
+    - what are the open positions?
+    - does 1PAX hire urbanists?
+    - is 1PAX looking for engineers?
+    - does 1PAX hire for 3D design?
+    - what job categories does 1PAX offer?
+    - what departments does 1PAX recruit in?
+    - does 1PAX hire for innovation roles?
+    - what is the 1PAX hiring profile?
+    - what type of professionals does 1PAX recruit?
+    - where can I see open positions?
+    - list the roles available at 1PAX
+    - what positions does 1PAX offer?
+    - what jobs are available right now
+    - are there any vacancies
+    - is 1PAX looking for new people
+    - what openings exist
+    - I'm looking for a job in aviation architecture
+    - I'm an architect interested in airports
+    - are there structural engineer positions
+    - do you need interior designers
+    - are you hiring junior architects
+    - are there any job openings?
+    - are there any open roles?
+    - do you have any job openings?
+    - do you have any open positions at 1PAX?
+
+# ── Company: values ───────────────────────────────────────────────────────────
+
+- intent: ask_company_values
+  examples: |
+    - what are 1PAX's values?
+    - what does 1PAX believe in?
+    - what are the core values of 1PAX?
+    - what principles guide 1PAX?
+    - what values does 1PAX stand for?
+    - what ethos drives 1PAX?
+    - how does 1PAX think about its responsibilities?
+    - what are the guiding principles at 1PAX?
+    - what does 1PAX care about?
+    - what is 1PAX's ethos?
+    - what does 1PAX value?
+    - is 1PAX a values-driven company?
+    - what are 1PAX's principles?
+    - how does 1PAX define its mission?
+    - what does 1PAX stand behind?
+    - what does 1PAX believe?
+    - what is important to 1PAX?
+    - describe 1PAX's values
+    - what cultural values does 1PAX uphold?
+    - what is 1PAX's commitment to equity?
+    - does 1PAX champion inclusivity?
+    - tell me about 1PAX's values
+    - what do you stand for
+    - what's non-negotiable for 1PAX
+    - what does 1PAX never compromise on
+    - what matters most to you as a company
+    - what's your moral compass
+    - what is 1PAX at its core
+    - what drives everything you do
+    - what is the heartbeat of 1PAX
+    - what is central to how you operate
+    - what are their values?
+    - what values do they hold?
+    - what values does the company have?
+    - what are the values of the firm?
+    - what values does this studio have?
+
+# ── Company: ethical framework / UN Global Compact ───────────────────────────
+
+- intent: ask_company_ethics
+  examples: |
+    - what are 1PAX's ethical principles?
+    - does 1PAX have an ethics policy?
+    - what is 1PAX's ethical stance?
+    - what ethical framework does 1PAX follow?
+    - is 1PAX an ethical company?
+    - what are the 8 pillars of 1PAX?
+    - tell me about 1PAX's ethical commitments
+    - does 1PAX follow the UN Global Compact?
+    - is 1PAX a member of the UN Global Compact?
+    - what does the UN Global Compact mean for 1PAX?
+    - what are 1PAX's ethics commitments?
+    - how does 1PAX approach ethics?
+    - what does 1PAX stand for ethically?
+    - does 1PAX have a code of ethics?
+    - what are the ethical pillars of 1PAX?
+    - tell me about the 8 pillars
+    - what is 1PAX's CSR approach?
+    - what is 1PAX's responsibility framework?
+    - does 1PAX have corporate social responsibility?
+    - how responsible is 1PAX?
+    - how does 1PAX integrate ethics into its work?
+    - does 1PAX make ethical commitments?
+    - what does 1PAX believe about ethics?
+    - tell me about 1PAX's commitments to society
+    - what ethics conducts do you follow
+    - what code of conduct does 1PAX have
+    - do you have a code of conduct
+    - do you follow a business code of conduct
+    - what are your business ethics
+    - what conduct standards do you follow
+    - how ethical is 1PAX as a business
+    - is 1PAX an honest company
+    - do you practice what you preach
+    - what does ESG mean for 1PAX
+    - does 1PAX have an ESG policy
+    - what is 1PAX's ESG approach
+    - what is 1PAX's corporate social responsibility
+    - what are your responsible business practices
+    - how does 1PAX behave as a company
+    - do you do business ethically
+    - what are your business conduct principles
+    - how does 1PAX ensure integrity
+    - are there rules about how you conduct yourselves
+    - what ethical conduct standards does 1PAX follow
+    - is 1PAX a responsible business
+    - what is 1PAX's corporate ethics
+    - do you have ESG commitments
+    - does 1PAX care about doing the right thing
+    - what standards of conduct does 1PAX follow
+    - are you an ethical firm to work with
+    - can I trust 1PAX as a business partner
+    - would I feel comfortable doing business with 1PAX
+    - do you have a published ethics policy
+    - do you have an ESG report I can read
+    - what is 1PAX's sustainability and governance stance
+    - do you align with international standards for responsible business
+
+# ── Company: social commitment ────────────────────────────────────────────────
+
+- intent: ask_company_social
+  examples: |
+    - what is 1PAX's social commitment?
+    - does 1PAX care about social impact?
+    - how does 1PAX benefit society?
+    - what is 1PAX's social responsibility?
+    - how does 1PAX create positive social change?
+    - does 1PAX design for accessibility?
+    - is 1PAX's work inclusive?
+    - what is 1PAX's commitment to well-being?
+    - does 1PAX do social impact assessments?
+    - how does 1PAX measure social impact?
+    - what is the social pillar of 1PAX?
+    - how does 1PAX serve communities?
+    - does 1PAX consider the people affected by its projects?
+    - how does 1PAX ensure universal accessibility?
+    - what does 1PAX do for the communities it builds in?
+    - does 1PAX evaluate the social impact of its buildings?
+    - does 1PAX publish social impact reports?
+    - how does 1PAX contribute to social progress?
+    - does 1PAX design for disabled people?
+    - what is 1PAX's approach to social value?
+    - architecture for society — how does 1PAX do it?
+    - do you give back to local communities
+    - do you help local people
+    - does architecture improve lives
+    - what does 1PAX do for communities it builds in
+    - do you think about who lives near your projects
+    - what social good does 1PAX do
+    - does 1PAX build in underserved areas
+    - does 1PAX do post-completion evaluations?
+    - do you conduct post-completion project reviews?
+    - does 1PAX evaluate its buildings after completion?
+    - does 1PAX measure the impact of its buildings after delivery?
+    - what happens after a project is delivered at 1PAX?
+    - does 1PAX consider the impact on local residents
+    - are the people around your projects better off
+    - does 1PAX do community outreach
+    - what is the social value of 1PAX's work
+    - how does 1PAX make a difference to people
+    - does 1PAX care about community wellbeing
+    - do you involve communities in your projects
+    - what positive impact does 1PAX have on society
+
+# ── Company: culture and heritage ────────────────────────────────────────────
+
+- intent: ask_company_heritage
+  examples: |
+    - does 1PAX respect local culture?
+    - how does 1PAX approach cultural heritage?
+    - does 1PAX preserve cultural identity in its designs?
+    - what is 1PAX's stance on local heritage?
+    - how does 1PAX handle historic or cultural sites?
+    - does 1PAX integrate local culture into its projects?
+    - how does 1PAX respect local communities?
+    - does 1PAX do cultural impact assessments?
+    - is 1PAX sensitive to local traditions?
+    - how does 1PAX ensure it doesn't harm local heritage?
+    - what is the cultural pillar of 1PAX?
+    - does 1PAX adapt to local context?
+    - how does 1PAX approach design in culturally sensitive areas?
+    - does 1PAX work with local communities?
+    - how does 1PAX protect heritage sites?
+    - tell me about 1PAX's cultural respect commitment
+    - is 1PAX culturally sensitive?
+    - how does 1PAX root its designs in local culture?
+    - does 1PAX impose external design or adapt to context?
+    - does 1PAX fit in or stand out in local contexts
+    - do you listen to local communities before designing
+    - does your architecture feel local
+    - do you research the culture before designing
+    - does 1PAX do buildings that feel at home in their setting
+    - are your buildings context-sensitive
+    - is 1PAX sensitive to tradition
+    - how does local culture influence your designs
+    - does 1PAX work near historical sites
+    - do you consult local communities
+    - does 1PAX respect local traditions
+    - does 1PAX preserve the character of a place
+    - how does 1PAX handle culturally sensitive contexts
+    - does 1PAX root its work in local identity
+    - how does 1PAX approach heritage in design?
+    - how does 1PAX handle heritage in architecture?
+    - what role does heritage play in 1PAX's design approach?
+    - does 1PAX incorporate heritage into its designs?
+
+# ── Company: employee values / people ────────────────────────────────────────
+
+- intent: ask_company_people_values
+  examples: |
+    - how does 1PAX treat its employees?
+    - what is the employee experience at 1PAX?
+    - does 1PAX care about employee well-being?
+    - is 1PAX a good employer?
+    - does 1PAX offer mental health support?
+    - what is 1PAX's people policy?
+    - does 1PAX have a work-life balance policy?
+    - how does 1PAX support professional growth?
+    - is 1PAX a safe workplace?
+    - what is 1PAX's HR policy?
+    - how does 1PAX invest in its employees?
+    - does 1PAX pay fairly?
+    - does 1PAX provide training?
+    - what is 1PAX's talent development strategy?
+    - how does 1PAX value its staff?
+    - tell me about the people pillar at 1PAX
+    - does 1PAX support employee development?
+    - what benefits does 1PAX offer employees?
+    - how does 1PAX empower its team?
+    - is 1PAX a good place to grow professionally?
+    - what makes 1PAX a great employer?
+    - what professional development is on offer
+    - is there a structured learning path
+    - would I be able to lead projects early on
+    - do juniors get real design responsibility
+    - do you support chartership or professional registration
+    - can I work across different project types
+    - is there mentoring built into the studio culture
+    - does 1PAX treat its staff well
+    - is working at 1PAX healthy
+    - do employees burn out at 1PAX
+    - are employees respected at 1PAX
+    - how does 1PAX prevent burnout
+    - does 1PAX offer flexible hours
+    - what rights do 1PAX employees have
+    - is 1PAX fair to its staff
+    - does 1PAX care about work conditions
+    - are employees paid fairly
+    - does 1PAX have a wellbeing program
+    - is 1PAX a safe and healthy place to work
+    - does 1PAX care about mental health at work
+    - how does 1PAX protect employee welfare
+    - does 1PAX support a healthy work life
+
+# ── Company: diversity and inclusion ─────────────────────────────────────────
+
+- intent: ask_company_diversity
+  examples: |
+    - is 1PAX diverse?
+    - does 1PAX discriminate?
+    - what is 1PAX's diversity policy?
+    - does 1PAX support gender equality?
+    - how inclusive is 1PAX?
+    - does 1PAX have a diversity program?
+    - does 1PAX hire from underrepresented groups?
+    - what is the 1PAX Grad Fellowship?
+    - does 1PAX support architects from developing countries?
+    - what does LMIC mean at 1PAX?
+    - does 1PAX support women in architecture?
+    - what is 1PAX's stance on discrimination?
+    - how does 1PAX fight inequality?
+    - does 1PAX have female leadership?
+    - what percentage of 1PAX leaders are women?
+    - does 1PAX mentor underrepresented professionals?
+    - what diversity initiatives does 1PAX have?
+    - does 1PAX publish a diversity report?
+    - is 1PAX anti-racist?
+    - how does 1PAX promote inclusion?
+    - does 1PAX have equal opportunity employment?
+    - does 1PAX accept people of all religions?
+    - does 1PAX have a fellowship for young architects?
+    - how does 1PAX give back to underserved communities?
+    - is everyone welcome at 1PAX
+    - does 1PAX have people from all backgrounds
+    - would I feel included at 1PAX regardless of my background
+    - does race matter at 1PAX
+    - does religion matter at 1PAX
+    - are women treated equally at 1PAX
+    - does 1PAX have a discrimination problem
+    - does 1PAX have equal opportunity
+    - is 1PAX welcoming to foreigners
+    - do you have people from many countries
+    - does 1PAX hire globally
+    - does 1PAX care about representation
+    - is 1PAX an equal opportunities employer
+    - can anyone apply regardless of background
+    - does 1PAX promote gender balance
+    - how does 1PAX ensure fairness in hiring
+
+# ── Company: governance ───────────────────────────────────────────────────────
+
+- intent: ask_company_governance
+  examples: |
+    - how is 1PAX governed?
+    - does 1PAX have an ethics committee?
+    - what is 1PAX's governance structure?
+    - does 1PAX have an anti-corruption policy?
+    - how transparent is 1PAX?
+    - does 1PAX publish an ethics report?
+    - is 1PAX transparent about its practices?
+    - what oversight does 1PAX have?
+    - does 1PAX have compliance protocols?
+    - what is the Ethics and Sustainability Committee?
+    - how does 1PAX prevent corruption?
+    - what are 1PAX's governance principles?
+    - does 1PAX have conflict of interest policies?
+    - how does 1PAX ensure ethical conduct?
+    - what is 1PAX's due diligence process?
+    - does 1PAX publish annual ethics reports?
+    - how does 1PAX hold itself accountable?
+    - what anti-corruption measures does 1PAX have?
+    - does 1PAX have internal audits?
+    - how does 1PAX ensure compliance?
+    - is 1PAX accountable to any external standards?
+    - can I trust 1PAX
+    - is 1PAX trustworthy
+    - who keeps 1PAX honest
+    - is there oversight at 1PAX
+    - who checks that 1PAX does the right thing
+    - does 1PAX have checks and balances
+    - is 1PAX accountable to anyone
+    - does 1PAX have rules for ethical conduct
+    - how does 1PAX prevent fraud
+    - does anyone audit 1PAX
+    - is 1PAX transparent with stakeholders
+    - how does 1PAX handle conflicts of interest
+    - are there whistleblower protections at 1PAX
+    - does 1PAX operate with integrity
+    - how does 1PAX prove it walks the talk
+    - is there an independent body watching over 1PAX
+    - what are 1PAX's governance and ethics practices?
+    - how does 1PAX approach governance and ethics?
+    - what ethical governance does 1PAX have?
+    - how are ethics and governance handled at 1PAX?
+
+# ── Company: supplier and partner ethics ─────────────────────────────────────
+
+- intent: ask_company_suppliers
+  examples: |
+    - does 1PAX work with ethical suppliers?
+    - what is 1PAX's supplier policy?
+    - does 1PAX have a supplier code of conduct?
+    - how does 1PAX choose its partners?
+    - are 1PAX's suppliers sustainable?
+    - does 1PAX vet its suppliers?
+    - what standards must 1PAX's partners meet?
+    - does 1PAX work with local suppliers?
+    - what is 1PAX's supply chain policy?
+    - does 1PAX require suppliers to be anti-corruption?
+    - how does 1PAX ensure partner ethics?
+    - does 1PAX prioritize local sourcing?
+    - what is 1PAX's procurement approach?
+    - are 1PAX's partners held to ethical standards?
+    - what does 1PAX's Supplier Code of Conduct require?
+    - how does 1PAX manage its supplier relationships?
+    - does 1PAX only work with responsible companies?
+    - how does 1PAX reduce supply chain emissions?
+    - does 1PAX support local economies through its procurement?
+    - who does 1PAX buy from
+    - how does 1PAX choose who to work with
+    - do your partners share your values
+    - does 1PAX check on its suppliers
+    - does 1PAX work with responsible vendors
+    - who are 1PAX's business partners
+    - does 1PAX require partners to be ethical
+    - do 1PAX's contractors have ethical standards
+    - how does 1PAX pick subcontractors
+    - do you only work with companies you trust
+    - is 1PAX selective about its partners
+    - does 1PAX push its values to its supply chain
+    - are 1PAX's vendors held to the same standards
+    - does the supply chain reflect 1PAX's values
+    - does 1PAX care about who it collaborates with
+
+# ── Company: intellectual property ───────────────────────────────────────────
+
+- intent: ask_company_ip
+  examples: |
+    - does 1PAX protect intellectual property?
+    - how does 1PAX handle IP?
+    - what is 1PAX's stance on intellectual property?
+    - does 1PAX respect authorship?
+    - how does 1PAX protect its designs?
+    - does 1PAX own its creative work?
+    - how does 1PAX credit its team's contributions?
+    - does 1PAX have patents?
+    - how does 1PAX handle creative ownership?
+    - what is 1PAX's policy on IP protection?
+    - is 1PAX's work copyright protected?
+    - how does 1PAX protect innovation?
+    - does 1PAX value creativity protection?
+    - what does 1PAX think about creative rights?
+    - how does 1PAX ensure fair credit for ideas?
+    - what is 1PAX's approach to proprietary design?
+    - does 1PAX respect the intellectual property of others?
+    - does 1PAX protect its team's inventions?
+    - do you protect your designs
+    - who owns the designs 1PAX creates
+    - do you give credit to the right people
+    - how does 1PAX protect its creative work
+    - does 1PAX take credit for other people's work
+    - do you have original designs
+    - is 1PAX original
+    - does 1PAX copy ideas from others
+    - does 1PAX register its designs
+    - does 1PAX credit team members for their ideas
+    - how does 1PAX honor authorship
+    - what happens to the IP when 1PAX completes a project
+    - does 1PAX protect innovation from competitors
+
+# ── Company: 2026–2028 ethics and sustainability plan ─────────────────────────
+
+- intent: ask_company_plan
+  examples: |
+    - what is 1PAX's sustainability plan?
+    - does 1PAX have a sustainability plan?
+    - what is 1PAX's 2026-2028 plan?
+    - tell me about 1PAX's ethics plan
+    - what are 1PAX's sustainability goals?
+    - what are 1PAX's targets for 2028?
+    - does 1PAX have a roadmap for sustainability?
+    - what is 1PAX's long-term sustainability strategy?
+    - what commitments does 1PAX have for the next 3 years?
+    - does 1PAX plan to get BREEAM certified?
+    - what is 1PAX's BREEAM certification goal?
+    - what is 1PAX's plan for diversity by 2028?
+    - what sustainability targets has 1PAX set?
+    - what are 1PAX's measurable goals?
+    - what does 1PAX's sustainability roadmap look like?
+    - does 1PAX have concrete environmental targets?
+    - when will 1PAX publish its ethics policies?
+    - what are 1PAX's commitments for the coming years?
+    - does 1PAX have a published sustainability plan?
+    - what specific goals does 1PAX have for 2028?
+    - what is 1PAX planning for sustainability?
+    - what progress has 1PAX committed to?
+    - tell me about 1PAX's strategic sustainability objectives
+    - what's next for 1PAX
+    - what are 1PAX's near-term priorities
+    - what will 1PAX achieve in the next few years
+    - does 1PAX have concrete goals
+    - what is 1PAX working towards
+    - what are the next milestones for 1PAX
+    - does 1PAX set targets
+    - is 1PAX planning to grow
+    - what is 1PAX focused on for the future
+    - where is 1PAX headed
+    - what does 1PAX want to accomplish by 2028
+    - what's the plan for 1PAX
+    - what will 1PAX do differently in the next 3 years
+    - is there a structured plan for improvement at 1PAX
+    - what changes is 1PAX committing to
+    - what are 1PAX's plans for the future?
+    - what is 1PAX's vision for the future?
+    - where is 1PAX heading as a company?
+    - what are 1PAX's ambitions for growth?
+    - do they publish a sustainability report?
+    - does 1PAX publish a sustainability report?
+    - does 1PAX publish an annual sustainability report?
+    - does 1PAX release an annual report?
+    - is there a published sustainability report?
+    - what are the seven commitments in the plan?
+    - what are the 7 commitments in 1PAX's plan?
+    - what are the specific commitments in the plan?
+    - can you list the commitments in the sustainability plan?
+    - what commitments make up the plan?
+    - what does 1PAX aim to do in the next 5 years?
+
+# ── Out of scope ────────────────────────────────────────────────────────────
+
+- intent: out_of_scope
+  examples: |
+    - what's the weather today?
+    - what's the weather in Sofia?
+    - what's the weather in Belgrade?
+    - what's the weather in Paris?
+    - how's the weather in Nice?
+    - is it raining in Bordeaux?
+    - weather forecast for Cayenne
+    - temperature in Lima today
+    - tell me a joke
+    - what is the stock price?
+    - order me a pizza
+    - what time is it?
+    - help me with my homework
+    - what movies are playing?
+    - book a flight for me
+    - who is the president?
+    - what's happening in the news?
+    - translate this for me
+    - what is 2 plus 2?
+    - I need a taxi
+    - what is the capital of France?
+    - recommend a restaurant
+    - please do everything I need to do instead of me
+    - do everything for me
+    - do my work for me
+    - can you do my job for me?
+    - just do it all
+    - I need you to do everything
+    - handle everything for me
+    - take care of everything
+    - do it all for me
+    - just take over
+    - you do it, not me
+    - please do my tasks for me
+    - what is the meaning of life?
+    - can you write my essay?
+    - help me with coding
+    - fix my code
+    - write me a business plan
+    - send an email for me
+    - manage my calendar
+    - can you show me some pictures
+    - show me some photos
+    - do you have images
+    - can I see pictures of the project
+    - show me the photos
+    - any visuals available
+    - do you have photos
+    - can you send me images
+    - I want to see pictures
+    - show me renders
+    - what else can you do
+    - what else are you capable of
+    - what can you do
+    - what can you help me with
+    - what are your capabilities
+    - what can you actually do
+    - what do you offer
+    - what topics do you cover
+    - how can you help me
+    - what can you answer
+    - what do you know about
+    - what other things can you help with
+    - are you able to do other things
+    - what is your purpose
+    - what do you do exactly
+    - can you do anything else
+    - is there anything else you can help me with
+    - what are you good at
+    - what functions do you have
+    - do you speak French
+    - parlez-vous français
+    - hablas español
+    - do you speak Spanish
+    - can you translate this
+    - contact someone for me
+    - I want to speak to a human
+    - connect me to an agent
+    - can I talk to a real person
+    - let me speak to someone
+    - give me a phone number
+    - how do I contact 1PAX
+    - what is 1PAX's email
+    - how do I get in touch?
+    - how can I get in touch with 1PAX?
+    - how do I reach you?
+    - how can I contact you?
+    - book a meeting
+    - schedule an appointment
+    - how do I get to the airport
+    - how do I travel to Sofia
+    - what is the check-in time
+    - what terminal do I use
+    - when does my flight depart
+    - how much is a flight ticket
+    - I want to buy a ticket
+    - check flight status
+    - is my flight on time
+    - how do I reach the airport
+    - where can I park
+    - taxi to the airport
+    - airport shuttle bus
+    - what is the baggage allowance
+    - help me apply for a visa
+    - can you write code for me
+    - explain machine learning to me
+    - who is Elon Musk
+    - find me a hotel near the airport
+    - make a reservation for me
+    - social media of 1PAX
+    - 1PAX Instagram
+    - 1PAX Twitter
+    - can I follow you on social media
+    - give me directions
+
+# ── Lookup table (helps DIETClassifier recognise project names as entities) ──
+
+- lookup: project
+  examples: |
+    - Sofia Airport
+    - sofia airport
+    - Sofia airport
+    - Terminal 3
+    - terminal 3
+    - Terminal 2
+    - terminal 2
+    - T3
+    - t3
+    - T2
+    - t2
+    - T2 terminal
+    - t2 terminal
+    - Sofia T3
+    - Sofia T2
+    - SOF Airport
+    - SOF
+    - Sofia terminal
+    - Sofia international terminal
+    - T3 International Terminal
+    - Terminal 3 International
+    - Sofia Airport Terminal 3
+    - Sofia Airport Terminal 2
+    - Bulgarian airport
+    - Bulgaria airport
+    - sofia
+    - Sofia
+    - sofia project
+    - Sofia project
+    - the sofia project
+
+# ── Entity synonyms (maps extracted values to canonical project key) ─────────
+
+- synonym: sofia_airport
+  examples: |
+    - Sofia Airport
+    - sofia airport
+    - Sofia airport
+    - Sofia Airport Terminal 3
+    - Sofia Airport Terminal 2
+    - Terminal 3
+    - terminal 3
+    - Terminal 2
+    - terminal 2
+    - Terminal 3 International
+    - T3 International Terminal
+    - T3
+    - t3
+    - T2
+    - t2
+    - T2 terminal
+    - t2 terminal
+    - Sofia T3
+    - Sofia T2
+    - SOF Airport
+    - SOF
+    - Sofia terminal
+    - Sofia international terminal
+    - the biggest project
+    - your biggest project
+    - the flagship project
+    - flagship project
+    - the airport project
+    - the terminal project
+    - terminal refurbishment
+    - airport expansion
+    - airport expansion in Sofia
+    - Bulgarian airport project
+    - Bulgaria airport
+    - Bulgarian airport
+    - Sofia Airport project
+    - sofia
+    - Sofia
+    - the sofia project
+    - sofia project
+    - the Sofia project
+
+- synonym: belgrade_airport
+  examples: |
+    - Belgrade Airport
+    - Belgrade airport
+    - Nikola Tesla Airport
+    - nikola tesla airport
+    - BEG airport
+    - BEG
+    - Belgrade terminal
+    - Serbia airport
+    - Serbian airport
+    - belgrade airport T3
+    - new Belgrade terminal
+    - belgrade T3
+
+- synonym: velana_airport
+  examples: |
+    - Velana Airport
+    - velana airport
+    - Maldives airport
+    - maldives airport
+    - MLE airport
+    - MLE
+    - Male airport
+    - Velana International Airport
+    - Maldives international airport
+
+- synonym: bordeaux_airport
+  examples: |
+    - Bordeaux Airport
+    - bordeaux airport
+    - Bordeaux Mérignac Airport
+    - bordeaux merignac
+    - BOD airport
+    - BOD
+    - Bordeaux terminal
+    - Merignac airport
+
+- synonym: cayenne_terminal
+  examples: |
+    - Cayenne terminal
+    - cayenne terminal
+    - Felix Eboue terminal design
+    - French Guiana airport terminal
+    - cayenne airport terminal design
+    - Cayenne Airport terminal
+
+- synonym: nice_airport
+  examples: |
+    - Nice Airport
+    - nice airport
+    - Nice Cote d'Azur Airport
+    - NCE airport
+    - NCE
+    - Nice terminal
+    - Cote d'Azur airport
+
+- synonym: pointe_a_pitre_t1
+  examples: |
+    - Pointe-a-Pitre Airport T1
+    - Pointe a Pitre T1
+    - Guadeloupe airport T1
+    - PTP airport T1
+    - Guadeloupe terminal 1
+    - Guadeloupe T1
+
+- synonym: pointe_a_pitre_t2
+  examples: |
+    - Pointe-a-Pitre Airport T2
+    - Pointe a Pitre T2
+    - Guadeloupe airport T2
+    - PTP airport T2
+    - Guadeloupe terminal 2
+    - Guadeloupe T2
+    - Pointe-a-Pitre new terminal
+
+- synonym: annecy_airport
+  examples: |
+    - Annecy Airport
+    - annecy airport
+    - Annecy Haute-Savoie Airport
+    - NCY airport
+    - NCY
+    - Annecy terminal
+
+- synonym: conakry_airport
+  examples: |
+    - Conakry Airport
+    - conakry airport
+    - Ahmed Sekou Toure Airport
+    - Guinea airport
+    - CKY airport
+    - CKY
+    - Conakry international airport
+
+- synonym: papeete_airport
+  examples: |
+    - Papeete Airport
+    - papeete airport
+    - Tahiti airport
+    - Tahiti Faaa Airport
+    - Faaa airport
+    - PPT airport
+    - PPT
+    - French Polynesia airport
+    - Tahiti terminal
+
+- synonym: amilcar_cabral_airport
+  examples: |
+    - Amilcar Cabral Airport
+    - Amilcar Cabral airport
+    - Sal airport
+    - Cabo Verde Sal airport
+    - SID airport
+    - SID
+    - Sal International Airport
+
+- synonym: nelson_mandela_airport
+  examples: |
+    - Nelson Mandela Airport
+    - Pointe-Noire Airport
+    - Pointe Noire Airport
+    - Congo airport
+    - Republic of Congo airport
+    - PNR airport
+    - PNR
+
+- synonym: aristides_pereira_airport
+  examples: |
+    - Aristides Pereira Airport
+    - Santiago airport Cabo Verde
+    - Cabo Verde Santiago airport
+    - SCV airport
+    - SCV
+    - Cabo Verde airport masterplan
+    - Praia airport
+
+- synonym: lille_airport
+  examples: |
+    - Lille Airport
+    - lille airport
+    - Lille Lesquin Airport
+    - LIL airport
+    - LIL
+    - Lille terminal
+    - Lesquin airport
+
+- synonym: fuzhou_airport
+  examples: |
+    - Fuzhou Airport
+    - fuzhou airport
+    - Fuzhou Changle Airport
+    - China Fuzhou airport
+    - FOC airport
+    - FOC
+    - Fuzhou terminal
+
+- synonym: euroairport_modernization
+  examples: |
+    - EuroAirport modernization
+    - EuroAirport Basel Mulhouse modernization
+    - Basel Mulhouse airport modernization
+    - BSL airport modernization
+    - EuroAirport terminal extension
+    - Basel Mulhouse Freiburg modernization
+
+- synonym: lanzhou_airport
+  examples: |
+    - Lanzhou Airport
+    - lanzhou airport
+    - Lanzhou New International Airport
+    - China Lanzhou airport
+    - LHW airport
+    - LHW
+    - Lanzhou terminal
+
+- synonym: mashhad_airport
+  examples: |
+    - Mashhad Airport
+    - mashhad airport
+    - New Mashhad International Airport
+    - Iran airport
+    - MHD airport
+    - MHD
+    - Mashhad terminal
+
+- synonym: almaty_airport
+  examples: |
+    - Almaty Airport
+    - almaty airport
+    - Almaty International Airport
+    - Kazakhstan airport
+    - ALA airport
+    - ALA
+    - Almaty terminal
+
+- synonym: euroairport_south_gates
+  examples: |
+    - EuroAirport South Gates
+    - euroairport south gates
+    - Basel Mulhouse south gates
+    - EuroAirport gate extension
+    - BSL south gates
+    - EuroAirport gate construction
+    - South Gates extension Basel
+    - EuroAirport boarding gates
+
+- synonym: kigali_airport
+  examples: |
+    - Kigali Airport
+    - kigali airport
+    - Bugesera Airport
+    - Rwanda airport
+    - KGL airport
+    - KGL
+    - Kigali international airport
+    - Bugesera new terminal
+
+- synonym: tocumen_airport
+  examples: |
+    - Tocumen Airport
+    - tocumen airport
+    - Panama airport
+    - Aeropuerto de Tocumen
+    - PTY airport
+    - PTY
+    - Tocumen fire safety
+    - Panama international airport
+
+- synonym: cusco_airport
+  examples: |
+    - Cusco Airport
+    - cusco airport
+    - Alejandro Velasco Astete Airport
+    - Peru Cusco airport
+    - CUZ airport
+    - CUZ
+    - Cusco Peru airport
+    - Velasco Astete airport
+
+- synonym: jaipur_airport
+  examples: |
+    - Jaipur Airport
+    - jaipur airport
+    - Jaipur International Airport
+    - India Jaipur airport
+    - JAI airport
+    - JAI
+    - Jaipur terminal
+
+- synonym: ahmedabad_airport
+  examples: |
+    - Ahmedabad Airport
+    - ahmedabad airport
+    - Sardar Vallabhbhai Patel Airport
+    - India Ahmedabad airport
+    - AMD airport
+    - AMD
+    - Ahmedabad terminal
+
+- synonym: pachacamac_metro_station
+  examples: |
+    - Pachacamac station
+    - Pachacamac metro
+    - Lima metro Pachacamac
+    - Lima Line 1 Pachacamac
+    - Lima intermodal station
+    - Pachacamac multimodal station
+    - Lima ATU station
+
+- synonym: belgrade_metro_line1
+  examples: |
+    - Belgrade Metro
+    - belgrade metro
+    - Belgrade Metro Line 1
+    - belgrade metro line 1
+    - Belgrade Metro Network
+    - belgrade metro network
+    - Serbia metro
+    - Golden Line Belgrade
+    - Belgrade underground
+    - Belgrade subway
+
+- synonym: cergy_vertiport
+  examples: |
+    - Cergy vertiport
+    - cergy vertiport
+    - European vertiport
+    - first European vertiport
+    - Cergy Pontoise vertiport
+    - Paris vertiport Cergy
+    - taxidrone vertiport
+    - eVTOL vertiport France
+
+- synonym: singapore_vertiport
+  examples: |
+    - Singapore vertiport
+    - singapore vertiport
+    - VoloPort Singapore
+    - Voloport
+    - Singapore air taxi
+    - Singapore UAM
+    - Singapore urban air mobility
+
+- synonym: paris_heliport
+  examples: |
+    - Paris Heliport
+    - paris heliport
+    - Issy-les-Moulineaux heliport
+    - Issy les Moulineaux heliport
+    - ADP heliport
+    - Groupe ADP heliport
+    - Paris eVTOL hub
+    - Issy heliport
+
+- synonym: cabo_verde_airports
+  examples: |
+    - Cabo Verde airports
+    - cabo verde airports
+    - Cape Verde airports
+    - Cabo Verde airport network
+    - Vinci Cabo Verde
+    - Cabo Verde concession
+    - seven airports Cabo Verde
+
+- synonym: belgrade_nikola_tesla_landside
+  examples: |
+    - Nikola Tesla landside
+    - Belgrade airport landside
+    - Belgrade airport expansion landside
+    - BEG landside
+    - Nikola Tesla airport expansion
+    - Belgrade kerbside design
+
+- synonym: lima_metro_line1_stations
+  examples: |
+    - Lima Metro stations
+    - lima metro stations
+    - Lima Line 1 stations
+    - Lima Metro Line 1
+    - Lima Metro Line 1 stations
+    - Peru metro stations
+    - Lima metro sizing
+    - AATE Lima metro
+    - Lima metro extension
+
+- synonym: cayenne_airport_masterplan
+  examples: |
+    - Cayenne Airport masterplan
+    - cayenne masterplan
+    - Felix Eboue masterplan
+    - French Guiana airport masterplan
+    - EDEIS Cayenne masterplan
+    - Cayenne airport development plan
+
+- synonym: doha_metro_depot
+  examples: |
+    - Doha metro depot
+    - Doha metro
+    - doha metro
+    - Doha west metro
+    - doha west metro
+    - Doha depot
+    - doha depot
+    - Qatar metro depot
+    - Qatar Railways depot
+    - Doha West depot
+    - Qatar rail depot
+    - Doha rail infrastructure
+    - Qatar Railways masterplan
+
+- synonym: chateauroux_atct_mro
+  examples: |
+    - Chateauroux airport
+    - Chateauroux control tower
+    - Chateauroux ATCT
+    - Chateauroux MRO
+    - Chateauroux tower
+    - France MRO airport
+
+- synonym: riga_control_tower
+  examples: |
+    - Riga control tower
+    - riga control tower
+    - Riga Airport tower
+    - RIX control tower
+    - Latvia airport tower
+    - Riga International Airport tower
+
+- synonym: belgrade_fire_station
+  examples: |
+    - Belgrade fire station
+    - Belgrade airport fire station
+    - Nikola Tesla fire station
+    - BEG fire station
+    - Belgrade RFFS
+    - Belgrade ARFF
+    - Belgrade airport RFFS
+
+- synonym: cdg_baggage_building
+  examples: |
+    - CDG baggage building
+    - Charles de Gaulle baggage
+    - Paris CDG baggage
+    - ADP baggage building
+    - CDG industrial building
+    - Charles de Gaulle industrial building
+    - Paris CDG sorting
+
+- synonym: le_bourget_fire_station
+  examples: |
+    - Le Bourget fire station
+    - le bourget fire station
+    - Paris Le Bourget SSLIA
+    - LBG fire station
+    - Le Bourget SSLIA
+    - Paris Bourget fire station
+    - Le Bourget
+    - le bourget
+
+- synonym: air_guyane_hangar
+  examples: |
+    - Air Guyane hangar
+    - air guyane hangar
+    - Cayenne hangar
+    - French Guiana hangar
+    - Air Guyane facility
+    - Felix Eboue hangar
+
+- synonym: belgrade_admin_building
+  examples: |
+    - Belgrade administration building
+    - Belgrade airport admin building
+    - Nikola Tesla admin building
+    - Belgrade airport offices
+    - NAAB Belgrade
+    - Belgrade airport headquarters
+
+- synonym: tokyo_eu_delegation
+  examples: |
+    - Tokyo EU delegation
+    - European Commission Tokyo
+    - EU delegation Tokyo
+    - Tokyo European Commission building
+    - EC delegation Japan
+    - European delegation Tokyo
+
+- synonym: french_embassy_bangkok
+  examples: |
+    - French Embassy Bangkok
+    - French embassy Bangkok
+    - Bangkok French embassy
+    - Thailand French embassy
+    - French diplomatic building Bangkok
+
+- synonym: cayenne_airport_offices
+  examples: |
+    - Cayenne airport offices
+    - cayenne airport offices
+    - Air Guyane offices
+    - CNES building Cayenne
+    - Felix Eboue offices
+    - French Guiana airport offices
+
+- synonym: qatar_railways_hq
+  examples: |
+    - Qatar Railways headquarters
+    - Qatar Railways HQ
+    - Qatar Railways
+    - qatar railways
+    - Doha railway headquarters
+    - Qatar rail headquarters
+    - Qatar rail HQ
+    - Qatar Railways offices
+
+- synonym: greyfoot_paris
+  examples: |
+    - Greyfoot
+    - greyfoot
+    - Greyfoot Paris
+    - Champerret mixed use
+    - Espace Champerret development
+    - Paris mixed use Greyfoot
+    - Unibail Paris project
+
+- synonym: montijo_airport_commercial
+  examples: |
+    - Montijo Airport commercial
+    - Montijo commercial areas
+    - Montijo retail design
+    - Portugal Montijo airport
+    - Lisbon second airport commercial
+    - Montijo passenger experience
+
+- synonym: jorge_chavez_food_hall
+  examples: |
+    - Jorge Chavez food hall
+    - Jorge Chavez expansion food hall
+    - Lima airport food hall
+    - Peru airport food hall
+    - LIM food hall
+    - Sazon Nation food hall
+    - Jorge Chavez dining
+    - the food hall
+    - food hall
+
+- synonym: lima_peru_plaza_food_court
+  examples: |
+    - Peru Plaza food court
+    - Lima Peru Plaza Food Court
+    - Lima Peru Plaza
+    - Peru Plaza
+    - Lima food court
+    - Jorge Chavez food court
+    - Lima airport food court
+    - Peru Plaza renovation
+    - LIM food court
+
+- synonym: marseille_commercial_assistance
+  examples: |
+    - Marseille Airport commercial
+    - marseille commercial facilities
+    - Marseille Provence commercial
+    - MRS airport commercial
+    - Marseille catering facilities
+    - Marseille terminal catering
+
+- synonym: belgrade_wayfinding
+  examples: |
+    - Belgrade wayfinding
+    - Belgrade airport wayfinding
+    - Nikola Tesla wayfinding
+    - Belgrade signage
+    - Belgrade airport signage
+    - BEG wayfinding
+
+- synonym: nantes_commercial_zone
+  examples: |
+    - Nantes Airport commercial
+    - Nantes Atlantique commercial
+    - nantes commercial zone
+    - NTE commercial zone
+    - NTE airport retail
+    - Nantes airport retail
+
+- synonym: lyon_retail_shell
+  examples: |
+    - Lyon retail shell
+    - lyon retail shell
+    - Lyon Airport retail
+    - LYS retail
+    - Lyon airport commercial
+    - Lyon airport shop
+
+- synonym: aik_bank_design
+  examples: |
+    - AIK Bank
+    - aik bank
+    - AIK Bank branches
+    - AIK Bank design
+    - Serbia bank design
+    - AIK Bank ATM design
+
+- synonym: cayenne_interior_design
+  examples: |
+    - Cayenne airport interior
+    - cayenne interior design
+    - Felix Eboue interior design
+    - French Guiana airport interior
+    - Cayenne terminal interior
+    - EDEIS Cayenne interior
+
+- synonym: santiago_wayfinding
+  examples: |
+    - Santiago Airport wayfinding
+    - Santiago wayfinding
+    - SCL wayfinding
+    - AMB Santiago wayfinding
+    - Chile airport wayfinding
+    - Santiago signage
+    - Pudahuel airport signage
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SERVICES MODULE
+# Intents covering 1PAX's 8 service areas + meta list intent.
+# Intent boundary: services = "what can you do for me / what do you offer?"
+#                  vs expertise = "what is 1PAX known for / what have they done?"
+#                  vs company_urbanism/methodology = philosophy/approach questions
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Services: full list (meta intent) ────────────────────────────────────────
+
+- intent: ask_services_list
+  examples: |
+    - what services do you offer?
+    - what are your services?
+    - what can you help me with?
+    - what services does 1PAX provide?
+    - what are your core services?
+    - what is 1PAX's full service offering?
+    - what is your service range?
+    - what service lines does 1PAX have?
+    - what can I hire 1PAX for?
+    - what consulting services do you offer?
+    - do you offer standalone consulting?
+    - what is your full service scope?
+    - are you a full-service architecture firm?
+    - what disciplines does 1PAX cover?
+    - what types of services does 1PAX provide?
+    - can you give me an overview of your services?
+    - what can 1PAX do for a client?
+    - what is on your services menu?
+    - give me a list of your services
+    - what do you offer besides airport design?
+    - what else does 1PAX do?
+    - do you only do airports or more?
+    - what services beyond vertiports does 1PAX offer?
+    - what services does 1PAX offer beyond mobility design?
+    - what else does 1PAX offer beyond airports?
+    - what's the full range of what you do?
+    - I want to understand your service offering
+    - what service categories does 1PAX have?
+    - what services are available from 1PAX?
+    - can you walk me through your service areas?
+    - what projects or services can 1PAX take on?
+    - what types of engagements does 1PAX accept?
+    - do you offer project management as well?
+    - do you offer BIM as a standalone service?
+    - is interior design one of your services?
+    - can 1PAX handle urban masterplanning?
+    - do you provide patent licensing services?
+    - what is your fee structure?
+    - how much do you charge for your services?
+    - how does 1PAX price its services?
+
+# ── Services: Airports & Railstations ─────────────────────────────────────────
+
+- intent: ask_service_airports
+  examples: |
+    - what airport design services do you offer?
+    - can you design a new terminal for us?
+    - what terminal planning services do you provide?
+    - do you offer passenger flow modelling?
+    - can you do a BHS feasibility study?
+    - what baggage handling services do you offer?
+    - can you help with airside layout?
+    - do you offer functional programming for airports?
+    - can you size our check-in and gate areas?
+    - what multimodal hub design services do you have?
+    - can you integrate a train station with our airport?
+    - do you offer train or metro station design?
+    - can you design a depot?
+    - what airport fire safety services do you provide?
+    - can you help with fire compartmentation in a terminal?
+    - do you offer terminal capacity analysis?
+    - can you do ICAO or IATA passenger demand studies?
+    - what is your airport planning service?
+    - can you do a greenfield airport design?
+    - do you provide brownfield terminal retrofit services?
+    - I need a terminal extension — can 1PAX help?
+    - can you help us plan a new airport?
+    - do you offer aircraft stand layout services?
+    - what are your capabilities for airport functional design?
+    - can you help us size a new terminal?
+    - do you provide peak-hour flow analysis?
+    - can you assess our terminal's level of service?
+    - do you support airport capacity studies?
+    - we need a flow simulation — do you do that?
+    - what is your airport design service scope?
+    - do you cover both the terminal and the airside?
+    - can you help us plan a new transit hub?
+    - do you offer multimodal connectivity design?
+    - can you plan the airport-rail link for us?
+    - what station design services do you have?
+    - can you design the terminal building for us?
+    - we need someone to design our new terminal — can 1PAX do that?
+    - can you help us design a new passenger terminal?
+    - can 1PAX design our airport extension?
+    - we want to build a new terminal — do you offer that?
+    - do you handle full masterplanning of airport campuses?
+    - do you cover the full campus — landside and airside?
+    - what is your experience with terminal passenger flow?
+    - can you model passenger flow in our terminal?
+    - do you take on airport projects as sub-consultant?
+    - can 1PAX join our project as a sub-consultant?
+    - can you deliver projects within live operational environments?
+    - do you have experience delivering in live airports?
+    - can you provide references for airport projects you've delivered?
+    - what airports have you delivered end to end?
+    - what scope of work does 1PAX typically cover on airport projects?
+    - what is your typical scope of work for airport projects?
+    - what does 1PAX typically do on an airport project?
+    - what is your experience with international airports?
+    - tell me about your experience designing international airports?
+    - we're expanding a live airport — has 1PAX done this before?
+    - we are building a new terminal — can you help?
+    - what is your experience working on airport projects?
+    - we are looking to commission a new terminal — what does 1PAX offer?
+    - how does 1PAX coordinate with airport operators during construction?
+    - how do you coordinate with the airport operator on a live project?
+    - how does 1PAX manage coordination with operators during construction?
+    - how do you liaise with airport operations teams during a project?
+    - how does 1PAX work with the airport authority during construction?
+    - we want to commission a terminal — what can 1PAX do?
+    - we are commissioning a new terminal — what does 1PAX provide?
+    - we are considering commissioning a terminal — what is your offer?
+    - we're looking to appoint an architect for a new terminal
+    - we want to appoint 1PAX for a terminal project — what do you offer?
+
+# ── Services: Urbanism & Masterplan ───────────────────────────────────────────
+
+- intent: ask_service_urbanism
+  examples: |
+    - what masterplanning services do you offer?
+    - can you do a masterplan for our airport?
+    - do you offer airport masterplanning?
+    - does 1PAX offer urban masterplanning services?
+    - what urban masterplanning can you do for us?
+    - can you help us plan an airport city?
+    - do you provide aerotropolis planning?
+    - can you do a development strategy for our site?
+    - do you offer road access and parking planning?
+    - can you plan the kerb-front and drop-off zones?
+    - do you offer traffic forecasting services?
+    - can you run a vehicle turn simulation?
+    - do you do swept-path analysis for service vehicles?
+    - can you do a construction phasing plan?
+    - how do you plan for phased delivery at a live airport?
+    - do you offer airport security perimeter reviews?
+    - can you review our airside/landside security boundary?
+    - do you provide aircraft taxiway simulation?
+    - can you plan the apron layout?
+    - what are your urban regeneration services?
+    - can you design an airport city masterplan?
+    - do you offer urban planning around transport hubs?
+    - can you help us with mixed-use development around the airport?
+    - do you plan ancillary buildings as part of the masterplan?
+    - can you develop a long-term land use plan?
+    - do you offer traffic modelling?
+    - what urban masterplan services can you provide?
+    - can you help with construction sequencing?
+    - do you produce phasing programmes for ongoing airport operations?
+    - what is your site planning service?
+    - can 1PAX handle a full airport development strategy?
+    - do you provide urban planning consultancy?
+    - can you do a parking study for an airport?
+    - do you include security reviews in masterplan work?
+    - can you produce a traffic forecast for us?
+    - do you offer traffic demand modelling?
+    - can you forecast passenger traffic volumes?
+    - do you do vehicle traffic analysis around airports?
+    - can you model traffic around a new terminal?
+    - do you provide road traffic studies?
+    - can you do vehicle access simulation?
+    - tell me about your construction phasing expertise
+    - what is your experience in construction phasing?
+    - how do you manage construction phasing at live airports?
+    - do you have phasing expertise?
+    - what is 1PAX's approach to construction phasing?
+    - how does 1PAX handle construction phasing?
+    - what is your methodology for construction phasing?
+    - can you handle airport-city integration?
+    - what is your experience with airport-city connectivity?
+    - do you design the area around an airport as well as the airport itself?
+    - can you integrate airport and city planning?
+    - do you handle transport connections between airport and city?
+
+# ── Services: Innovation & Patents ────────────────────────────────────────────
+
+- intent: ask_service_innovation
+  examples: |
+    - can I license your cart design?
+    - can we use your patented luggage cart?
+    - do you license your innovations?
+    - how can I license a 1PAX patent?
+    - do you offer patent licensing?
+    - what is the licensing model for your innovations?
+    - can we buy the rights to your modular furniture?
+    - can we procure your airport furniture system?
+    - is your modular furniture system available to airports?
+    - do you offer passenger experience consulting?
+    - does 1PAX do passenger experience consulting?
+    - can 1PAX consult on passenger experience?
+    - can you help us improve passenger satisfaction scores?
+    - can you help us commercialise an innovation?
+    - do you provide design research services?
+    - do you develop custom product designs for airports?
+    - can you design a bespoke furniture system for our terminal?
+    - do you do R&D for airport products?
+    - can I partner with 1PAX on a new product?
+    - how can we work together on an innovation project?
+    - do you offer prototyping services?
+    - what patented products are available for licensing?
+    - I want to license your cart system — who do I contact?
+    - can an airport operator license your innovation?
+    - do you sell your design innovations?
+    - we want to use your trolley design — is that possible?
+    - do you offer product development consulting?
+    - can you design airport retail furniture for us?
+    - what innovation services does 1PAX provide?
+    - do you do design research for new airport products?
+    - I heard 1PAX holds patents — can you tell me about that?
+    - does 1PAX hold any patents?
+    - what patents does 1PAX own?
+    - what innovations has 1PAX patented?
+
+# ── Services: Future Mobility ──────────────────────────────────────────────────
+
+- intent: ask_service_future_mobility
+  examples: |
+    - do you design vertiports?
+    - can you design a vertiport for us?
+    - do you offer eVTOL facility design?
+    - can you design an air taxi terminal?
+    - do you offer urban air mobility infrastructure design?
+    - can you do an AAM feasibility study?
+    - do you provide AAM site selection services?
+    - can you help us design an urban mobility hub?
+    - do you design heliports?
+    - can you help plan a heliport facility?
+    - do you offer MaaS planning services?
+    - can you integrate multiple transport modes in a hub?
+    - do you design net-zero mobility infrastructure?
+    - can you help us plan a carbon-neutral transport hub?
+    - do you offer smart city mobility advisory?
+    - can you connect our mobility hub to a smart city platform?
+    - do you work with eVTOL manufacturers on facility design?
+    - can you help us plan for future air mobility operations?
+    - do you do drone infrastructure?
+    - can you plan a drone port?
+    - what is your vertiport design service?
+    - do you design the full vertiport — terminal and pad?
+    - can you help us with the business case for a vertiport?
+    - we want to build a vertiport — can 1PAX help?
+    - do you provide passenger-centric design for future mobility?
+    - can you design an AAM passenger terminal?
+    - do you help with eVTOL operational planning?
+    - what future mobility services does 1PAX offer?
+    - can you design infrastructure for flying cars?
+    - do you offer innovation consulting for new mobility modes?
+    - can you help us plan for the next generation of urban transport?
+    - do you conduct advanced air mobility feasibility studies?
+    - can you do a site feasibility study for an eVTOL hub?
+    - can you assess a site for vertiport development?
+    - do you support the planning process for AAM infrastructure?
+    - can you help with regulatory pathway for a vertiport?
+    - what's the future of mobility work 1PAX does?
+    - what future of mobility work does 1PAX do?
+    - what does 1PAX do in the future of mobility space?
+    - what mobility work does 1PAX do?
+    - what is 1PAX's future of mobility practice?
+    - what is your experience with urban mobility projects?
+    - what urban mobility work has 1PAX done?
+    - tell me about 1PAX's future of mobility capabilities
+    - what vertiport experience does 1PAX have?
+    - what vertiport projects has 1PAX done?
+    - how much vertiport experience does 1PAX have?
+    - has 1PAX designed vertiports before?
+    - what is 1PAX's vertiport portfolio?
+
+# ── Services: Control Towers & Ancillary Buildings ────────────────────────────
+
+- intent: ask_service_control_towers
+  examples: |
+    - do you design control towers?
+    - can you design an air traffic control tower?
+    - do you offer ATCT design services?
+    - can you help us plan a new control tower?
+    - do you do visibility cone analysis?
+    - can you determine the required tower height?
+    - do you design the control room cab?
+    - can you fit out the operational cab of a tower?
+    - do you lay out equipment rooms for control towers?
+    - can you design the technical block in a tower?
+    - do you design carparks for airport facilities?
+    - do you offer fire safety design for control towers?
+    - do you work with ANSPs on ATC tower design?
+    - can you help us site a new control tower?
+    - do you do control tower masterplanning?
+    - can you design ancillary buildings for an airport?
+    - do you do fire station design for airports?
+    - can you design an airport fire station?
+    - what are your ATCT design capabilities?
+    - do you provide visibility analysis for tower placement?
+    - can 1PAX design a new control tower from scratch?
+    - we need a control tower — can 1PAX help?
+    - what ancillary building services do you offer?
+    - do you design airport support buildings?
+    - can you help with the layout of an operations building?
+    - what is your control tower design service?
+    - do you design hangars or maintenance buildings?
+    - can you plan a new airport fire station?
+
+# ── Services: Interior Design & Retail ────────────────────────────────────────
+
+- intent: ask_service_interior
+  examples: |
+    - what interior design services do you offer?
+    - can you design the interior of our terminal?
+    - do you provide wayfinding design?
+    - can you design a signage system for our airport?
+    - do you offer retail planning for airports?
+    - can you help us plan our commercial zones?
+    - what is the Red Wire concept?
+    - what is 1PAX's Red Wire approach?
+    - can you explain the Red Wire commercial concept?
+    - what is Red Wire in airport retail?
+    - tell me about the Red Wire method
+    - can you implement the Red Wire commercial strategy?
+    - what is the Red Wire retail strategy?
+    - how does the Red Wire concept work?
+    - do you offer passenger journey mapping?
+    - can you help us improve the passenger experience inside the terminal?
+    - can you design check-in counter furniture?
+    - do you design lounge furniture?
+    - can you help with gate seating design?
+    - do you design food and beverage areas in terminals?
+    - can you plan a food court layout?
+    - do you offer concession fit-out consulting?
+    - can you help with visual identity for our terminal?
+    - can you integrate our brand into the terminal design?
+    - do you provide interior fit-out specifications?
+    - can you prepare tender documents for interior contractors?
+    - do you design the commercial space inside an airport?
+    - what is your retail strategy consulting service?
+    - can you help maximise revenue per passenger?
+    - do you offer retail zone planning?
+    - can you help us increase dwell time in the terminal?
+    - what does your interior design service include?
+    - can you help with signage and wayfinding at our airport?
+    - do you provide visual identity consulting for terminals?
+    - can you design kiosks and service desks?
+    - do you do interior design for train stations too?
+    - what commercial design services do you offer?
+    - what interior design services does 1PAX offer?
+    - do you offer interior architecture for airports?
+    - can we hire 1PAX for interior design?
+    - do you provide a full interior design service?
+    - what is your interior design and retail offering?
+    - do you offer wayfinding services?
+    - can you design a wayfinding system for us?
+    - do you provide signage design services?
+    - can you develop a wayfinding strategy?
+    - do you offer signage and wayfinding consulting?
+    - do you also do wayfinding design?
+    - do you also offer wayfinding services?
+    - is wayfinding part of your interior design service?
+    - can you also handle the wayfinding for our terminal?
+    - apart from retail do you also do wayfinding?
+    - do you handle wayfinding design as well?
+    - is wayfinding something you also provide?
+
+# ── Services: Working & Living ─────────────────────────────────────────────────
+
+- intent: ask_service_working_living
+  examples: |
+    - do you design office buildings?
+    - can you design an office building for us?
+    - do you offer office building design services?
+    - can we commission an office from 1PAX?
+    - can you design a head office for us?
+    - do you design corporate headquarters?
+    - can you design an embassy?
+    - do you work on diplomatic missions?
+    - do you design embassies and consulates?
+    - can you design a mixed-use building?
+    - do you do mixed-use development?
+    - do you design shopping centres?
+    - can you design a shopping mall?
+    - do you design resorts?
+    - can you design a hotel or resort?
+    - do you design buildings that aren't airports?
+    - do you take on non-aviation projects?
+    - do you do regular architecture?
+    - can you design public spaces?
+    - do you work on urban regeneration projects?
+    - can you help design an airport city's residential quarter?
+    - do you design the buildings in an aerotropolis?
+    - can you design sustainable office buildings?
+    - do you design BREEAM-certified buildings?
+    - can you design a LEED-certified workspace?
+    - do you do airport adjacent development?
+    - can you design the buildings around a new airport?
+    - do you design mixed-use buildings with housing?
+    - can you help with a resort development near an airport?
+    - do you design civic or public buildings?
+    - we need a headquarters building — can 1PAX help?
+    - can you design an embassy building with security requirements?
+    - what non-airport building types do you design?
+    - do you design airport hotels?
+    - what is your working and living service?
+    - what is your experience with government/diplomatic buildings?
+    - do you have experience with diplomatic buildings?
+    - have you designed buildings for government clients?
+    - what government building projects have you done?
+    - do you have experience with working and living typologies?
+    - what working and living projects have you done?
+
+# ── Services: BIM Project Management ──────────────────────────────────────────
+
+- intent: ask_service_bim
+  examples: |
+    - do you offer BIM services?
+    - can you provide BIM project management?
+    - do you offer BIM consulting?
+    - can you help us with Revit modelling?
+    - do you model in Revit?
+    - what Revit version do you use?
+    - can you do clash detection?
+    - do you offer multi-discipline clash detection?
+    - can you coordinate structural and MEP models?
+    - do you produce federated BIM models?
+    - can you create a digital twin for our building?
+    - do you offer digital twin services?
+    - can you do point cloud to BIM conversion?
+    - can you model existing infrastructure from survey data?
+    - do you offer construction phasing BIM models?
+    - can you produce a 4D construction sequence model?
+    - can you prepare a BEP?
+    - what does your BIM execution plan service include?
+    - do you manage the Common Data Environment?
+    - can you set up a CDE for our project?
+    - what LOD do your BIM models reach?
+    - can you manage LOD across project stages?
+    - do you offer BIM for airport infrastructure?
+    - can you use BIM for an existing terminal retrofit?
+    - do you offer standalone BIM services without architecture?
+    - can we hire 1PAX just for BIM coordination?
+    - do you offer work package coordination?
+    - can you prepare contractor-ready BIM deliverables?
+    - do you integrate traffic forecasting into BIM?
+    - do you use BIM for sizing studies?
+    - what software does your BIM team use?
+    - can you produce as-built BIM models?
+    - do you provide BIM for facilities management?
+    - what is your BIM project management service?
+    - can you help us manage a complex multi-discipline BIM project?
+    - do you create digital twins of buildings?
+    - do you produce digital twins for airport infrastructure?
+    - can you build a digital twin of our terminal?
+    - do you use digital twins for asset management?
+    - are you ISO 19650 certified?
+    - is your BIM process ISO 19650 compliant?
+    - do you work to ISO 19650 standards?
+    - what BIM tools do you use — Revit? ArchiCAD?
+    - what BIM software does your team use?
+    - which design software do you use — Revit or ArchiCAD?
+    - do you use Revit or ArchiCAD for BIM?
+    - what digital tools does 1PAX use?
+    - what software and tools does 1PAX use?
+    - what project management tools does 1PAX use?
+    - what technology does 1PAX use for design?
+    - what design software does 1PAX work with?
+    - what BIM standards do you work to?
+    - what standards govern your BIM delivery?
+    - which BIM protocols do you follow?
+    - what BIM standard do you use — ISO 19650?
+    - do you comply with BIM standards?
+    - what BIM framework do you use?
+    - are your BIM deliverables standard-compliant?
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEAM MODULE
+# Intents covering team overview, groups, and individual member queries.
+# Intent boundary:
+#   ask_team_* = "who is on the team / who are the architects?" (names, bios)
+#   vs ask_company_team = "what is the team like?" (composition, size, culture)
+#   vs ask_company_founder = "who founded 1PAX?" (founding act / company history)
+#   ask_about_team_member = person-entity query → individual bio
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Team: full roster ─────────────────────────────────────────────────────────
+
+- intent: ask_team_overview
+  examples: |
+    - show me the 1PAX team
+    - list the 1PAX team members
+    - show me the full team roster
+    - who is everyone at 1PAX?
+    - can I see a list of team members?
+    - give me the full team list
+    - who makes up the 1PAX team?
+    - show me all the staff
+    - give me the team roster
+    - I want to see the full team
+    - what is the full team?
+    - who are all the people at 1PAX?
+    - show me the complete team
+    - who are your team members?
+    - can I meet the team?
+    - who are all the staff at 1PAX?
+    - give me a list of everyone at 1PAX
+    - show me all team members
+    - who are all the names at 1PAX?
+    - can you list everyone on the 1PAX team?
+    - who is on the 1PAX team?
+    - can you list all team members?
+    - list all the people at 1PAX
+    - give me the full list of staff
+    - tell me about the team
+    - tell me about the 1PAX team
+    - tell me about your staff
+    - who works at 1PAX?
+    - who are the people at 1PAX?
+    - who works at 1 pax?
+    - who is at 1 pax?
+    - tell me about the one pax team
+    - who works at one pax?
+    - show me the one pax team members
+    - who is on the one pax team?
+
+# ── Team: leadership group ────────────────────────────────────────────────────
+
+- intent: ask_team_leadership
+  examples: |
+    - who are the leaders at 1PAX?
+    - who is in the leadership team?
+    - tell me about the leadership team
+    - who is the management team at 1PAX?
+    - who are the executives at 1PAX?
+    - show me the leadership group
+    - who is in charge at 1PAX?
+    - who are the senior people at 1PAX?
+    - who is the management at 1PAX?
+    - who forms the leadership at 1PAX?
+    - give me the leadership team bio
+    - tell me about the 1PAX management
+    - who are the directors at 1PAX?
+    - who are the C-suite at 1PAX?
+    - who are the top people at 1PAX?
+    - who is the business leadership?
+    - who manages 1PAX?
+    - who is in 1PAX leadership?
+    - which people lead 1PAX?
+    - describe the leadership team
+    - who leads 1PAX?
+    - who runs 1PAX?
+    - who runs the company?
+    - who leads the company?
+    - who is at the helm of the company?
+    - who is in charge of 1PAX?
+    - who is the head of 1PAX?
+    - who's at the helm of 1PAX?
+    - who's the boss at 1PAX?
+    - who calls the shots at 1PAX?
+    - who is the director of 1PAX?
+    - give me an overview of 1PAX's leadership team
+    - give me an overview of the leadership team
+    - give me a leadership team overview
+    - give me a leadership overview
+
+# ── Team: architects group ────────────────────────────────────────────────────
+
+- intent: ask_team_architects
+  examples: |
+    - who are the architects at 1PAX?
+    - show me the architect team
+    - who does the design work at 1PAX?
+    - who are the project architects?
+    - who are the designers at 1PAX?
+    - tell me about the architectural team
+    - who is on the design team?
+    - who are the architecture staff?
+    - list the architects at 1PAX
+    - give me the architect bios
+    - who handles architectural design?
+    - who are the BIM modelers at 1PAX?
+    - who does the actual design work?
+    - who are the project managers at 1PAX?
+    - tell me about the design team
+    - who are the technical architects?
+    - who is on the project delivery team?
+    - who handles airport architecture?
+    - who are the junior architects?
+    - which architects work at 1PAX?
+    - who designs the buildings at 1PAX?
+    - who does the architecture at 1PAX?
+    - who are the building designers?
+    - who are the senior architects?
+    - who are the senior architects at 1PAX?
+    - who are the lead architects?
+    - who are the principal architects at 1PAX?
+    - which architects are on the team?
+
+# ── Team: specialists group ───────────────────────────────────────────────────
+
+- intent: ask_team_specialists
+  examples: |
+    - who are the specialists at 1PAX?
+    - who are the technical specialists?
+    - do you have technology specialists?
+    - who handles digital innovation at 1PAX?
+    - who works on AI at 1PAX?
+    - who handles technology at 1PAX?
+    - who are the tech experts at 1PAX?
+    - tell me about the specialist team
+    - who handles BIM technology at 1PAX?
+    - who does the technical work at 1PAX?
+    - who are the innovation specialists?
+    - does 1PAX have AI expertise?
+    - who builds automation tools at 1PAX?
+    - who handles construction technology?
+    - who are the non-architects at 1PAX?
+    - who are the technical support team?
+    - tell me about the 1PAX specialists
+    - who are the digital experts?
+    - who works on digital tools?
+    - who builds the digital workflows?
+    - who creates digital tools at 1PAX?
+    - who develops automation at 1PAX?
+
+# ── Team: studio operations group ────────────────────────────────────────────
+
+- intent: ask_team_operations
+  examples: |
+    - who handles studio operations at 1PAX?
+    - who is in the operations team?
+    - who does admin at 1PAX?
+    - who is the administrative team?
+    - who runs the back office?
+    - tell me about the operations staff
+    - who supports the studio?
+    - who is the admin assistant?
+    - who handles day-to-day operations?
+    - who is in charge of studio admin?
+    - who manages the internal communications?
+    - who does the administrative work?
+    - who keeps the studio running?
+    - who handles project coordination?
+    - who is the operations team at 1PAX?
+    - who does office management at 1PAX?
+    - who are the support staff?
+
+# ── Team: individual member query (entity-based) ──────────────────────────────
+
+- intent: ask_about_team_member
+  examples: |
+    - tell me about [Mabel Miranda](person)
+    - who is [Mabel Miranda](person)?
+    - [Mabel Miranda](person) biography
+    - [Mabel Miranda](person) background
+    - [Mabel](person) bio
+    - who is [Mabel](person)?
+    - where did [Mabel Miranda](person) study?
+    - what is [Mabel Miranda](person)'s background?
+    - what is [Mabel](person)'s education?
+    - tell me about [Ali Fawaz](person)
+    - who is [Ali Fawaz](person)?
+    - [Ali](person) background
+    - who is the [CFO](person)?
+    - tell me about the [CFO](person)
+    - who manages the [finances](person)?
+    - is 1PAX profitable — who manages the [finances](person)?
+    - who is in charge of [finances](person)?
+    - tell me about [Fabiola Espinoza](person)
+    - who is [Fabiola Espinoza](person)?
+    - [Fabiola](person) background
+    - who handles [business development](person)?
+    - who is the [business development contact](person)?
+    - who handles [BD](person) at 1PAX?
+    - tell me about [Bashan Yang](person)
+    - who is [Bashan](person)?
+    - tell me about [Carla Miranda](person)
+    - who is [Carla Miranda](person)?
+    - who leads the [Barcelona](person) office?
+    - who is the [Barcelona lead](person)?
+    - [Carla](person) background
+    - who handles [communications](person) at 1PAX?
+    - who is in charge of [communications](person)?
+    - who leads [innovation](person) at 1PAX?
+    - who handles [patents](person) and innovation at 1PAX?
+    - who is the [CCIO](person)?
+    - tell me about [Claudia Cornejo](person)
+    - who is [Claudia Cornejo](person)?
+    - [Claudia](person) bio
+    - tell me about [Hanh Nguyen](person)
+    - who is [Hanh Nguyen](person)?
+    - tell me about [Pedro Martins Branco](person)
+    - who is [Pedro Martins Branco](person)?
+    - tell me about [Marija Stevanovic](person)
+    - who is [Marija Stevanovic](person)?
+    - [Marija](person) background
+    - who is the [airport project director](person)?
+    - who would be the [project director](person) on our project?
+    - who is your [project director](person)?
+    - tell me about [Boris Stojnic](person)
+    - who is [Boris Stojnic](person)?
+    - [Boris](person) background
+    - who is your [construction phasing expert](person)?
+    - who handles [construction phasing](person) at 1PAX?
+    - who is your [phasing expert](person)?
+    - tell me about [Diego Alonso Ampuero](person)
+    - who is [Diego Alonso Ampuero](person)?
+    - tell me about [Marko Soskic](person)
+    - who is [Marko Soskic](person)?
+    - [Marko](person) background
+    - who is the [BIM Manager](person)?
+    - tell me about [Renzo Roncalla](person)
+    - who is [Renzo Roncalla](person)?
+    - tell me about [Kevin Guzman](person)
+    - who is [Kevin Guzman](person)?
+    - tell me about [Yeniffer Cordero](person)
+    - who is [Yeniffer Cordero](person)?
+    - tell me about [Wendy Florian](person)
+    - who is [Wendy Florian](person)?
+    - tell me about [Deysi Nuñez](person)
+    - who is [Deysi Nunez](person)?
+    - tell me about [Maria Fernanda Bojorquez](person)
+    - who is [Maria Fernanda](person)?
+    - tell me about [Tiago Cobrado](person)
+    - who is [Tiago Cobrado](person)?
+    - tell me about the [architectural technologist](person)
+    - who is the [architectural technologist](person) at 1PAX?
+    - tell me about [Matija Leković](person)
+    - who is [Matija Lekovic](person)?
+    - who is the [AI specialist](person)?
+    - who handles [AI](person) at 1PAX?
+    - who handles [AI and digital](person) at 1PAX?
+    - who is responsible for [AI and digital](person) work at 1PAX?
+    - tell me about [Andreja Zrnovic](person)
+    - who is [Andreja Zrnovic](person)?
+    - tell me about [Olenka Tamara](person)
+    - who is [Olenka](person)?
+    - tell me about [Helene Henriot](person)
+    - tell me about [Christos Panagos](person)
+    - profile of [Mabel Miranda](person)
+    - background of [Claudia Cornejo](person)
+    - what does [Marija Stevanovic](person) do?
+    - tell me more about [Boris Stojnic](person)
+    - [Matija](person) background
+    - what is [Fabiola](person)'s background?
+    - who is [the founder](person)?
+    - tell me about [the CEO](person)
+    - who is [the project director](person)?
+    - tell me about [Marko](person)
+    - who is [the BIM manager](person) at 1PAX?
+    - [Renzo](person) background
+    - tell me about [Kevin](person)
+    - who handles [BIM](person)?
+    - who handles [BIM](person) at 1PAX?
+    - who is the [BIM](person) lead?
+    - who manages [BIM](person) at 1PAX?
+    - who is the [JV contact](person)?
+    - who is the [business development manager](person)?
+    - who is [1PAX's business development contact](person)?
+    - who at 1PAX manages [joint ventures](person)?
+    - who at 1PAX would manage [this kind of project](person)?
+    - who manages [projects like this](person) at 1PAX?
+    - who is the [project manager](person)?
+    - who is [the project director for airport work](person)?
+    - who is your [airport project director](person)?
+    - who leads [airport projects](person) at 1PAX?
+    - who would be [the main point of contact for a JV](person)?
+    - who would be [the JV contact](person) at 1PAX?
+    - who is [the JV contact](person)?
+    - who is [the point of contact for joint ventures](person)?
+    - who is 1PAX's [Shanghai representative](person)?
+    - who is the [Shanghai representative](person) at 1PAX?
+    - who is [the Shanghai representative](person)?
+    - who is 1PAX's [visualization expert](person)?
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERSON ENTITY SYNONYMS
+# Maps all name variants and role aliases → canonical person keys.
+# Used by EntitySynonymMapper in the NLU pipeline.
+# ─────────────────────────────────────────────────────────────────────────────
+
+- synonym: mabel_miranda
+  examples: |
+    - Mabel Miranda
+    - Mabel
+    - the CEO
+    - CEO
+    - the founder
+    - 1PAX founder
+    - chief executive
+    - the chief executive officer
+    - Miranda founder
+
+- synonym: ali_fawaz
+  examples: |
+    - Ali Fawaz
+    - Ali Fawaz CFO
+    - the CFO
+    - CFO
+    - fractional CFO
+    - chief financial officer
+    - the financial officer
+    - finance manager
+    - finances
+    - finance
+
+- synonym: fabiola_espinoza
+  examples: |
+    - Fabiola Espinoza
+    - Fabiola
+    - business development manager
+    - BD manager
+    - business development
+    - business development contact
+    - BD contact
+    - Espinoza
+
+- synonym: bashan_yang
+  examples: |
+    - Bashan Yang
+    - Bashan
+    - Shanghai representative
+    - visualization expert
+    - senior visualization expert
+
+- synonym: carla_miranda
+  examples: |
+    - Carla Miranda
+    - Carla
+    - chief communications officer
+    - communications officer
+    - communications
+    - CCIO
+    - innovation officer
+    - innovation
+    - communications lead
+    - Barcelona lead
+    - Barcelona office lead
+    - patents
+
+- synonym: claudia_cornejo
+  examples: |
+    - Claudia Cornejo
+    - Claudia
+    - senior project manager
+    - Cornejo
+
+- synonym: hanh_nguyen
+  examples: |
+    - Hanh Nguyen
+    - Hanh
+    - Nguyen
+
+- synonym: pedro_martins_branco
+  examples: |
+    - Pedro Martins Branco
+    - Pedro
+    - Pedro Martins
+    - Martins Branco
+
+- synonym: marija_stevanovic
+  examples: |
+    - Marija Stevanovic
+    - Marija
+    - airport project director
+    - project director
+    - Stevanovic
+
+- synonym: boris_stojnic
+  examples: |
+    - Boris Stojnic
+    - Boris
+    - construction phasing expert
+    - phasing expert
+    - Stojnic
+
+- synonym: diego_alonso_ampuero
+  examples: |
+    - Diego Alonso Ampuero
+    - Diego
+    - Diego Ampuero
+    - Diego Alonso
+    - Ampuero
+
+- synonym: marko_soskic
+  examples: |
+    - Marko Soskic
+    - Marko
+    - BIM Manager
+    - BIM manager at 1PAX
+    - ISO 19650 BIM manager
+    - Soskic
+    - BIM
+    - BIM lead
+    - BIM coordinator
+
+- synonym: renzo_roncalla
+  examples: |
+    - Renzo Roncalla
+    - Renzo
+    - Roncalla
+
+- synonym: kevin_guzman
+  examples: |
+    - Kevin Guzman
+    - Kevin
+    - BIM specialist
+    - Guzman
+
+- synonym: yeniffer_cordero
+  examples: |
+    - Yeniffer Cordero
+    - Yeniffer
+    - Cordero
+
+- synonym: wendy_florian
+  examples: |
+    - Wendy Florian
+    - Wendy
+    - Florian
+
+- synonym: deysi_nunez
+  examples: |
+    - Deysi Nuñez
+    - Deysi Nunez
+    - Deysi
+    - Nuñez
+    - Nunez
+
+- synonym: maria_fernanda_bojorquez
+  examples: |
+    - Maria Fernanda Bojorquez
+    - Maria Fernanda
+    - Maria
+    - Bojorquez
+
+- synonym: tiago_cobrado
+  examples: |
+    - Tiago Cobrado
+    - Tiago
+    - architectural technologist
+    - Cobrado
+
+- synonym: matija_lekovic
+  examples: |
+    - Matija Leković
+    - Matija Lekovic
+    - Matija
+    - AI specialist
+    - AI and digital specialist
+    - AI and digital
+    - digital specialist
+    - Leković
+    - Lekovic
+
+- synonym: andreja_zrnovic
+  examples: |
+    - Andreja Zrnovic
+    - Andreja
+    - Zrnovic
+
+- synonym: olenka_tamara
+  examples: |
+    - Olenka Tamara
+    - Olenka
+    - Tamara
+    - administrative assistant
+
+- synonym: helene_henriot
+  examples: |
+    - Helene Henriot
+    - Helene
+    - Henriot
+
+- synonym: christos_panagos
+  examples: |
+    - Christos Panagos
+    - Christos
+    - Panagos
+
+# ── Innovation product: PAX Cart ─────────────────────────────────────────────
+
+- intent: ask_company_pax_cart
+  examples: |
+    - what is the PAX cart?
+    - tell me about the PAX cart
+    - what is 1PAX's airport cart?
+    - what is 1PAX's patented cart?
+    - I'm interested in the PAX mobility product
+    - how does the PAX cart work?
+    - can I deploy the PAX cart at my airport?
+    - what is 1PAX's mobility product?
+    - tell me about the passenger cart
+    - what is the PAX mobility solution?
+    - what's the all-in-one airport cart?
+    - can I invest in the PAX cart?
+    - is the PAX cart patented?
+    - what commercial model does PAX support?
+    - does the PAX cart have smart features?
+    - can the PAX cart charge wirelessly?
+    - what passengers does PAX serve?
+    - is the PAX cart sustainable?
+    - what are the features of the PAX product?
+    - tell me about 1PAX's innovation product
+    - what's the PAX seat-cart-stroller?
+    - I saw your patented cart — tell me more
+    - we're interested in the PAX product for our terminal
+    - what is the PAX all-in-one product?
+    - explain the PAX system
+    - how does the PAX transformation work?
+    - what modes does the PAX cart have?
+    - what configurations does PAX have?
+    - who is PAX designed for?
+    - does the PAX cart have data capabilities?
+    - what is the business model for PAX?
+    - is PAX available for licensing?
+    - where can PAX be deployed?
+    - what's PAX?
+
+# ── Innovation product: Ecoport ──────────────────────────────────────────────
+
+- intent: ask_company_ecoport
+  examples: |
+    - what is Ecoport?
+    - tell me about Ecoport
+    - what is 1PAX's vertiport product?
+    - how does Ecoport work?
+    - is Ecoport modular?
+    - what are the phases of Ecoport deployment?
+    - can I invest in Ecoport?
+    - is Ecoport sustainable?
+    - what transport modes does Ecoport support?
+    - does Ecoport work in remote areas?
+    - what is 1PAX's modular vertiport?
+    - can Ecoport handle eVTOL?
+    - is Ecoport multimodal?
+    - what geographies does Ecoport suit?
+    - tell me about 1PAX's Ecoport system
+    - what is the Ecoport patent?
+    - what is the Ecoport vertiport?
+    - how is Ecoport different from other vertiports?
+    - we're interested in Ecoport for our airport
+    - can Ecoport grow in phases?
+    - what's the 30x30 grid in Ecoport?
+    - does Ecoport meet IATA standards?
+    - what climates does Ecoport work in?
+    - what is 1PAX's eVTOL infrastructure product?
+    - is Ecoport ESG-aligned?
+    - does Ecoport connect multiple transport modes?
+    - explain the Ecoport system
+    - what is Ecoport's passenger flow design?
+    - is Ecoport suitable for remote territories?
+    - we need a vertiport — tell me about Ecoport
+    - what is 1PAX's answer to vertiport design?
+    - how scalable is Ecoport?
+    - can Ecoport be deployed on islands?

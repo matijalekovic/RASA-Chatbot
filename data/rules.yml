@@ -1,0 +1,398 @@
+version: "3.1"
+
+rules:
+
+# ── Core conversation ────────────────────────────────────────────────────────
+
+- rule: Greet the user
+  steps:
+    - intent: greet
+    - action: utter_greet
+
+- rule: Say goodbye
+  steps:
+    - intent: goodbye
+    - action: utter_goodbye
+
+- rule: Respond to bot challenge
+  steps:
+    - intent: bot_challenge
+    - action: utter_iamabot
+
+- rule: Handle out of scope questions
+  steps:
+    - intent: out_of_scope
+    - action: action_handle_out_of_scope
+
+- rule: NLU fallback
+  steps:
+    - intent: nlu_fallback
+    - action: action_handle_out_of_scope
+
+# ── Project discovery ────────────────────────────────────────────────────────
+
+- rule: List all projects
+  steps:
+    - intent: ask_projects_list
+    - action: action_list_projects
+
+- rule: List projects by category
+  steps:
+    - intent: ask_project_category
+    - action: action_list_projects
+
+# ── Project detail intents — ALL routed via rule (reliable, no TEDPolicy) ───
+# The action itself handles "which project?" when no entity/slot context exists.
+
+- rule: Handle ask about project
+  steps:
+    - intent: ask_about_project
+    - action: action_answer_project_query
+
+- rule: Handle project overview
+  steps:
+    - intent: ask_project_overview
+    - action: action_answer_project_query
+
+- rule: Handle project location
+  steps:
+    - intent: ask_project_location
+    - action: action_answer_project_query
+
+- rule: Handle project year
+  steps:
+    - intent: ask_project_year
+    - action: action_answer_project_query
+
+- rule: Handle project client
+  steps:
+    - intent: ask_project_client
+    - action: action_answer_project_query
+
+- rule: Handle project cost
+  steps:
+    - intent: ask_project_cost
+    - action: action_answer_project_query
+
+- rule: Handle project area
+  steps:
+    - intent: ask_project_area
+    - action: action_answer_project_query
+
+- rule: Handle project capacity
+  steps:
+    - intent: ask_project_capacity
+    - action: action_answer_project_query
+
+- rule: Handle project architect
+  steps:
+    - intent: ask_project_architect
+    - action: action_answer_project_query
+
+- rule: Handle project partners
+  steps:
+    - intent: ask_project_partners
+    - action: action_answer_project_query
+
+- rule: Handle project challenge
+  steps:
+    - intent: ask_project_challenge
+    - action: action_answer_project_query
+
+- rule: Handle project approach
+  steps:
+    - intent: ask_project_approach
+    - action: action_answer_project_query
+
+- rule: Handle project 5star
+  steps:
+    - intent: ask_project_5star
+    - action: action_answer_project_query
+
+- rule: Handle project video
+  steps:
+    - intent: ask_project_video
+    - action: action_answer_project_query
+
+- rule: Handle project sustainability
+  steps:
+    - intent: ask_project_sustainability
+    - action: action_answer_project_query
+
+- rule: Handle project concept
+  steps:
+    - intent: ask_project_concept
+    - action: action_answer_project_query
+
+- rule: Handle project status
+  steps:
+    - intent: ask_project_status
+    - action: action_answer_project_query
+
+- rule: Handle project tender
+  steps:
+    - intent: ask_project_tender
+    - action: action_answer_project_query
+
+- rule: Handle project scope
+  steps:
+    - intent: ask_project_scope
+    - action: action_answer_project_query
+
+- rule: Handle project program
+  steps:
+    - intent: ask_project_program
+    - action: action_answer_project_query
+
+- rule: Handle project facts
+  steps:
+    - intent: ask_project_facts
+    - action: action_answer_project_query
+
+# ── Company info intents — ALL routed to action_answer_company_query ─────────
+
+- rule: Handle company overview
+  steps:
+    - intent: ask_company_overview
+    - action: action_answer_company_query
+
+- rule: Handle company name meaning
+  steps:
+    - intent: ask_company_name
+    - action: action_answer_company_query
+
+- rule: Handle company mission
+  steps:
+    - intent: ask_company_mission
+    - action: action_answer_company_query
+
+- rule: Handle company history
+  steps:
+    - intent: ask_company_history
+    - action: action_answer_company_query
+
+- rule: Handle company founder
+  steps:
+    - intent: ask_company_founder
+    - action: action_answer_company_query
+
+- rule: Handle company offices
+  steps:
+    - intent: ask_company_offices
+    - action: action_answer_company_query
+
+- rule: Handle company team
+  steps:
+    - intent: ask_company_team
+    - action: action_answer_company_query
+
+- rule: Handle company expertise
+  steps:
+    - intent: ask_company_expertise
+    - action: action_answer_company_query
+
+- rule: Handle company design approach
+  steps:
+    - intent: ask_company_approach
+    - action: action_answer_company_query
+
+- rule: Handle company human centered design
+  steps:
+    - intent: ask_company_human_centered
+    - action: action_answer_company_query
+
+- rule: Handle company sustainability
+  steps:
+    - intent: ask_company_sustainability
+    - action: action_answer_company_query
+
+- rule: Handle company innovation
+  steps:
+    - intent: ask_company_innovation
+    - action: action_answer_company_query
+
+- rule: Handle company urbanism
+  steps:
+    - intent: ask_company_urbanism
+    - action: action_answer_company_query
+
+- rule: Handle company methodology
+  steps:
+    - intent: ask_company_methodology
+    - action: action_answer_company_query
+
+- rule: Handle company clients
+  steps:
+    - intent: ask_company_clients
+    - action: action_answer_company_query
+
+- rule: Handle company difference
+  steps:
+    - intent: ask_company_difference
+    - action: action_answer_company_query
+
+- rule: Handle why 1PAX
+  steps:
+    - intent: ask_company_why
+    - action: action_answer_company_query
+
+- rule: Handle company careers
+  steps:
+    - intent: ask_company_careers
+    - action: action_answer_company_query
+
+- rule: Handle company culture
+  steps:
+    - intent: ask_company_culture
+    - action: action_answer_company_query
+
+- rule: Handle company mentorship
+  steps:
+    - intent: ask_company_mentorship
+    - action: action_answer_company_query
+
+- rule: Handle company open roles
+  steps:
+    - intent: ask_company_open_roles
+    - action: action_answer_company_query
+
+- rule: Handle company values
+  steps:
+    - intent: ask_company_values
+    - action: action_answer_company_query
+
+# ── Company ethics & pillars ─────────────────────────────────────────────────
+
+- rule: Handle company ethics
+  steps:
+    - intent: ask_company_ethics
+    - action: action_answer_company_query
+
+- rule: Handle company social commitment
+  steps:
+    - intent: ask_company_social
+    - action: action_answer_company_query
+
+- rule: Handle company cultural heritage
+  steps:
+    - intent: ask_company_heritage
+    - action: action_answer_company_query
+
+- rule: Handle company people values
+  steps:
+    - intent: ask_company_people_values
+    - action: action_answer_company_query
+
+- rule: Handle company diversity
+  steps:
+    - intent: ask_company_diversity
+    - action: action_answer_company_query
+
+- rule: Handle company governance
+  steps:
+    - intent: ask_company_governance
+    - action: action_answer_company_query
+
+- rule: Handle company suppliers
+  steps:
+    - intent: ask_company_suppliers
+    - action: action_answer_company_query
+
+- rule: Handle company IP
+  steps:
+    - intent: ask_company_ip
+    - action: action_answer_company_query
+
+- rule: Handle company ethics plan
+  steps:
+    - intent: ask_company_plan
+    - action: action_answer_company_query
+
+# ── Team intents — ALL routed to action_answer_team_query ────────────────
+
+- rule: Handle team overview
+  steps:
+    - intent: ask_team_overview
+    - action: action_answer_team_query
+
+- rule: Handle team leadership
+  steps:
+    - intent: ask_team_leadership
+    - action: action_answer_team_query
+
+- rule: Handle team architects
+  steps:
+    - intent: ask_team_architects
+    - action: action_answer_team_query
+
+- rule: Handle team specialists
+  steps:
+    - intent: ask_team_specialists
+    - action: action_answer_team_query
+
+- rule: Handle team operations
+  steps:
+    - intent: ask_team_operations
+    - action: action_answer_team_query
+
+- rule: Handle team member query
+  steps:
+    - intent: ask_about_team_member
+    - action: action_answer_team_query
+
+# ── Services intents — ALL routed to action_answer_services_query ─────────
+
+- rule: Handle services list
+  steps:
+    - intent: ask_services_list
+    - action: action_answer_services_query
+
+- rule: Handle airport services
+  steps:
+    - intent: ask_service_airports
+    - action: action_answer_services_query
+
+- rule: Handle urbanism services
+  steps:
+    - intent: ask_service_urbanism
+    - action: action_answer_services_query
+
+- rule: Handle innovation services
+  steps:
+    - intent: ask_service_innovation
+    - action: action_answer_services_query
+
+- rule: Handle future mobility services
+  steps:
+    - intent: ask_service_future_mobility
+    - action: action_answer_services_query
+
+- rule: Handle control tower services
+  steps:
+    - intent: ask_service_control_towers
+    - action: action_answer_services_query
+
+- rule: Handle interior design services
+  steps:
+    - intent: ask_service_interior
+    - action: action_answer_services_query
+
+- rule: Handle working and living services
+  steps:
+    - intent: ask_service_working_living
+    - action: action_answer_services_query
+
+- rule: Handle BIM services
+  steps:
+    - intent: ask_service_bim
+    - action: action_answer_services_query
+
+- rule: PAX Cart product query
+  steps:
+  - intent: ask_company_pax_cart
+  - action: action_answer_company_query
+
+- rule: Ecoport product query
+  steps:
+  - intent: ask_company_ecoport
+  - action: action_answer_company_query
