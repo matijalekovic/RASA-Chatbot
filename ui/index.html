@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>1PAX — Assistant</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f5f4f2;
+      --surface:   #ffffff;
+      --border:    #e2e0db;
+      --text:      #1a1a1a;
+      --muted:     #7a7670;
+      --accent:    #1a1a1a;
+      --user-bg:   #1a1a1a;
+      --user-text: #ffffff;
+      --bot-bg:    #ffffff;
+      --bot-text:  #1a1a1a;
+      --radius:    14px;
+      --shadow:    0 2px 16px rgba(0,0,0,0.08);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      max-width: 760px;
+      height: 100vh;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .logo-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-left: 3px;
+      vertical-align: middle;
+    }
+    .header-sub {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 78%;
+      animation: fadeIn 0.18s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message.bot  { align-self: flex-start; align-items: flex-start; }
+
+    .bubble {
+      padding: 11px 16px;
+      border-radius: var(--radius);
+      font-size: 14.5px;
+      line-height: 1.6;
+      word-break: break-word;
+      box-shadow: var(--shadow);
+    }
+    .message.user .bubble {
+      background: var(--user-bg);
+      color: var(--user-text);
+      border-bottom-right-radius: 4px;
+    }
+    .message.bot .bubble {
+      background: var(--bot-bg);
+      color: var(--bot-text);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Markdown rendering inside bubbles */
+    .bubble strong { font-weight: 600; }
+    .bubble em { font-style: italic; color: var(--muted); }
+    .bubble ul { padding-left: 18px; margin: 6px 0; }
+    .bubble li { margin: 3px 0; }
+    .bubble p { margin: 5px 0; }
+    .bubble p:first-child { margin-top: 0; }
+    .bubble p:last-child  { margin-bottom: 0; }
+    .bubble a { color: inherit; text-decoration: underline; }
+
+    /* Timestamp */
+    .ts {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px;
+      padding: 0 4px;
+    }
+
+    /* ── Typing indicator ── */
+    #typing {
+      align-self: flex-start;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 18px;
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-bottom-left-radius: 4px;
+      margin: 0 20px 6px;
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.18s ease;
+    }
+    #typing.hidden { display: none; }
+    #typing span {
+      width: 7px; height: 7px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    #typing span:nth-child(2) { animation-delay: 0.2s; }
+    #typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%            { transform: translateY(-5px); }
+    }
+
+    /* ── Input bar ── */
+    #input-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #input {
+      flex: 1;
+      padding: 11px 16px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      font-size: 14.5px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #input:focus { border-color: #999; }
+    #input::placeholder { color: var(--muted); }
+
+    #send {
+      padding: 11px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    #send:hover { opacity: 0.82; }
+    #send:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Welcome message ── */
+    .welcome {
+      text-align: center;
+      padding: 32px 24px;
+      color: var(--muted);
+    }
+    .welcome h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .welcome p { font-size: 14px; line-height: 1.6; }
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .suggestion {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .suggestion:hover { background: var(--border); }
+
+    /* Scrollbar */
+    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="logo">1PAX<span class="logo-dot"></span></span>
+    <span class="header-sub">Assistant — internal preview</span>
+    <span class="status-dot" title="Online"></span>
+  </header>
+
+  <div id="messages">
+    <div class="welcome" id="welcome">
+      <h2>Hello 👋</h2>
+      <p>Ask me about 1PAX projects, the team, services, or our products.</p>
+      <div class="suggestions">
+        <span class="suggestion" onclick="send('What projects has 1PAX designed?')">What projects has 1PAX designed?</span>
+        <span class="suggestion" onclick="send('Tell me about Sofia Airport')">Tell me about Sofia Airport</span>
+        <span class="suggestion" onclick="send('What is Ecoport?')">What is Ecoport?</span>
+        <span class="suggestion" onclick="send('Who is the CEO?')">Who is the CEO?</span>
+        <span class="suggestion" onclick="send('What services does 1PAX offer?')">What services does 1PAX offer?</span>
+        <span class="suggestion" onclick="send('Tell me about the PAX cart')">Tell me about the PAX cart</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="typing" class="hidden">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div id="input-bar">
+    <input id="input" type="text" placeholder="Ask about projects, team, services…" autocomplete="off" />
+    <button id="send" onclick="handleSend()">Send</button>
+  </div>
+</div>
+
+<script>
+  const RASA_URL = "";  // same origin — nginx proxies /webhooks/ to Rasa
+  const SESSION_ID = "user_" + Math.random().toString(36).slice(2, 10);
+
+  const messagesEl = document.getElementById("messages");
+  const inputEl    = document.getElementById("input");
+  const sendBtn    = document.getElementById("send");
+  const typingEl   = document.getElementById("typing");
+
+  // ── Markdown-lite renderer ──────────────────────────────────────────────────
+  function renderMarkdown(text) {
+    // Escape HTML first
+    let s = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // Bold: **text**
+    s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    // Italic: *text* (single asterisk, not double)
+    s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
+    // Links: [text](url)
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    // Bullet lists — collect consecutive bullet lines into <ul>
+    const lines = s.split("\n");
+    const out = [];
+    let inList = false;
+    for (const line of lines) {
+      const bulletMatch = line.match(/^[•\-\*]\s+(.+)/);
+      if (bulletMatch) {
+        if (!inList) { out.push("<ul>"); inList = true; }
+        out.push(`<li>${bulletMatch[1]}</li>`);
+      } else {
+        if (inList) { out.push("</ul>"); inList = false; }
+        out.push(line);
+      }
+    }
+    if (inList) out.push("</ul>");
+
+    // Paragraphs: blank lines → <p> splits
+    return out.join("\n")
+      .split(/\n{2,}/)
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => p.startsWith("<ul>") || p.startsWith("<li>") ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`)
+      .join("\n");
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  function now() {
+    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function appendMessage(role, text) {
+    const welcome = document.getElementById("welcome");
+    if (welcome) welcome.remove();
+
+    const wrapper = document.createElement("div");
+    wrapper.className = `message ${role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.innerHTML = renderMarkdown(text);
+
+    const ts = document.createElement("div");
+    ts.className = "ts";
+    ts.textContent = now();
+
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(ts);
+    messagesEl.appendChild(wrapper);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function setLoading(on) {
+    sendBtn.disabled = on;
+    inputEl.disabled = on;
+    typingEl.classList.toggle("hidden", !on);
+    if (on) messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  // ── Send ────────────────────────────────────────────────────────────────────
+  async function send(text) {
+    const msg = (text || inputEl.value).trim();
+    if (!msg) return;
+    inputEl.value = "";
+    appendMessage("user", msg);
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender: SESSION_ID, message: msg }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const replies = await res.json();
+      setLoading(false);
+      if (!replies || replies.length === 0) {
+        appendMessage("bot", "I didn't get a response — please try again.");
+      } else {
+        for (const reply of replies) {
+          if (reply.text) appendMessage("bot", reply.text);
+        }
+      }
+    } catch (err) {
+      setLoading(false);
+      appendMessage("bot", "⚠️ Could not reach the assistant. Please check back shortly.");
+      console.error(err);
+    }
+  }
+
+  function handleSend() { send(); }
+
+  inputEl.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  // Focus input on load
+  inputEl.focus();
+</script>
+</body>
+</html>
