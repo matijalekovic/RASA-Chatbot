@@ -90,8 +90,8 @@ class ActionGreet(Action):
     def run(self, dispatcher, tracker, domain):
         lang = get_lang(tracker)
         dispatcher.utter_message(text=translate_response(random.choice([
-            "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — or you can explore our 58 architectural projects. What would you like to know?",
-            "Hi there! I'm here to help you learn about 1PAX. Ask about the studio, our founder, design philosophy, sustainability commitment, or explore our project portfolio. Where would you like to start?",
+            "Hi! I can tell you about 1PAX — our studio, mission, design approach, team, or careers — or help you explore our 58 architectural projects. What would you like to know?",
+            "Hello! Ask about the studio, our founder, design philosophy, sustainability commitment, or explore our project portfolio. Where would you like to start?",
             "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — or dive into any of our 58 projects across airports, mobility infrastructure, and more. What's on your mind?",
             "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' to browse the full portfolio.",
         ]), lang))

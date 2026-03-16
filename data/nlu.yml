@@ -181,6 +181,11 @@ nlu:
     - what does 1PAX's project track record look like?
     - what is 1PAX's experience with large projects?
     - what is 1PAX's delivery record?
+    - what are your plans for airports?
+    - what are your plans for projects?
+    - what are your plans in terms of projects?
+    - show me your project plans
+    - what are 1PAX's project plans?
 
 - intent: ask_project_category
   examples: |
@@ -202,6 +207,8 @@ nlu:
     - any airport stuff?
     - show me airport stuff
     - got anything with airports?
+    - what are your plans for the airport?
+    - what are your plans for airport projects?
     - airport things
     - you do airports?
     - airport work?
