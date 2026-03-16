@@ -25,6 +25,10 @@ lsof -ti:5005 | xargs kill -9 2>/dev/null || true
 lsof -ti:8080 | xargs kill -9 2>/dev/null || true
 sleep 1
 
+# Start the translation proxy server (port 5056)
+"$PYTHON" "$SCRIPT_DIR/translation_server.py" > /tmp/rasa_translate.log 2>&1 &
+TRANSLATE_PID=$!
+
 # Start the action server in the background
 "$PYTHON" -m rasa run actions --port 5055 > /tmp/rasa_actions.log 2>&1 &
 ACTION_PID=$!
@@ -49,7 +53,7 @@ echo "  ✅ API     → http://localhost:5005"
 echo ""
 
 # Kill all servers on exit
-trap "kill $ACTION_PID $UI_PID 2>/dev/null; echo ''; echo '  Servers stopped.'; exit 0" INT TERM EXIT
+trap "kill $TRANSLATE_PID $ACTION_PID $UI_PID 2>/dev/null; echo ''; echo '  Servers stopped.'; exit 0" INT TERM EXIT
 
 # Start Rasa API in the foreground
 "$PYTHON" -m rasa run --enable-api --cors "*" --port 5005 --endpoints endpoints.yml

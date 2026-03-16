@@ -527,8 +527,30 @@
     if (on) messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  // ── Input translation (→ English for Rasa NLU) ──────────────────────────────
+  // Local dev: call translation server directly on port 5056 (CORS enabled).
+  // Production (nginx): proxied via /api/translate.
+  const TRANSLATE_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:5056/translate"
+    : "/api/translate";
+
+  async function translateToEnglish(text, lang) {
+    if (!lang) return text;  // already English
+    try {
+      const r = await fetch(TRANSLATE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const d = await r.json();
+      return d.text || text;
+    } catch {
+      return text;  // translation server unavailable — send as-is
+    }
+  }
+
   // ── Send ─────────────────────────────────────────────────────────────────────
-  async function send(text, _retries = 0) {
+  async function send(text, _retries = 0, _cachedEnglish = null) {
     const msg = (text || inputEl.value).trim();
     if (!msg) return;
     if (_retries === 0) {
@@ -537,13 +559,16 @@
     }
     setLoading(true);
 
+    // Translate input to English once; reuse on retries to avoid redundant API calls
+    const englishMsg = _cachedEnglish ?? await translateToEnglish(msg, currentLang);
+
     try {
       const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sender: SESSION_ID,
-          message: msg,
+          message: englishMsg,
           ...(currentLang ? { metadata: { lang: currentLang } } : {}),
         }),
       });
@@ -554,7 +579,7 @@
         if (_retries < 24) {
           if (_retries > 0 && _retries % 4 === 0)
             appendMessage("bot", `⏳ Still loading… (~${Math.round((24 - _retries) * 5)}s remaining)`);
-          setTimeout(() => send(msg, _retries + 1), 5000);
+          setTimeout(() => send(msg, _retries + 1, englishMsg), 5000);
         } else {
           appendMessage("bot", "⚠️ Assistant took too long to start. Please refresh and try again.");
         }
