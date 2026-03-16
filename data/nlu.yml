@@ -288,6 +288,10 @@ nlu:
     - [SOF airport](project)
     - [SOF](project)
     - tell me about [Sofia Airport](project)
+    - tell me about the airport in [Sofia](project)
+    - tell me about the airport in [Belgrade](project)
+    - tell me about the airport in [Bordeaux](project)
+    - tell me about the [airport](project) in Sofia
     - I want to know about [Sofia Airport](project)
     - what is the [Sofia Airport](project) project?
     - give me information on [Terminal 3](project)
@@ -733,6 +737,11 @@ nlu:
     - what was the delivery schedule
     - how long was the construction phase
     - what was the design to handover timeline
+    - when was [Sofia Airport](project) built?
+    - when was [Belgrade Airport](project) built?
+    - when was the [Velana Airport](project) built?
+    - when was [Sofia](project) built?
+    - when was it built
 
 # ── Client ──────────────────────────────────────────────────────────────────
 
@@ -2146,6 +2155,10 @@ nlu:
     - what architectural language does 1PAX prefer
     - how do you approach wayfinding and legibility
     - how do you adapt design to local context
+    - what is 1PAX's approach?
+    - what is the approach of 1PAX?
+    - describe 1PAX's approach
+    - how does 1PAX approach its work?
 
 # ── Company: human-centered design ───────────────────────────────────────────
 
@@ -2250,6 +2263,10 @@ nlu:
     - is environmental performance a factor in your designs?
     - is energy efficiency part of your design brief?
     - how do you deal with climate in airport design?
+    - what is 1PAX doing to promote sustainable development?
+    - what is 1PAX doing to promote sustainability?
+    - how does 1PAX promote sustainability?
+    - what is 1PAX's commitment to sustainable development?
 
 # ── Company: innovation ───────────────────────────────────────────────────────
 
@@ -3205,6 +3222,11 @@ nlu:
     - can you list the commitments in the sustainability plan?
     - what commitments make up the plan?
     - what does 1PAX aim to do in the next 5 years?
+    - what is the 2026-2028 sustainability plan?
+    - what is the 2026–2028 sustainability plan?
+    - tell me about the 2026-2028 plan
+    - what does the sustainability plan say?
+    - what is in the ethics and sustainability plan?
 
 # ── Out of scope ────────────────────────────────────────────────────────────
 
@@ -4114,6 +4136,12 @@ nlu:
     - we are considering commissioning a terminal — what is your offer?
     - we're looking to appoint an architect for a new terminal
     - we want to appoint 1PAX for a terminal project — what do you offer?
+    - can you design a terminal?
+    - can you design terminals?
+    - can you design an airport terminal?
+    - can you design our terminal?
+    - do you design terminals?
+    - do you design airport terminals?
 
 # ── Services: Urbanism & Masterplan ───────────────────────────────────────────
 
@@ -4403,6 +4431,11 @@ nlu:
     - what government building projects have you done?
     - do you have experience with working and living typologies?
     - what working and living projects have you done?
+    - do you design offices?
+    - do you design office spaces?
+    - can you design our offices?
+    - do you do office design?
+    - do you design workplaces?
 
 # ── Services: BIM Project Management ──────────────────────────────────────────
 
