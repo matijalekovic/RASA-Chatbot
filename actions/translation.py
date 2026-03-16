@@ -27,12 +27,13 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+_MODEL = "gemini-2.5-flash-lite"
 
 # ── Gemini setup ──────────────────────────────────────────────────────────────
 
 try:
     from google import genai
+    from google.genai import types as genai_types
     _GENAI_OK = True
 except ImportError:
     _GENAI_OK = False
@@ -152,13 +153,19 @@ def translate_response(text: str, lang: Optional[str]) -> str:
         return text
 
     try:
-        prompt = (
-            f"Translate the following text to {lang_name}. "
-            "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
-            "Return only the translated text with no explanation or preamble:\n\n"
-            + text
+        config = genai_types.GenerateContentConfig(
+            system_instruction=(
+                "You are a translator. Output ONLY the translated text. "
+                "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
+                "No explanations, no quotes, no notes."
+            ),
+            temperature=0.1,
         )
-        response = c.models.generate_content(model=_MODEL, contents=prompt)
+        response = c.models.generate_content(
+            model=_MODEL,
+            contents=f"Translate to {lang_name}: {text}",
+            config=config,
+        )
         return response.text.strip()
     except Exception as exc:
         logger.warning(f"translate_response to {lang} failed: {exc}")

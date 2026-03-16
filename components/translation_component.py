@@ -32,10 +32,11 @@ from rasa.shared.nlu.training_data.training_data import TrainingData
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+_MODEL = "gemini-2.5-flash-lite"
 
 try:
     from google import genai
+    from google.genai import types as genai_types
     from langdetect import detect, LangDetectException
     _DEPS_OK = True
 except ImportError:
@@ -125,12 +126,15 @@ class TranslationComponent(GraphComponent):
 
         if self._client:
             try:
-                prompt = (
-                    "Translate the following text to English. "
-                    "Return only the translated text with no explanation:\n\n"
-                    + text
+                config = genai_types.GenerateContentConfig(
+                    system_instruction="You are a translator. Output ONLY the translated text. No explanations, no quotes, no notes.",
+                    temperature=0.1,
                 )
-                result = self._client.models.generate_content(model=_MODEL, contents=prompt)
+                result = self._client.models.generate_content(
+                    model=_MODEL,
+                    contents=f"Translate to English: {text}",
+                    config=config,
+                )
                 translated = result.text.strip()
                 message.set("text", translated)
                 logger.debug(f"[translate-in] → EN: '{text}' → '{translated}'")

@@ -20,6 +20,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 try:
     from google import genai
+    from google.genai import types as genai_types
     _api_key = os.environ.get("GEMINI_API_KEY", "")
     if _api_key:
         _client = genai.Client(api_key=_api_key)
@@ -34,7 +35,7 @@ except Exception as exc:
     _client = None
     _ready = False
 
-_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+_MODEL = "gemini-2.5-flash-lite"
 
 _CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -48,13 +49,17 @@ def _normalize(text: str) -> str:
     return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
 
 
+_CONFIG_TO_EN = genai_types.GenerateContentConfig(
+    system_instruction="You are a translator. Output ONLY the translated text. No explanations, no quotes, no notes.",
+    temperature=0.1,
+)
+
 def _translate_to_english(text: str) -> str:
-    prompt = (
-        "Translate the following text to English. "
-        "Return only the translated text with no explanation, preamble, or quotes:\n\n"
-        + text
+    response = _client.models.generate_content(
+        model=_MODEL,
+        contents=f"Translate to English: {text}",
+        config=_CONFIG_TO_EN,
     )
-    response = _client.models.generate_content(model=_MODEL, contents=prompt)
     return response.text.strip()
 
 
