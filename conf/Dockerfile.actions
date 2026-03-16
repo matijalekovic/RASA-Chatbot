@@ -1,0 +1,14 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install rasa-sdk first (cached layer)
+COPY requirements-actions.txt .
+RUN pip install --no-cache-dir -r requirements-actions.txt
+
+# Copy action files
+COPY actions/ ./actions/
+
+EXPOSE 5055
+
+CMD ["python", "-m", "rasa_sdk", "--actions", "actions", "--port", "5055"]

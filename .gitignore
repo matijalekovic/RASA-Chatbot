@@ -17,7 +17,7 @@ env/
 .rasa/
 
 # Test artifacts
-test_results/
+tests/results/
 *.log
 
 # Claude Code
