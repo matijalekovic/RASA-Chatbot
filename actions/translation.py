@@ -1,7 +1,7 @@
 """
 Translation utilities for the 1PAX action server.
 
-get_lang(tracker)              → DeepL target code ("FR", "ZH-HANS", "SR", …)
+get_lang(tracker)              → language code ("FR", "ZH-HANS", "SR", …)
                                  or None when the user is writing English.
 
 translate_response(text, lang) → English text translated to lang, or original
@@ -17,8 +17,8 @@ Usage in every action:
         dispatcher.utter_message(text=translate_response("Hello!", lang))
         return [SlotSet("language", lang), ...]   # persist across short follow-ups
 
-Requires:  pip install deepl langdetect
-Env var:   DEEPL_API_KEY  (free-tier key ends with :fx)
+Requires:  pip install google-genai langdetect
+Env var:   GEMINI_API_KEY
 """
 
 import os
@@ -27,18 +27,62 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+
+# ── Gemini setup ──────────────────────────────────────────────────────────────
+
 try:
-    import deepl
-    from langdetect import detect, LangDetectException
-    _DEPS_OK = True
+    from google import genai
+    _GENAI_OK = True
 except ImportError:
-    _DEPS_OK = False
+    _GENAI_OK = False
+    logger.warning("translation.py: google-genai not installed")
+
+try:
+    from langdetect import detect, LangDetectException
+    _LANGDETECT_OK = True
+except ImportError:
+    _LANGDETECT_OK = False
+
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None and _GENAI_OK:
+        key = os.environ.get("GEMINI_API_KEY", "")
+        if key:
+            try:
+                _client = genai.Client(api_key=key)
+            except Exception as exc:
+                logger.warning(f"translation.py: Gemini init failed — {exc}")
+    return _client
+
+
+# ── Language name mapping for translation prompts ─────────────────────────────
+
+_LANG_NAMES = {
+    "FR":      "French",
+    "ES":      "Spanish",
+    "PT-PT":   "European Portuguese",
+    "PT-BR":   "Brazilian Portuguese",
+    "ZH-HANS": "Simplified Chinese",
+    "ZH-HANT": "Traditional Chinese",
+    "SR":      "Serbian",
+    "DE":      "German",
+    "IT":      "Italian",
+    "NL":      "Dutch",
+    "PL":      "Polish",
+    "JA":      "Japanese",
+    "KO":      "Korean",
+    "AR":      "Arabic",
+}
 
 # Entity name set by TranslationComponent in the NLU pipeline
 _LANG_ENTITY = "__lang__"
 
-# Fallback: langdetect code → DeepL target code (used when __lang__ entity absent)
-_LANGDETECT_TO_DEEPL: dict = {
+# Fallback: langdetect code → our language code
+_LANGDETECT_MAP: dict = {
     "es":    "ES",
     "fr":    "FR",
     "zh-cn": "ZH-HANS",
@@ -50,29 +94,13 @@ _LANGDETECT_TO_DEEPL: dict = {
     "bs":    "SR",
 }
 
-_translator: Optional[object] = None
-
-
-def _get_translator():
-    global _translator
-    if _translator is None and _DEPS_OK:
-        key = os.environ.get("DEEPL_API_KEY", "")
-        if key:
-            try:
-                _translator = deepl.Translator(key)
-            except Exception as exc:
-                logger.warning(f"translation.py: DeepL init failed — {exc}")
-    return _translator
-
 
 def get_lang(tracker) -> Optional[str]:
     """
-    Return the DeepL target language code for the current user turn, or None
-    for English.
+    Return the language code for the current user turn, or None for English.
 
     Priority:
       1. UI metadata      — lang code sent by the frontend with every message
-                            (most reliable; set explicitly by the user)
       2. __lang__ entity  — set by TranslationComponent during NLU
       3. language slot    — persisted from a previous turn
       4. langdetect       — last-resort fallback
@@ -93,12 +121,12 @@ def get_lang(tracker) -> Optional[str]:
         return slot
 
     # 4. Langdetect fallback
-    if _DEPS_OK:
+    if _LANGDETECT_OK:
         text = (tracker.latest_message.get("text") or "").strip()
         if len(text) >= 4:
             try:
                 raw = detect(text)
-                return _LANGDETECT_TO_DEEPL.get(raw)
+                return _LANGDETECT_MAP.get(raw)
             except Exception:
                 pass
 
@@ -109,22 +137,29 @@ def translate_response(text: str, lang: Optional[str]) -> str:
     """
     Translate an English response string to the target language.
     Returns the original text unchanged on any error or when lang is None/English.
-    DeepL preserves Markdown (*bold*, _italic_, bullet lists).
+    Gemini preserves Markdown (*bold*, _italic_, bullet lists).
     """
     if not lang or lang.upper().startswith("EN"):
         return text
 
-    t = _get_translator()
-    if not t:
+    lang_name = _LANG_NAMES.get(lang, lang)
+    c = _get_client()
+    if not c:
         logger.warning(
-            "translate_response: no DeepL translator available "
-            f"(DEEPL_API_KEY set? _DEPS_OK={_DEPS_OK})"
+            f"translate_response: Gemini not available "
+            f"(GEMINI_API_KEY set? _GENAI_OK={_GENAI_OK})"
         )
         return text
 
     try:
-        result = t.translate_text(text, source_lang="EN", target_lang=lang)
-        return result.text
+        prompt = (
+            f"Translate the following text to {lang_name}. "
+            "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
+            "Return only the translated text with no explanation or preamble:\n\n"
+            + text
+        )
+        response = c.models.generate_content(model=_MODEL, contents=prompt)
+        return response.text.strip()
     except Exception as exc:
         logger.warning(f"translate_response to {lang} failed: {exc}")
         return text

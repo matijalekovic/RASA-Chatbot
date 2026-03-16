@@ -10,7 +10,7 @@ Nginx proxies /api/translate → http://localhost:5056/translate
 The UI calls this before sending messages to Rasa so that DIET always
 sees English input regardless of the user's selected language.
 
-Requires: DEEPL_API_KEY env var (same one used by the action server).
+Requires: GEMINI_API_KEY env var.
 """
 
 import json
@@ -18,20 +18,23 @@ import os
 import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# DeepL reads "1pax" (lowercase) as "1 PAX" (aviation: 1 passenger).
-# Normalize to uppercase so it's treated as the company name.
-def _normalize(text: str) -> str:
-    return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
-
 try:
-    import deepl
-    _translator = deepl.Translator(os.environ.get("DEEPL_API_KEY", ""))
-    _ready = True
-    print(f"[translate] DeepL ready.")
+    from google import genai
+    _api_key = os.environ.get("GEMINI_API_KEY", "")
+    if _api_key:
+        _client = genai.Client(api_key=_api_key)
+        _ready = True
+        print("[translate] Gemini ready.")
+    else:
+        print("[translate] GEMINI_API_KEY not set — translation disabled.")
+        _client = None
+        _ready = False
 except Exception as exc:
-    print(f"[translate] DeepL unavailable: {exc}")
-    _translator = None
+    print(f"[translate] Gemini unavailable: {exc}")
+    _client = None
     _ready = False
+
+_MODEL = "gemini-2.5-flash-lite-preview-06-17"
 
 _CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -39,6 +42,20 @@ _CORS = {
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json",
 }
+
+# Normalize "1pax" → "1PAX" so Gemini treats it as a company name, not a number.
+def _normalize(text: str) -> str:
+    return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
+
+
+def _translate_to_english(text: str) -> str:
+    prompt = (
+        "Translate the following text to English. "
+        "Return only the translated text with no explanation, preamble, or quotes:\n\n"
+        + text
+    )
+    response = _client.models.generate_content(model=_MODEL, contents=prompt)
+    return response.text.strip()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -69,12 +86,11 @@ class Handler(BaseHTTPRequestHandler):
             self._send({"text": text})
             return
 
-        source_lang = (data.get("source_lang") or "").strip() or None
         try:
-            result = _translator.translate_text(text, source_lang=source_lang, target_lang="EN-US")
-            self._send({"text": result.text})
-        except Exception:
-            # Source == target (already English) or any API error → return as-is
+            translated = _translate_to_english(text)
+            self._send({"text": translated})
+        except Exception as exc:
+            print(f"[translate] Gemini error: {exc}")
             self._send({"text": text})
 
     def log_message(self, *args):
