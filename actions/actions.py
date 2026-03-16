@@ -80,6 +80,53 @@ _OUT_OF_SCOPE_NO_CONTEXT = [
 ]
 
 
+# ── Greet / Goodbye / Bot challenge ─────────────────────────────────────────
+
+
+class ActionGreet(Action):
+    def name(self) -> Text:
+        return "action_greet"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_lang(tracker)
+        dispatcher.utter_message(text=translate_response(random.choice([
+            "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — or you can explore our 58 architectural projects. What would you like to know?",
+            "Hi there! I'm here to help you learn about 1PAX. Ask about the studio, our founder, design philosophy, sustainability commitment, or explore our project portfolio. Where would you like to start?",
+            "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — or dive into any of our 58 projects across airports, mobility infrastructure, and more. What's on your mind?",
+            "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' to browse the full portfolio.",
+        ]), lang))
+        return [SlotSet("language", lang)] if lang else []
+
+
+class ActionGoodbye(Action):
+    def name(self) -> Text:
+        return "action_goodbye"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_lang(tracker)
+        dispatcher.utter_message(text=translate_response(random.choice([
+            "Thank you for your interest in 1PAX. Feel free to come back anytime!",
+            "It was a pleasure — hope to see you again. Goodbye!",
+            "Thanks for exploring 1PAX's work. Have a great day!",
+            "Goodbye! Don't hesitate to reach out if you have more questions about our projects.",
+        ]), lang))
+        return [SlotSet("language", lang)] if lang else []
+
+
+class ActionIAmABot(Action):
+    def name(self) -> Text:
+        return "action_iamabot"
+
+    def run(self, dispatcher, tracker, domain):
+        lang = get_lang(tracker)
+        dispatcher.utter_message(text=translate_response(random.choice([
+            "I'm the 1PAX virtual assistant, here to help you explore our architectural portfolio. I'm powered by Rasa.",
+            "I'm a chatbot built to answer questions about 1PAX's projects — airports, mobility infrastructure, interior design, and more.",
+            "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 58 architectural projects.",
+        ]), lang))
+        return [SlotSet("language", lang)] if lang else []
+
+
 # ── Fuzzy project matching ───────────────────────────────────────────────────
 
 # Common English words to skip when fuzzy-matching project names

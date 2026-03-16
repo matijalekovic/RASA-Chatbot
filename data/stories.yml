@@ -16,7 +16,7 @@ stories:
 - story: user greets then asks about a project
   steps:
     - intent: greet
-    - action: utter_greet
+    - action: action_greet
     - intent: ask_about_project
       entities:
         - project: "sofia_airport"
@@ -148,7 +148,7 @@ stories:
 - story: full project deep dive
   steps:
     - intent: greet
-    - action: utter_greet
+    - action: action_greet
     - intent: ask_about_project
       entities:
         - project: "sofia_airport"
@@ -162,7 +162,7 @@ stories:
     - intent: ask_project_video
     - action: action_answer_project_query
     - intent: goodbye
-    - action: utter_goodbye
+    - action: action_goodbye
 
 - story: project facts conversation
   steps:

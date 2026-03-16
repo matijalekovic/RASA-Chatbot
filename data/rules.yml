@@ -7,17 +7,17 @@ rules:
 - rule: Greet the user
   steps:
     - intent: greet
-    - action: utter_greet
+    - action: action_greet
 
 - rule: Say goodbye
   steps:
     - intent: goodbye
-    - action: utter_goodbye
+    - action: action_goodbye
 
 - rule: Respond to bot challenge
   steps:
     - intent: bot_challenge
-    - action: utter_iamabot
+    - action: action_iamabot
 
 - rule: Handle out of scope questions
   steps:

@@ -147,6 +147,9 @@ responses:
     - text: "I couldn't understand that. I can help with questions about the 1PAX studio, our mission, values, careers, or any of our 58 architectural projects."
 
 actions:
+  - action_greet
+  - action_goodbye
+  - action_iamabot
   - action_answer_project_query
   - action_list_projects
   - action_handle_out_of_scope

@@ -43,7 +43,26 @@
     }
     .logo { font-size: 16px; font-weight: 700; letter-spacing: 0.07em; }
     .header-sub { font-size: 12px; color: var(--muted); }
-    .status-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; margin-left: auto; }
+    .status-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; margin-left: 8px; flex-shrink: 0; }
+
+    /* ── Language selector ── */
+    .lang-selector { display: flex; gap: 3px; margin-left: auto; }
+    .lang-btn {
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      transition: all 0.1s;
+      line-height: 1.6;
+    }
+    .lang-btn:hover  { border-color: #aaa; color: var(--text); }
+    .lang-btn.active { background: #111; color: #fff; border-color: #111; }
 
     /* ── Messages ── */
     #messages {
@@ -288,6 +307,14 @@
   <header>
     <span class="logo">1PAX</span>
     <span class="header-sub">Assistant · internal preview</span>
+    <div class="lang-selector">
+      <button class="lang-btn active" data-lang="">EN</button>
+      <button class="lang-btn" data-lang="FR">FR</button>
+      <button class="lang-btn" data-lang="ES">ES</button>
+      <button class="lang-btn" data-lang="PT-PT">PT</button>
+      <button class="lang-btn" data-lang="ZH-HANS">中文</button>
+      <button class="lang-btn" data-lang="SR">SR</button>
+    </div>
     <span class="status-dot"></span>
   </header>
 
@@ -323,6 +350,42 @@
   const inputEl    = document.getElementById("input");
   const sendBtn    = document.getElementById("send");
   const typingEl   = document.getElementById("typing");
+
+  // ── Language selection ───────────────────────────────────────────────────────
+
+  // Country → DeepL target code (pre-selects based on IP; user can override)
+  const COUNTRY_LANG = {
+    FR:"FR", BE:"FR", CH:"FR", MC:"FR", LU:"FR", CI:"FR", SN:"FR", CM:"FR",
+    ES:"ES", MX:"ES", AR:"ES", CO:"ES", PE:"ES", CL:"ES", VE:"ES", EC:"ES",
+    BO:"ES", PY:"ES", UY:"ES", CR:"ES", PA:"ES", DO:"ES", CU:"ES", GT:"ES",
+    PT:"PT-PT", BR:"PT-PT", AO:"PT-PT", MZ:"PT-PT", CV:"PT-PT",
+    CN:"ZH-HANS", TW:"ZH-HANS", HK:"ZH-HANS", SG:"ZH-HANS",
+    RS:"SR", BA:"SR", ME:"SR",
+  };
+
+  let currentLang = localStorage.getItem("pax_lang") ?? "";
+
+  function setLang(code) {
+    currentLang = code;
+    localStorage.setItem("pax_lang", code);
+    document.querySelectorAll(".lang-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.lang === code)
+    );
+  }
+  // Apply stored preference immediately
+  setLang(currentLang);
+
+  document.querySelectorAll(".lang-btn").forEach(b =>
+    b.addEventListener("click", () => setLang(b.dataset.lang))
+  );
+
+  // Pre-select from IP geolocation (only if user hasn't chosen before)
+  if (!localStorage.getItem("pax_lang")) {
+    fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(d => { const l = COUNTRY_LANG[d.country_code]; if (l) setLang(l); })
+      .catch(() => {});
+  }
 
   // ── Markdown renderer ────────────────────────────────────────────────────────
 
@@ -478,7 +541,11 @@
       const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender: SESSION_ID, message: msg }),
+        body: JSON.stringify({
+          sender: SESSION_ID,
+          message: msg,
+          ...(currentLang ? { metadata: { lang: currentLang } } : {}),
+        }),
       });
 
       if (res.status === 502 || res.status === 503) {

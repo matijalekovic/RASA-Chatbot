@@ -71,21 +71,28 @@ def get_lang(tracker) -> Optional[str]:
     for English.
 
     Priority:
-      1. __lang__ entity  — set by TranslationComponent during NLU (most reliable)
-      2. language slot    — persisted from a previous turn (handles short follow-ups)
-      3. langdetect       — last-resort fallback when the entity is missing
+      1. UI metadata      — lang code sent by the frontend with every message
+                            (most reliable; set explicitly by the user)
+      2. __lang__ entity  — set by TranslationComponent during NLU
+      3. language slot    — persisted from a previous turn
+      4. langdetect       — last-resort fallback
     """
-    # 1. Entity set by NLU component
+    # 1. Language explicitly selected in the UI
+    lang = (tracker.latest_message.get("metadata") or {}).get("lang")
+    if lang:
+        return lang
+
+    # 2. Entity set by NLU component
     for entity in tracker.latest_message.get("entities", []):
         if entity.get("entity") == _LANG_ENTITY:
             return entity["value"]
 
-    # 2. Slot from a previous turn
+    # 3. Slot from a previous turn
     slot = tracker.get_slot("language")
     if slot:
         return slot
 
-    # 3. Langdetect fallback (action server has no DeepL dependency for detection)
+    # 4. Langdetect fallback
     if _DEPS_OK:
         text = (tracker.latest_message.get("text") or "").strip()
         if len(text) >= 4:
