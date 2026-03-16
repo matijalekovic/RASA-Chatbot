@@ -20,6 +20,9 @@ env/
 tests/results/
 *.log
 
+# Environment / secrets
+.env
+
 # Claude Code
 .claude/
 

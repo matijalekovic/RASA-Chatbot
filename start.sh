@@ -6,6 +6,13 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Load environment variables from .env if present
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    source "$SCRIPT_DIR/.env"
+    set +a
+fi
+
 PYTHON="$SCRIPT_DIR/.venv/bin/python3"
 
 echo ""
