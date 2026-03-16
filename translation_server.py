@@ -15,7 +15,13 @@ Requires: DEEPL_API_KEY env var (same one used by the action server).
 
 import json
 import os
+import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# DeepL reads "1pax" (lowercase) as "1 PAX" (aviation: 1 passenger).
+# Normalize to uppercase so it's treated as the company name.
+def _normalize(text: str) -> str:
+    return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
 
 try:
     import deepl
@@ -57,7 +63,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send({"error": "invalid JSON"}, 400)
             return
 
-        text = (data.get("text") or "").strip()
+        text = _normalize((data.get("text") or "").strip())
 
         if not text or not _ready:
             self._send({"text": text})

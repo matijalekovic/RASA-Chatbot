@@ -318,20 +318,7 @@
     <span class="status-dot"></span>
   </header>
 
-  <div id="messages">
-    <div class="welcome" id="welcome">
-      <h2>Hello</h2>
-      <p>Ask about 1PAX projects, the team, services, or our products.</p>
-      <div class="chips-row">
-        <span class="sug-chip" onclick="send('What projects has 1PAX designed?')">Projects portfolio</span>
-        <span class="sug-chip" onclick="send('Tell me about Sofia Airport')">Sofia Airport</span>
-        <span class="sug-chip" onclick="send('What is Ecoport?')">Ecoport</span>
-        <span class="sug-chip" onclick="send('Who leads 1PAX?')">Leadership team</span>
-        <span class="sug-chip" onclick="send('What services does 1PAX offer?')">Services</span>
-        <span class="sug-chip" onclick="send('Tell me about the PAX cart')">PAX cart</span>
-      </div>
-    </div>
-  </div>
+  <div id="messages"></div>
 
   <div id="typing" class="hidden"><span></span><span></span><span></span></div>
 
@@ -380,11 +367,22 @@
   );
 
   // Pre-select from IP geolocation (only if user hasn't chosen before)
+  // Then fire the opening greeting once language is known.
+  let _greetingSent = false;
+  function maybeGreet() {
+    if (_greetingSent) return;
+    _greetingSent = true;
+    sendGreeting(currentLang);
+  }
+
   if (!localStorage.getItem("pax_lang")) {
     fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) })
       .then(r => r.json())
       .then(d => { const l = COUNTRY_LANG[d.country_code]; if (l) setLang(l); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => maybeGreet());
+  } else {
+    maybeGreet();
   }
 
   // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -553,6 +551,31 @@
     }
   }
 
+  // ── Bot-initiated greeting ────────────────────────────────────────────────────
+  async function sendGreeting(lang) {
+    typingEl.classList.remove("hidden");
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    try {
+      const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: SESSION_ID,
+          message: "hello",
+          ...(lang ? { metadata: { lang } } : {}),
+        }),
+      });
+      typingEl.classList.add("hidden");
+      if (res.ok) {
+        const replies = await res.json();
+        for (const r of replies) if (r.text) appendMessage("bot", r.text);
+      }
+    } catch {
+      typingEl.classList.add("hidden");
+    }
+    inputEl.focus();
+  }
+
   // ── Send ─────────────────────────────────────────────────────────────────────
   async function send(text, _retries = 0, _cachedEnglish = null) {
     const msg = (text || inputEl.value).trim();
@@ -598,10 +621,12 @@
       } else {
         for (const r of replies) if (r.text) appendMessage("bot", r.text);
       }
+      inputEl.focus();
     } catch (err) {
       setLoading(false);
       appendMessage("bot", "⚠️ Could not reach the assistant. Please check back shortly.");
       console.error(err);
+      inputEl.focus();
     }
   }
 
