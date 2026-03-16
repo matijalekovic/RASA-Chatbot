@@ -9,9 +9,11 @@ import random
 from typing import Any, Text, Dict, List
 
 from rasa_sdk import Action, Tracker
+from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .company_data import COMPANY_INFO
+from .translation import get_lang, translate_response
 
 
 # ── Intent suffix → COMPANY_INFO key ─────────────────────────────────────────
@@ -68,6 +70,9 @@ class ActionAnswerCompanyQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        lang = get_lang(tracker)
+        lang_event = [SlotSet("language", lang)] if lang else []
+
         intent = tracker.latest_message.get("intent", {}).get("name", "")
 
         # Strip prefix: "ask_company_overview" → "overview"
@@ -77,25 +82,26 @@ class ActionAnswerCompanyQuery(Action):
 
         if not data_key or data_key not in COMPANY_INFO:
             dispatcher.utter_message(
-                text=(
+                text=translate_response(
                     "I can tell you about **1PAX** — our mission, design approach, team, "
                     "offices, sustainability commitment, careers, and more. What would you "
-                    "like to know?"
+                    "like to know?",
+                    lang,
                 )
             )
-            return []
+            return lang_event
 
         messages = COMPANY_INFO[data_key]
 
         # Send each message part separately (multi-part responses)
         for msg in messages:
-            dispatcher.utter_message(text=msg)
+            dispatcher.utter_message(text=translate_response(msg, lang))
 
         # Append a randomised follow-up prompt (not always — empty string weighted in)
         follow_up_pool = COMPANY_INFO.get("follow_up", [])
         if follow_up_pool:
             suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
             if suffix:
-                dispatcher.utter_message(text=suffix)
+                dispatcher.utter_message(text=translate_response(suffix, lang))
 
-        return []
+        return lang_event

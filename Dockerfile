@@ -2,10 +2,12 @@ FROM rasa/rasa:3.6.21
 
 USER root
 
-# Install nginx
+# Install nginx + Python translation dependencies (needed by both Rasa NLU
+# component and the action server, which share the same /opt/venv)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && /opt/venv/bin/pip install --no-cache-dir deepl>=1.18.0 langdetect>=1.0.9
 
 WORKDIR /app
 

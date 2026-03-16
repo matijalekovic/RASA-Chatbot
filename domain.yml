@@ -90,6 +90,11 @@ entities:
   - person
 
 slots:
+  language:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
   project_name:
     type: text
     influence_conversation: true

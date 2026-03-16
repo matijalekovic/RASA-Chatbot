@@ -17,9 +17,11 @@ from difflib import get_close_matches
 from typing import Any, Optional, Text, Dict, List
 
 from rasa_sdk import Action, Tracker
+from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .team_data import TEAM_INFO, PERSONS
+from .translation import get_lang, translate_response
 
 
 # ── Intent suffix → TEAM_INFO key ─────────────────────────────────────────────
@@ -156,11 +158,14 @@ class ActionAnswerTeamQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        lang = get_lang(tracker)
+        lang_event = [SlotSet("language", lang)] if lang else []
+
         intent = tracker.latest_message.get("intent", {}).get("name", "")
 
         # ── Individual person lookup ─────────────────────────────────────────
         if intent == "ask_about_team_member":
-            return self._handle_person_query(dispatcher, tracker)
+            return self._handle_person_query(dispatcher, tracker, lang)
 
         # ── Group dispatch ───────────────────────────────────────────────────
         info_type = intent.replace("ask_team_", "")
@@ -168,18 +173,19 @@ class ActionAnswerTeamQuery(Action):
 
         if not data_key or data_key not in TEAM_INFO:
             dispatcher.utter_message(
-                text=(
+                text=translate_response(
                     "I can tell you about the **1PAX team** — overview, leadership, architects, "
                     "specialists, and operations. Or ask about a specific person: "
-                    "*\"Tell me about Mabel Miranda\"* or *\"Who is the BIM Manager?\"*"
+                    "*\"Tell me about Mabel Miranda\"* or *\"Who is the BIM Manager?\"*",
+                    lang,
                 )
             )
-            return []
+            return lang_event
 
         for msg in TEAM_INFO[data_key]:
-            dispatcher.utter_message(text=msg)
+            dispatcher.utter_message(text=translate_response(msg, lang))
 
-        return []
+        return lang_event
 
     # ────────────────────────────────────────────────────────────────────────────
 
@@ -187,6 +193,7 @@ class ActionAnswerTeamQuery(Action):
         self,
         dispatcher: CollectingDispatcher,
         tracker: Tracker,
+        lang: Optional[str] = None,
     ) -> List[Dict[Text, Any]]:
         """Look up a person by entity value and return their bio."""
 
@@ -206,28 +213,31 @@ class ActionAnswerTeamQuery(Action):
             if slot_val:
                 person_key = _lookup_person(slot_val)
 
+        lang_event = [SlotSet("language", lang)] if lang else []
+
         if not person_key or person_key not in PERSONS:
             dispatcher.utter_message(
-                text=(
+                text=translate_response(
                     "Who would you like to know about? You can ask about any 1PAX team member — "
                     "for example: *\"Tell me about Marija Stevanovic\"*, *\"Who is the CFO?\"*, "
-                    "or *\"Who handles AI at 1PAX?\"*"
+                    "or *\"Who handles AI at 1PAX?\"*",
+                    lang,
                 )
             )
-            return []
+            return lang_event
 
         person = PERSONS[person_key]
         for msg in person["bio"]:
-            dispatcher.utter_message(text=msg)
+            dispatcher.utter_message(text=translate_response(msg, lang))
 
         # Light follow-up
         suffix = random.choice([
-            f"\n\nWant to know about anyone else on the team?",
-            f"\n\nAny other team member you'd like to explore?",
+            "\n\nWant to know about anyone else on the team?",
+            "\n\nAny other team member you'd like to explore?",
             "",
             "",
         ])
         if suffix:
-            dispatcher.utter_message(text=suffix)
+            dispatcher.utter_message(text=translate_response(suffix, lang))
 
-        return []
+        return lang_event

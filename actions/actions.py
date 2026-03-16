@@ -16,6 +16,7 @@ from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet
 
 from .projects_data import PROJECTS, CATEGORIES
+from .translation import get_lang, translate_response
 
 
 # ── Variation pools ──────────────────────────────────────────────────────────
@@ -648,19 +649,32 @@ class ActionAnswerProjectQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        lang = get_lang(tracker)
+        lang_event = [SlotSet("language", lang)] if lang else []
+
         entity_value = next(tracker.get_latest_entity_values("project"), None)
         project_key, project = _resolve_project(tracker)
 
         if not project_key:
             if entity_value:
-                # A project was named but we don't have it — give a "not in portfolio" response
-                dispatcher.utter_message(response="utter_project_not_found")
+                dispatcher.utter_message(text=translate_response(
+                    random.choice([
+                        "I don't have data on that project yet. Try 'list projects' to see all 58 projects in our portfolio.",
+                        "Hmm, I can't find that one. Ask 'what projects do you have?' to browse the full catalogue.",
+                    ]), lang
+                ))
             else:
-                dispatcher.utter_message(response="utter_ask_which_project")
-            return []
+                dispatcher.utter_message(text=translate_response(
+                    random.choice([
+                        "Which project are you asking about? You can name a city, airport, or project — like **Sofia Airport**, **Belgrade Metro**, or **Lima Food Hall**.",
+                        "Sure! Which project did you have in mind? Try saying **Tahiti airport**, **Paris Heliport**, or type 'list projects' for the full catalogue.",
+                        "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects.",
+                    ]), lang
+                ))
+            return lang_event
 
         if not project:
-            dispatcher.utter_message(text=random.choice([
+            dispatcher.utter_message(text=translate_response(random.choice([
                 (
                     "I don't have details on that project yet. Try asking about "
                     "**Sofia Airport**, **Belgrade Airport**, or type 'list projects' "
@@ -670,8 +684,8 @@ class ActionAnswerProjectQuery(Action):
                     "Hmm, I can't find that one. Ask 'what projects do you have?' "
                     "to see the full list — there are 58 to explore!"
                 ),
-            ]))
-            return []
+            ]), lang))
+            return lang_event
 
         intent_name = tracker.latest_message.get("intent", {}).get("name", "")
         info_type = _intent_to_info_type(intent_name)
@@ -682,16 +696,18 @@ class ActionAnswerProjectQuery(Action):
             _photo_words = {"photo", "photos", "image", "images", "picture", "pictures", "pic", "pics"}
             if any(w in raw_msg.split() for w in _photo_words):
                 if project.get("video_url"):
-                    dispatcher.utter_message(text=(
+                    dispatcher.utter_message(text=translate_response(
                         f"I don't have individual project photos, but there's a video of "
-                        f"**{project['display_name']}** you can check out:\n\n{project['video_url']}"
+                        f"**{project['display_name']}** you can check out:\n\n{project['video_url']}",
+                        lang,
                     ))
                 else:
-                    dispatcher.utter_message(text=(
+                    dispatcher.utter_message(text=translate_response(
                         f"We don't have photos or media for **{project['display_name']}** yet — "
-                        f"check [1pax.com](https://1pax.com) for the latest."
+                        f"check [1pax.com](https://1pax.com) for the latest.",
+                        lang,
                     ))
-                return [SlotSet("project_name", project_key)]
+                return [SlotSet("project_name", project_key)] + lang_event
 
         # Special case: "ask_about_project" with no new entity = "what else can you tell me"
         # Show highlights instead of repeating the intro teaser
@@ -701,8 +717,8 @@ class ActionAnswerProjectQuery(Action):
                 info_type = "facts"
 
         formatter = INFO_DISPATCH.get(info_type, _fmt_teaser)
-        dispatcher.utter_message(text=formatter(project))
-        return [SlotSet("project_name", project_key)]
+        dispatcher.utter_message(text=translate_response(formatter(project), lang))
+        return [SlotSet("project_name", project_key)] + lang_event
 
 
 class ActionListProjects(Action):
@@ -718,11 +734,14 @@ class ActionListProjects(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        lang = get_lang(tracker)
+        lang_event = [SlotSet("language", lang)] if lang else []
+
         if not PROJECTS:
             dispatcher.utter_message(
-                text="No projects in the database yet — check back soon!"
+                text=translate_response("No projects in the database yet — check back soon!", lang)
             )
-            return []
+            return lang_event
 
         lines = [random.choice([
             "Here are 1PAX's architectural projects:\n",
@@ -745,8 +764,8 @@ class ActionListProjects(Action):
             "Pick any project and ask away — I can cover cost, location, design approach, and much more.",
         ]))
 
-        dispatcher.utter_message(text="\n".join(lines))
-        return []
+        dispatcher.utter_message(text=translate_response("\n".join(lines), lang))
+        return lang_event
 
 
 class ActionHandleOutOfScope(Action):
@@ -766,6 +785,9 @@ class ActionHandleOutOfScope(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        lang = get_lang(tracker)
+        lang_event = [SlotSet("language", lang)] if lang else []
+
         user_text = tracker.latest_message.get("text", "")
         lower_text = user_text.lower()
 
@@ -776,7 +798,7 @@ class ActionHandleOutOfScope(Action):
                         "what can you tell me about", "what topics do you cover",
                         "what can you answer", "how can you help"}
         if any(sig in lower_text for sig in _CAP_SIGNALS):
-            dispatcher.utter_message(text=(
+            dispatcher.utter_message(text=translate_response(
                 "Here's what I can help you with:\n\n"
                 "**About 1PAX as a studio:**\n"
                 "• Who we are, our mission and history\n"
@@ -790,9 +812,10 @@ class ActionHandleOutOfScope(Action):
                 "• Ask about any project by name, city, or airport code\n"
                 "• For any project: location, year, client, budget, design concept, "
                 "key challenge, sustainability, team, highlights, and more\n\n"
-                "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, or _'tell me about Sofia Airport'_."
+                "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, or _'tell me about Sofia Airport'_.",
+                lang,
             ))
-            return [SlotSet("project_name", None)]
+            return [SlotSet("project_name", None)] + lang_event
 
         # ── Safety net: try to fuzzy-match a project from the raw message ────────
         # This catches cases where NLU misfires on bare project names or typos
@@ -807,8 +830,8 @@ class ActionHandleOutOfScope(Action):
             p = PROJECTS[fuzzy_key]
             for text in _fmt_teaser(p).split("\n\n"):
                 if text.strip():
-                    dispatcher.utter_message(text=text.strip())
-            return [SlotSet("project_name", fuzzy_key)]
+                    dispatcher.utter_message(text=translate_response(text.strip(), lang))
+            return [SlotSet("project_name", fuzzy_key)] + lang_event
 
         # ── Normal out-of-scope / fallback handling ───────────────────────────────
         project_key = tracker.get_slot("project_name")
@@ -821,5 +844,5 @@ class ActionHandleOutOfScope(Action):
         else:
             msg = random.choice(_OUT_OF_SCOPE_NO_CONTEXT)
 
-        dispatcher.utter_message(text=msg)
-        return []
+        dispatcher.utter_message(text=translate_response(msg, lang))
+        return lang_event
