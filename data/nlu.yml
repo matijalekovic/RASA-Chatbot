@@ -171,6 +171,11 @@ nlu:
     - how many projects have you done
     - what projects does 1PAX do?
     - what projects does 1PAX work on?
+    - what are the projects?
+    - what are the 1PAX projects?
+    - what are the projects at 1PAX?
+    - show me the projects
+    - list the projects
     - what is 1PAX's track record with large-scale projects?
     - what is 1PAX's track record on major projects?
     - what does 1PAX's project track record look like?
@@ -4504,6 +4509,21 @@ nlu:
     - who works at one pax?
     - show me the one pax team members
     - who is on the one pax team?
+    - who works in 1PAX?
+    - who works for 1PAX?
+    - who works in 1 pax?
+    - who are the employees at 1PAX?
+    - who are the employees in 1PAX?
+    - who are 1PAX employees?
+    - who is employed at 1PAX?
+    - who are the staff members at 1PAX?
+    - who are your employees?
+    - who are the people working at 1PAX?
+    - who are the people working in 1PAX?
+    - who are the members of the 1PAX team?
+    - who are the people in the company?
+    - who works there?
+    - who are the people in 1PAX?
 
 # ── Team: leadership group ────────────────────────────────────────────────────
 
@@ -4544,6 +4564,12 @@ nlu:
     - give me an overview of the leadership team
     - give me a leadership team overview
     - give me a leadership overview
+    - who is driving 1PAX?
+    - who drives 1PAX?
+    - who drives the company?
+    - who is driving the company?
+    - who is steering 1PAX?
+    - who pilots the studio?
 
 # ── Team: architects group ────────────────────────────────────────────────────
 

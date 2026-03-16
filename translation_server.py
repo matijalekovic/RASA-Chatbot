@@ -63,8 +63,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send({"text": text})
             return
 
+        source_lang = (data.get("source_lang") or "").strip() or None
         try:
-            result = _translator.translate_text(text, target_lang="EN-US")
+            result = _translator.translate_text(text, source_lang=source_lang, target_lang="EN-US")
             self._send({"text": result.text})
         except Exception:
             # Source == target (already English) or any API error → return as-is

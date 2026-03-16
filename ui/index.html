@@ -534,13 +534,17 @@
     ? "http://localhost:5056/translate"
     : "/api/translate";
 
+  // DeepL target codes use regional variants (PT-PT, ZH-HANS); source codes use base language
+  const TARGET_TO_SOURCE = { "PT-PT": "PT", "PT-BR": "PT", "ZH-HANS": "ZH", "ZH-HANT": "ZH" };
+
   async function translateToEnglish(text, lang) {
     if (!lang) return text;  // already English
+    const sourceLang = TARGET_TO_SOURCE[lang] || lang;
     try {
       const r = await fetch(TRANSLATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, source_lang: sourceLang }),
       });
       const d = await r.json();
       return d.text || text;
