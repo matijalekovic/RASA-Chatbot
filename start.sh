@@ -20,6 +20,7 @@ echo "  Starting 1PAX chatbot..."
 echo ""
 
 # Kill anything already on relevant ports
+lsof -ti:5056 | xargs kill -9 2>/dev/null || true
 lsof -ti:5055 | xargs kill -9 2>/dev/null || true
 lsof -ti:5005 | xargs kill -9 2>/dev/null || true
 lsof -ti:8080 | xargs kill -9 2>/dev/null || true
