@@ -1,4 +1,2 @@
 rasa-sdk>=3.6.0,<3.7.0
-google-genai>=1.0.0
 langdetect>=1.0.9
-websockets==10.4

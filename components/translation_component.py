@@ -4,7 +4,7 @@ TranslationComponent — Custom Rasa NLU GraphComponent
 Placed FIRST in the NLU pipeline (config.yml). For each incoming user
 message it:
   1. Detects the language with langdetect (fast, local, no API).
-  2. If non-English, translates the text to English via Gemini so the
+  2. If non-English, translates the text to English via Gemini REST so the
      English-trained DIET classifier can classify the intent correctly.
   3. Stores the detected language code (e.g. "FR", "ZH-HANS") as a
      special entity named "__lang__" in the message, so downstream actions
@@ -15,12 +15,15 @@ sending to Rasa. This component acts as a fallback for direct API access.
 
 Training data is never translated — it is already in English.
 
-Requires:  pip install google-genai langdetect
+Requires:  pip install langdetect
 Env var:   GEMINI_API_KEY
 """
 
-import os
+import json
 import logging
+import os
+import urllib.error
+import urllib.request
 from typing import Any, Dict, List, Text
 
 from rasa.engine.graph import GraphComponent, ExecutionContext
@@ -32,21 +35,21 @@ from rasa.shared.nlu.training_data.training_data import TrainingData
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite"
+_GEMINI_MODEL = "gemini-2.5-flash-lite"
+_GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
+)
 
 try:
-    from google import genai
-    from google.genai import types as genai_types
     from langdetect import detect, LangDetectException
     _DEPS_OK = True
 except ImportError:
     _DEPS_OK = False
     logger.warning(
-        "TranslationComponent: 'google-genai' or 'langdetect' not installed — "
+        "TranslationComponent: 'langdetect' not installed — "
         "multilingual input translation disabled."
     )
 
-# langdetect ISO code → language code used in metadata/slots
 _LANG_MAP: Dict[str, str] = {
     "es":    "ES",
     "fr":    "FR",
@@ -55,8 +58,8 @@ _LANG_MAP: Dict[str, str] = {
     "zh":    "ZH-HANS",
     "pt":    "PT-PT",
     "sr":    "SR",
-    "hr":    "SR",  # Croatian often detected instead of Serbian Latin
-    "bs":    "SR",  # Bosnian similarly confused
+    "hr":    "SR",
+    "bs":    "SR",
 }
 
 LANG_ENTITY = "__lang__"
@@ -73,16 +76,14 @@ class TranslationComponent(GraphComponent):
         return {"gemini_api_key": None}
 
     def __init__(self, config: Dict[Text, Any]) -> None:
-        self._client = None
-        if not _DEPS_OK:
-            return
-        api_key = config.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
-        if api_key:
-            try:
-                self._client = genai.Client(api_key=api_key)
-                logger.info("TranslationComponent: Gemini translator initialised.")
-            except Exception as exc:
-                logger.warning(f"TranslationComponent: Gemini init failed — {exc}")
+        self._api_key = (
+            config.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+        )
+        if not self._api_key:
+            logger.info(
+                "TranslationComponent: GEMINI_API_KEY not set — "
+                "input translation will be skipped."
+            )
 
     @classmethod
     def create(
@@ -94,19 +95,13 @@ class TranslationComponent(GraphComponent):
     ) -> "TranslationComponent":
         return cls(config)
 
-    # ── Inference ─────────────────────────────────────────────────────────────
-
     def process(self, messages: List[Message]) -> List[Message]:
         for msg in messages:
             self._handle(msg)
         return messages
 
-    # ── Training ──────────────────────────────────────────────────────────────
-
     def process_training_data(self, training_data: TrainingData) -> TrainingData:
         return training_data  # Already English — never translate training data
-
-    # ── Internals ─────────────────────────────────────────────────────────────
 
     def _handle(self, message: Message) -> None:
         text = message.get("text", "")
@@ -120,26 +115,44 @@ class TranslationComponent(GraphComponent):
 
         lang_code = _LANG_MAP.get(raw_lang)
         if not lang_code:
-            return  # English or unsupported
+            return
 
         self._set_lang_entity(message, lang_code)
 
-        if self._client:
-            try:
-                config = genai_types.GenerateContentConfig(
-                    system_instruction="You are a translator. Output ONLY the translated text. No explanations, no quotes, no notes.",
-                    temperature=0.1,
-                )
-                result = self._client.models.generate_content(
-                    model=_MODEL,
-                    contents=f"Translate to English: {text}",
-                    config=config,
-                )
-                translated = result.text.strip()
-                message.set("text", translated)
-                logger.debug(f"[translate-in] → EN: '{text}' → '{translated}'")
-            except Exception as exc:
-                logger.warning(f"TranslationComponent: input translation failed — {exc}")
+        if not self._api_key:
+            return
+
+        translated = self._translate_to_english(text)
+        if translated:
+            message.set("text", translated)
+            logger.debug(f"[translate-in] → EN: '{text}' → '{translated}'")
+
+    def _translate_to_english(self, text: str) -> str:
+        body = {
+            "contents": [{"parts": [{"text": f"Translate to English: {text}"}]}],
+            "systemInstruction": {
+                "parts": [{
+                    "text": (
+                        "You are a translator. Output ONLY the translated text. "
+                        "No explanations, no quotes, no notes."
+                    )
+                }]
+            },
+            "generationConfig": {"temperature": 0.1},
+        }
+        req = urllib.request.Request(
+            f"{_GEMINI_URL}?key={self._api_key}",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10.0) as resp:
+                result = json.loads(resp.read())
+            return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, ValueError) as exc:
+            logger.warning(f"TranslationComponent: input translation failed — {exc}")
+            return ""
 
     def _set_lang_entity(self, message: Message, lang_code: str) -> None:
         entities = list(message.get("entities") or [])

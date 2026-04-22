@@ -17,47 +17,29 @@ Usage in every action:
         dispatcher.utter_message(text=translate_response("Hello!", lang))
         return [SlotSet("language", lang), ...]   # persist across short follow-ups
 
-Requires:  pip install google-genai langdetect
+Requires:  pip install langdetect
 Env var:   GEMINI_API_KEY
 """
 
-import os
+import json
 import logging
+import os
+import urllib.error
+import urllib.request
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-2.5-flash-lite"
-
-# ── Gemini setup ──────────────────────────────────────────────────────────────
-
-try:
-    from google import genai
-    from google.genai import types as genai_types
-    _GENAI_OK = True
-except ImportError:
-    _GENAI_OK = False
-    logger.warning("translation.py: google-genai not installed")
+_GEMINI_MODEL = "gemini-2.5-flash-lite"
+_GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
+)
 
 try:
     from langdetect import detect, LangDetectException
     _LANGDETECT_OK = True
 except ImportError:
     _LANGDETECT_OK = False
-
-_client = None
-
-
-def _get_client():
-    global _client
-    if _client is None and _GENAI_OK:
-        key = os.environ.get("GEMINI_API_KEY", "")
-        if key:
-            try:
-                _client = genai.Client(api_key=key)
-            except Exception as exc:
-                logger.warning(f"translation.py: Gemini init failed — {exc}")
-    return _client
 
 
 # ── Language name mapping for translation prompts ─────────────────────────────
@@ -106,22 +88,18 @@ def get_lang(tracker) -> Optional[str]:
       3. language slot    — persisted from a previous turn
       4. langdetect       — last-resort fallback
     """
-    # 1. Language explicitly selected in the UI
     lang = (tracker.latest_message.get("metadata") or {}).get("lang")
     if lang:
         return lang
 
-    # 2. Entity set by NLU component
     for entity in tracker.latest_message.get("entities", []):
         if entity.get("entity") == _LANG_ENTITY:
             return entity["value"]
 
-    # 3. Slot from a previous turn
     slot = tracker.get_slot("language")
     if slot:
         return slot
 
-    # 4. Langdetect fallback
     if _LANGDETECT_OK:
         text = (tracker.latest_message.get("text") or "").strip()
         if len(text) >= 4:
@@ -134,6 +112,32 @@ def get_lang(tracker) -> Optional[str]:
     return None
 
 
+def _gemini_call(prompt: str, system_instruction: str, timeout: float = 10.0) -> Optional[str]:
+    """POST to Gemini REST; return the text or None on any error."""
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return None
+
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "systemInstruction": {"parts": [{"text": system_instruction}]},
+        "generationConfig": {"temperature": 0.1},
+    }
+    req = urllib.request.Request(
+        f"{_GEMINI_URL}?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            result = json.loads(resp.read())
+        return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, ValueError) as exc:
+        logger.warning(f"Gemini REST call failed: {exc}")
+        return None
+
+
 def translate_response(text: str, lang: Optional[str]) -> str:
     """
     Translate an English response string to the target language.
@@ -144,29 +148,12 @@ def translate_response(text: str, lang: Optional[str]) -> str:
         return text
 
     lang_name = _LANG_NAMES.get(lang, lang)
-    c = _get_client()
-    if not c:
-        logger.warning(
-            f"translate_response: Gemini not available "
-            f"(GEMINI_API_KEY set? _GENAI_OK={_GENAI_OK})"
-        )
-        return text
-
-    try:
-        config = genai_types.GenerateContentConfig(
-            system_instruction=(
-                "You are a translator. Output ONLY the translated text. "
-                "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
-                "No explanations, no quotes, no notes."
-            ),
-            temperature=0.1,
-        )
-        response = c.models.generate_content(
-            model=_MODEL,
-            contents=f"Translate to {lang_name}: {text}",
-            config=config,
-        )
-        return response.text.strip()
-    except Exception as exc:
-        logger.warning(f"translate_response to {lang} failed: {exc}")
-        return text
+    translated = _gemini_call(
+        prompt=f"Translate to {lang_name}: {text}",
+        system_instruction=(
+            "You are a translator. Output ONLY the translated text. "
+            "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
+            "No explanations, no quotes, no notes."
+        ),
+    )
+    return translated if translated is not None else text

@@ -16,26 +16,21 @@ Requires: GEMINI_API_KEY env var.
 import json
 import os
 import re
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-try:
-    from google import genai
-    from google.genai import types as genai_types
-    _api_key = os.environ.get("GEMINI_API_KEY", "")
-    if _api_key:
-        _client = genai.Client(api_key=_api_key)
-        _ready = True
-        print("[translate] Gemini ready.")
-    else:
-        print("[translate] GEMINI_API_KEY not set — translation disabled.")
-        _client = None
-        _ready = False
-except Exception as exc:
-    print(f"[translate] Gemini unavailable: {exc}")
-    _client = None
-    _ready = False
+_GEMINI_MODEL = "gemini-2.5-flash-lite"
+_GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
+)
 
-_MODEL = "gemini-2.5-flash-lite"
+_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+_READY = bool(_API_KEY)
+if _READY:
+    print("[translate] Gemini REST ready.")
+else:
+    print("[translate] GEMINI_API_KEY not set — translation disabled.")
 
 _CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -44,23 +39,34 @@ _CORS = {
     "Content-Type": "application/json",
 }
 
+
 # Normalize "1pax" → "1PAX" so Gemini treats it as a company name, not a number.
 def _normalize(text: str) -> str:
     return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
 
 
-_CONFIG_TO_EN = genai_types.GenerateContentConfig(
-    system_instruction="You are a translator. Output ONLY the translated text. No explanations, no quotes, no notes.",
-    temperature=0.1,
-)
-
 def _translate_to_english(text: str) -> str:
-    response = _client.models.generate_content(
-        model=_MODEL,
-        contents=f"Translate to English: {text}",
-        config=_CONFIG_TO_EN,
+    body = {
+        "contents": [{"parts": [{"text": f"Translate to English: {text}"}]}],
+        "systemInstruction": {
+            "parts": [{
+                "text": (
+                    "You are a translator. Output ONLY the translated text. "
+                    "No explanations, no quotes, no notes."
+                )
+            }]
+        },
+        "generationConfig": {"temperature": 0.1},
+    }
+    req = urllib.request.Request(
+        f"{_GEMINI_URL}?key={_API_KEY}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
     )
-    return response.text.strip()
+    with urllib.request.urlopen(req, timeout=10.0) as resp:
+        result = json.loads(resp.read())
+    return result["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -87,7 +93,7 @@ class Handler(BaseHTTPRequestHandler):
 
         text = _normalize((data.get("text") or "").strip())
 
-        if not text or not _ready:
+        if not text or not _READY:
             self._send({"text": text})
             return
 
@@ -99,7 +105,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send({"text": text})
 
     def log_message(self, *args):
-        pass  # suppress per-request noise
+        pass
 
 
 if __name__ == "__main__":
