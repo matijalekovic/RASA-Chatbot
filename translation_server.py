@@ -25,12 +25,20 @@ _GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
 )
 
-_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+def _read_api_key() -> str:
+    # Support both names so deployment envs are less brittle.
+    return (
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GOOGLE_API_KEY", "").strip()
+    )
+
+
+_API_KEY = _read_api_key()
 _READY = bool(_API_KEY)
 if _READY:
     print("[translate] Gemini REST ready.")
 else:
-    print("[translate] GEMINI_API_KEY not set — translation disabled.")
+    print("[translate] GEMINI_API_KEY / GOOGLE_API_KEY not set — translation disabled.")
 
 _CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -83,7 +91,17 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._send({})
 
+    def do_GET(self):
+        if self.path.rstrip("/") == "/health":
+            self._send({"status": "ok", "translation_enabled": _READY})
+            return
+        self._send({"error": "not found"}, 404)
+
     def do_POST(self):
+        if self.path.rstrip("/") != "/translate":
+            self._send({"error": "not found"}, 404)
+            return
+
         length = int(self.headers.get("Content-Length", 0))
         try:
             data = json.loads(self.rfile.read(length))
@@ -93,16 +111,20 @@ class Handler(BaseHTTPRequestHandler):
 
         text = _normalize((data.get("text") or "").strip())
 
-        if not text or not _READY:
-            self._send({"text": text})
+        if not text:
+            self._send({"text": text, "translation_enabled": _READY})
+            return
+
+        if not _READY:
+            self._send({"text": text, "translation_enabled": False})
             return
 
         try:
             translated = _translate_to_english(text)
-            self._send({"text": translated})
+            self._send({"text": translated, "translation_enabled": True})
         except Exception as exc:
             print(f"[translate] Gemini error: {exc}")
-            self._send({"text": text})
+            self._send({"text": text, "translation_enabled": True})
 
     def log_message(self, *args):
         pass

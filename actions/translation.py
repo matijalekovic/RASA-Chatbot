@@ -114,7 +114,10 @@ def get_lang(tracker) -> Optional[str]:
 
 def _gemini_call(prompt: str, system_instruction: str, timeout: float = 10.0) -> Optional[str]:
     """POST to Gemini REST; return the text or None on any error."""
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = (
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GOOGLE_API_KEY", "").strip()
+    )
     if not api_key:
         return None
 

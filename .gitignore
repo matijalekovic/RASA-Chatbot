@@ -15,6 +15,7 @@ env/
 
 # Rasa
 .rasa/
+models/*.tar.gz
 
 # Test artifacts
 tests/results/

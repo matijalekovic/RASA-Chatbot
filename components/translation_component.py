@@ -77,11 +77,13 @@ class TranslationComponent(GraphComponent):
 
     def __init__(self, config: Dict[Text, Any]) -> None:
         self._api_key = (
-            config.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+            config.get("gemini_api_key")
+            or os.environ.get("GEMINI_API_KEY", "")
+            or os.environ.get("GOOGLE_API_KEY", "")
         )
         if not self._api_key:
             logger.info(
-                "TranslationComponent: GEMINI_API_KEY not set — "
+                "TranslationComponent: GEMINI_API_KEY / GOOGLE_API_KEY not set — "
                 "input translation will be skipped."
             )
 
