@@ -70,6 +70,12 @@ class ActionAnswerCompanyQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        from .calendly_actions import continue_active_calendly_scheduling
+
+        schedule_events = continue_active_calendly_scheduling(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
+
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
 

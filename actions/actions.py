@@ -19,6 +19,12 @@ from .projects_data import PROJECTS, CATEGORIES
 from .translation import get_lang, translate_response
 
 
+def _continue_schedule_if_active(dispatcher, tracker, domain):
+    from .calendly_actions import continue_active_calendly_scheduling
+
+    return continue_active_calendly_scheduling(dispatcher, tracker, domain)
+
+
 # ── Variation pools ──────────────────────────────────────────────────────────
 
 _OVERVIEW_INTROS = [
@@ -88,6 +94,10 @@ class ActionGreet(Action):
         return "action_greet"
 
     def run(self, dispatcher, tracker, domain):
+        schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
+
         lang = get_lang(tracker)
         dispatcher.utter_message(text=translate_response(random.choice([
             "Hi! I can tell you about 1PAX — our studio, mission, design approach, team, or careers — or help you explore our 58 architectural projects. What would you like to know?",
@@ -103,6 +113,10 @@ class ActionGoodbye(Action):
         return "action_goodbye"
 
     def run(self, dispatcher, tracker, domain):
+        schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
+
         lang = get_lang(tracker)
         dispatcher.utter_message(text=translate_response(random.choice([
             "Thank you for your interest in 1PAX. Feel free to come back anytime!",
@@ -118,6 +132,10 @@ class ActionIAmABot(Action):
         return "action_iamabot"
 
     def run(self, dispatcher, tracker, domain):
+        schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
+
         lang = get_lang(tracker)
         dispatcher.utter_message(text=translate_response(random.choice([
             "I'm the 1PAX virtual assistant, here to help you explore our architectural portfolio. I'm powered by Rasa.",
@@ -696,6 +714,10 @@ class ActionAnswerProjectQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
+
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
 
@@ -781,6 +803,10 @@ class ActionListProjects(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
+        schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
+
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
 
@@ -840,10 +866,9 @@ class ActionHandleOutOfScope(Action):
 
         # If a Calendly flow is already active, let the scheduler handle terse
         # follow-ups like names, emails, numbers, "yes", or "no".
-        if tracker.get_slot("schedule_stage"):
-            from .calendly_actions import run_calendly_scheduling
-
-            return run_calendly_scheduling(dispatcher, tracker, domain)
+        schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
+        if schedule_events is not None:
+            return schedule_events
 
         # ── Capability question: "what can you do", "what else can you do", etc. ─
         _CAP_SIGNALS = {"what can you do", "what else can you do", "what do you offer",

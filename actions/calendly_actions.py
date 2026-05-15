@@ -868,6 +868,18 @@ def run_calendly_scheduling(
     return events + _set_stage("select_slot")
 
 
+def continue_active_calendly_scheduling(
+    dispatcher: CollectingDispatcher,
+    tracker: Tracker,
+    domain: Dict[Text, Any],
+) -> Optional[List[SlotSet]]:
+    """Let the scheduler handle follow-ups while a booking flow is active."""
+
+    if not tracker.get_slot("schedule_stage"):
+        return None
+    return run_calendly_scheduling(dispatcher, tracker, domain)
+
+
 class ActionScheduleMeeting(Action):
     """Conversational Calendly scheduler."""
 
