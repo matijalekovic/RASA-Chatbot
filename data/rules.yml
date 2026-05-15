@@ -387,6 +387,43 @@ rules:
     - intent: ask_service_bim
     - action: action_answer_services_query
 
+# ── Calendly scheduling ─────────────────────────────────────────────────────
+
+- rule: Start Calendly scheduling
+  steps:
+    - intent: ask_schedule_meeting
+    - action: action_schedule_meeting
+
+- rule: Collect scheduling name
+  steps:
+    - intent: provide_schedule_name
+    - action: action_schedule_meeting
+
+- rule: Collect scheduling email
+  steps:
+    - intent: provide_schedule_email
+    - action: action_schedule_meeting
+
+- rule: Collect scheduling time preference
+  steps:
+    - intent: provide_schedule_time_preference
+    - action: action_schedule_meeting
+
+- rule: Select Calendly slot
+  steps:
+    - intent: select_schedule_slot
+    - action: action_schedule_meeting
+
+- rule: Confirm Calendly booking
+  steps:
+    - intent: confirm_schedule_booking
+    - action: action_schedule_meeting
+
+- rule: Cancel Calendly booking
+  steps:
+    - intent: cancel_schedule_booking
+    - action: action_schedule_meeting
+
 - rule: PAX Cart product query
   steps:
   - intent: ask_company_pax_cart

@@ -65,17 +65,17 @@ _OUT_OF_SCOPE_NO_CONTEXT = [
     (
         "I'm really only set up to talk about 1PAX's architectural work — but that's a pretty interesting topic! "
         "Name a project or ask 'what projects do you have?' to get started. "
-        "For direct contact, visit **1pax.com**."
+        "For direct contact, visit **1pax.com** or ask me to **schedule a meeting**."
     ),
     (
         "That's a bit outside my lane — I'm all about 1PAX's portfolio. "
         "Try naming a project (like **Sofia Airport** or **Belgrade Metro**) and I'll tell you everything about it. "
-        "To reach 1PAX directly, head to **1pax.com**."
+        "To reach 1PAX directly, head to **1pax.com** or ask me to **schedule a meeting**."
     ),
     (
         "Not quite my territory — I focus on 1PAX's projects. "
         "Ask 'show me all projects' or just name one and we can go from there. "
-        "To contact the team, visit **1pax.com**."
+        "To contact the team, visit **1pax.com** or ask me to **schedule a meeting**."
     ),
 ]
 
@@ -838,6 +838,13 @@ class ActionHandleOutOfScope(Action):
         user_text = tracker.latest_message.get("text", "")
         lower_text = user_text.lower()
 
+        # If a Calendly flow is already active, let the scheduler handle terse
+        # follow-ups like names, emails, numbers, "yes", or "no".
+        if tracker.get_slot("schedule_stage"):
+            from .calendly_actions import run_calendly_scheduling
+
+            return run_calendly_scheduling(dispatcher, tracker, domain)
+
         # ── Capability question: "what can you do", "what else can you do", etc. ─
         _CAP_SIGNALS = {"what can you do", "what else can you do", "what do you offer",
                         "what are you capable of", "what do you know", "what can you help",
@@ -859,7 +866,10 @@ class ActionHandleOutOfScope(Action):
                 "• Ask about any project by name, city, or airport code\n"
                 "• For any project: location, year, client, budget, design concept, "
                 "key challenge, sustainability, team, highlights, and more\n\n"
-                "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, or _'tell me about Sofia Airport'_.",
+                "**Scheduling:**\n"
+                "• Ask me to *schedule a meeting* and I can help find a Calendly time.\n\n"
+                "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, _'tell me about Sofia Airport'_, "
+                "or _'schedule a meeting'_.",
                 lang,
             ))
             return [SlotSet("project_name", None)] + lang_event

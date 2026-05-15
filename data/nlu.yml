@@ -2288,6 +2288,7 @@ nlu:
     - does 1PAX develop new solutions?
     - how does 1PAX push boundaries?
     - does 1PAX use AI in its work?
+    - do they use any innovation in their work?
     - is AI part of 1PAX's workflow?
     - how does 1PAX use artificial intelligence?
     - how do you approach innovation in architecture?
@@ -2389,14 +2390,11 @@ nlu:
     - how do you communicate with clients
     - what methodology does 1PAX use?
     - what is the creative process at 1PAX?
-    - do you work with Revit
-    - what software does 1PAX use for design
     - what RIBA stages do you cover
     - do you do RIBA Stage 2 through 4
     - do you work from concept to construction documents
     - how do you coordinate with structural engineers
     - what is your quality management process
-    - do you use any project management tools
     - how do you handle design changes
     - is the design process iterative at 1PAX
     - how do you manage international projects remotely
@@ -3228,6 +3226,153 @@ nlu:
     - what does the sustainability plan say?
     - what is in the ethics and sustainability plan?
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CALENDLY SCHEDULING
+# Conversational meeting booking through Calendly.
+# ─────────────────────────────────────────────────────────────────────────────
+
+- intent: ask_schedule_meeting
+  examples: |
+    - I want to schedule a meeting
+    - can I schedule a meeting with 1PAX?
+    - book a meeting
+    - schedule an appointment
+    - I want to book a call
+    - can we book a call?
+    - I'd like to arrange a consultation
+    - schedule a consultation
+    - can I speak with someone from 1PAX?
+    - I want to talk to someone from the studio
+    - connect me with the 1PAX team
+    - I want to speak to a human
+    - can I talk to a real person?
+    - let me speak to someone
+    - how can I meet with 1PAX?
+    - can I set up a design consultation?
+    - I need a meeting with your team
+    - I'd like to discuss a project
+    - can we schedule time to discuss our airport project?
+    - I want to talk about hiring 1PAX
+    - can I book time with business development?
+    - I want to schedule a call with the business development team
+    - arrange a meeting for next week
+    - book a meeting tomorrow afternoon
+    - schedule a call next Tuesday morning
+    - can we talk this week?
+    - I want a consultation next week
+    - set up a meeting with 1PAX
+    - I need to contact 1PAX about a project
+    - how can I get in touch with 1PAX?
+
+- intent: provide_schedule_name
+  examples: |
+    - my name is John Smith
+    - name is Maria Garcia
+    - I'm Alex Johnson
+    - I am Sophie Martin
+    - this is Daniel Lee
+    - put it under Jordan Miller
+    - book it for Priya Shah
+    - use the name Elena Petrova
+    - the invite should say Michael Brown
+    - you can use Ana Lopez
+    - Marko Simic
+    - Claudia Rossi
+    - Thomas Nguyen
+    - Sarah Thompson
+    - Ahmed Khan
+
+- intent: provide_schedule_email
+  examples: |
+    - my email is john@example.com
+    - john@example.com
+    - use maria.garcia@example.com
+    - send it to alex@company.com
+    - the email is sophie.martin@studio.com
+    - you can reach me at daniel@airportco.com
+    - book it with jordan.miller@client.org
+    - my address is priya@designfirm.com
+    - email me at elena.petrov@example.rs
+    - use michael.brown@example.co.uk
+    - ana.lopez@developer.com
+    - marko.simic@example.com
+
+- intent: provide_schedule_time_preference
+  examples: |
+    - tomorrow afternoon
+    - tomorrow morning works
+    - today if possible
+    - next week
+    - any time next week
+    - next Tuesday morning
+    - Wednesday afternoon
+    - Friday after lunch
+    - Monday morning
+    - Thursday evening
+    - May 15
+    - 15 May
+    - 2026-05-15
+    - sometime this week
+    - mornings are best
+    - afternoons work better
+    - I am available after 2 pm
+    - any slot tomorrow
+    - do you have anything next Friday?
+    - show me times for next week
+    - I can do Tuesday or Wednesday
+
+- intent: select_schedule_slot
+  examples: |
+    - 1
+    - option 1
+    - the first one
+    - first slot
+    - 2
+    - option 2
+    - second one
+    - the second slot
+    - 3
+    - option 3
+    - third one
+    - pick the third slot
+    - the 10 am one
+    - choose the afternoon slot
+    - that time works
+    - the earliest one
+    - the latest one
+
+- intent: confirm_schedule_booking
+  examples: |
+    - yes
+    - yes please
+    - confirm
+    - confirm it
+    - book it
+    - please book it
+    - go ahead
+    - that works
+    - sounds good
+    - yes that is correct
+    - yes book the meeting
+    - okay book it
+    - sure, confirm it
+
+- intent: cancel_schedule_booking
+  examples: |
+    - no
+    - no thanks
+    - cancel
+    - cancel booking
+    - stop scheduling
+    - never mind
+    - not now
+    - I don't want to book anymore
+    - forget it
+    - leave it
+    - do not schedule it
+    - cancel the meeting request
+    - I changed my mind
+
 # ── Out of scope ────────────────────────────────────────────────────────────
 
 - intent: out_of_scope
@@ -3307,20 +3452,12 @@ nlu:
     - hablas español
     - do you speak Spanish
     - can you translate this
-    - contact someone for me
-    - I want to speak to a human
-    - connect me to an agent
-    - can I talk to a real person
-    - let me speak to someone
     - give me a phone number
     - how do I contact 1PAX
     - what is 1PAX's email
     - how do I get in touch?
-    - how can I get in touch with 1PAX?
     - how do I reach you?
     - how can I contact you?
-    - book a meeting
-    - schedule an appointment
     - how do I get to the airport
     - how do I travel to Sofia
     - what is the check-in time
@@ -4490,6 +4627,11 @@ nlu:
     - what digital tools does 1PAX use?
     - what software and tools does 1PAX use?
     - what project management tools does 1PAX use?
+    - do you use any project management tools?
+    - what software does 1PAX use for design?
+    - do you work with Revit?
+    - what tools do you use to manage BIM projects?
+    - what digital project management tools do you use?
     - what technology does 1PAX use for design?
     - what design software does 1PAX work with?
     - what BIM standards do you work to?
@@ -4610,6 +4752,10 @@ nlu:
     - who is driving the company?
     - who is steering 1PAX?
     - who pilots the studio?
+    - who leads the AAM work at 1PAX?
+    - who leads the vertiport work at 1PAX?
+    - who leads the AAM/vertiport work at 1PAX?
+    - who is in charge of future mobility at 1PAX?
 
 # ── Team: architects group ────────────────────────────────────────────────────
 

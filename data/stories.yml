@@ -194,6 +194,23 @@ stories:
     - intent: ask_project_5star
     - action: action_answer_project_query
 
+# ── 5. Calendly scheduling ─────────────────────────────────────────────────
+
+- story: schedule meeting through Calendly
+  steps:
+    - intent: ask_schedule_meeting
+    - action: action_schedule_meeting
+    - intent: provide_schedule_name
+    - action: action_schedule_meeting
+    - intent: provide_schedule_email
+    - action: action_schedule_meeting
+    - intent: provide_schedule_time_preference
+    - action: action_schedule_meeting
+    - intent: select_schedule_slot
+    - action: action_schedule_meeting
+    - intent: confirm_schedule_booking
+    - action: action_schedule_meeting
+
 # ── 6. Out of scope ─────────────────────────────────────────────────────────
 
 - story: out of scope then redirected to project

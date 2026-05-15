@@ -14,6 +14,7 @@ Output: test_results/test_results_<timestamp>.txt
 """
 
 import json
+import os
 import time
 import datetime
 import requests
