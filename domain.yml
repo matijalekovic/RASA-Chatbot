@@ -130,6 +130,11 @@ slots:
     influence_conversation: false
     mappings:
       - type: custom
+  schedule_purpose:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
   schedule_time_preference:
     type: text
     influence_conversation: false

@@ -2,8 +2,8 @@
 Calendly scheduling flow for the 1PAX chatbot.
 
 The flow is intentionally action-driven, matching the rest of this bot:
-collect name/email/time preference, show live Calendly availability, ask for
-confirmation, then create the invitee through Calendly.
+collect name/email/meeting purpose/time preference, show live Calendly
+availability, ask for confirmation, then create the invitee through Calendly.
 """
 
 import json
@@ -35,6 +35,7 @@ _SCHEDULE_SLOTS = [
     "schedule_stage",
     "schedule_name",
     "schedule_email",
+    "schedule_purpose",
     "schedule_time_preference",
     "schedule_timezone",
     "schedule_offered_slots",
@@ -108,9 +109,15 @@ class CalendlyConfig:
 class CalendlyAPIError(RuntimeError):
     """Raised when Calendly returns an error or cannot be reached."""
 
-    def __init__(self, message: str, status: Optional[int] = None):
+    def __init__(
+        self,
+        message: str,
+        status: Optional[int] = None,
+        detail: Optional[str] = None,
+    ):
         super().__init__(message)
         self.status = status
+        self.detail = detail
 
 
 def _config_from_env() -> CalendlyConfig:
@@ -199,6 +206,48 @@ def _extract_email(text: str) -> Optional[str]:
         flags=re.IGNORECASE,
     )
     return match.group(0).lower() if match else None
+
+
+def _clean_purpose(raw: str) -> Optional[str]:
+    value = re.sub(r"\s+", " ", raw).strip(" .,;:!?")
+    if not value or len(value) < 3:
+        return None
+    if len(value) > 500:
+        value = value[:500].rstrip()
+
+    lowered = value.lower()
+    blocked = {
+        "yes",
+        "no",
+        "confirm",
+        "cancel",
+        "book it",
+        "go ahead",
+        "tomorrow",
+        "today",
+        "next week",
+    }
+    if lowered in blocked:
+        return None
+    if _extract_email(value):
+        return None
+    return value
+
+
+def _extract_purpose(text: str, stage: Optional[str]) -> Optional[str]:
+    if stage == "collect_purpose":
+        return _clean_purpose(text)
+
+    patterns = [
+        r"\b(?:purpose|intent|reason)\s+(?:is|for the meeting is)\s+(.+)",
+        r"\b(?:meeting is|call is)\s+(?:about|regarding)\s+(.+)",
+        r"\b(?:to discuss|about|regarding)\s+(.+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return _clean_purpose(match.group(1))
+    return None
 
 
 def _clean_name(raw: str) -> Optional[str]:
@@ -521,8 +570,19 @@ def _calendly_request(
             raw = resp.read().decode("utf-8")
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as exc:
-        logger.warning("Calendly API returned HTTP %s", exc.code)
-        raise CalendlyAPIError("Calendly rejected the request.", exc.code) from exc
+        detail = exc.read().decode("utf-8", errors="replace")
+        logger.warning(
+            "Calendly API returned HTTP %s for %s %s: %s",
+            exc.code,
+            method,
+            path,
+            detail[:800],
+        )
+        raise CalendlyAPIError(
+            "Calendly rejected the request.",
+            exc.code,
+            detail[:1200],
+        ) from exc
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
         logger.warning("Calendly API call failed: %s", exc)
         raise CalendlyAPIError("Calendly could not be reached.") from exc
@@ -586,8 +646,10 @@ def _booking_body(
     cfg: CalendlyConfig,
     name: str,
     email: str,
+    purpose: str,
     timezone_name: str,
     start_time: str,
+    location: Optional[Dict[str, str]],
 ) -> Dict[str, Any]:
     body: Dict[str, Any] = {
         "event_type": cfg.event_type_uri,
@@ -600,30 +662,84 @@ def _booking_body(
         "tracking": {
             "utm_source": "1pax_chatbot",
             "utm_campaign": "website_consultation",
+            "utm_content": purpose[:255],
         },
+        "questions_and_answers": [
+            {
+                "question": "Purpose of meeting",
+                "answer": purpose,
+                "position": 1,
+            }
+        ],
     }
-    if cfg.location_kind:
-        location = {"kind": cfg.location_kind}
-        if cfg.location_value:
-            location["location"] = cfg.location_value
+    if location:
         body["location"] = location
     if cfg.event_guests:
         body["event_guests"] = list(cfg.event_guests)
     return body
 
 
+def _configured_location(cfg: CalendlyConfig) -> Optional[Dict[str, str]]:
+    if not cfg.location_kind:
+        return None
+    location = {"kind": cfg.location_kind}
+    if cfg.location_value:
+        location["location"] = cfg.location_value
+    return location
+
+
+def _event_type_location(cfg: CalendlyConfig) -> Optional[Dict[str, str]]:
+    event_type_uuid = cfg.event_type_uri.rstrip("/").split("/")[-1]
+    result = _calendly_request(cfg, "GET", f"/event_types/{event_type_uuid}")
+    event_type = result.get("resource", result)
+    locations = event_type.get("locations") or []
+    if len(locations) != 1:
+        return None
+
+    location = locations[0] or {}
+    kind = location.get("kind")
+    if not kind:
+        return None
+    payload = {"kind": kind}
+    location_value = location.get("location")
+    if location_value:
+        payload["location"] = location_value
+    return payload
+
+
+def _booking_location(cfg: CalendlyConfig) -> Optional[Dict[str, str]]:
+    configured = _configured_location(cfg)
+    if configured:
+        return configured
+    try:
+        return _event_type_location(cfg)
+    except CalendlyAPIError:
+        logger.warning("Could not infer Calendly event type location.")
+        return None
+
+
 def _book_invitee(
     cfg: CalendlyConfig,
     name: str,
     email: str,
+    purpose: str,
     timezone_name: str,
     start_time: str,
 ) -> Dict[str, Any]:
+    location = _booking_location(cfg)
     result = _calendly_request(
         cfg,
         "POST",
         "/invitees",
-        body=_booking_body(cfg, name, email, timezone_name, start_time),
+        body=_booking_body(
+            cfg,
+            name,
+            email,
+            purpose,
+            timezone_name,
+            start_time,
+            location,
+        ),
     )
     return result.get("resource", result)
 
@@ -673,6 +789,7 @@ def run_calendly_scheduling(
     timezone_name = _user_timezone(tracker, cfg)
     name = tracker.get_slot("schedule_name")
     email = tracker.get_slot("schedule_email")
+    purpose = tracker.get_slot("schedule_purpose")
     time_preference = tracker.get_slot("schedule_time_preference")
     selected_slot = tracker.get_slot("schedule_selected_slot")
     selected_label = tracker.get_slot("schedule_selected_slot_label")
@@ -688,7 +805,14 @@ def run_calendly_scheduling(
         email = extracted_email
         events.append(SlotSet("schedule_email", email))
 
-    extracted_time_preference = _extract_time_preference(text, stage)
+    extracted_purpose = _extract_purpose(text, stage)
+    if extracted_purpose:
+        purpose = extracted_purpose
+        events.append(SlotSet("schedule_purpose", purpose))
+
+    extracted_time_preference = (
+        None if stage == "collect_purpose" else _extract_time_preference(text, stage)
+    )
     if extracted_time_preference and stage not in {"select_slot", "confirm"}:
         time_preference = extracted_time_preference
         offered_slots = []
@@ -721,6 +845,16 @@ def run_calendly_scheduling(
         )
         return events + _set_stage("collect_email")
 
+    if not purpose:
+        _utter(
+            dispatcher,
+            "What is the purpose of the meeting? A short note is enough, for "
+            "example: project consultation, partnership, proposal, careers, "
+            "press, or a general introduction.",
+            lang,
+        )
+        return events + _set_stage("collect_purpose")
+
     if not time_preference:
         _utter(
             dispatcher,
@@ -747,7 +881,8 @@ def run_calendly_scheduling(
             _utter(
                 dispatcher,
                 f"Perfect. Should I book **{selected_label}** for **{name}** "
-                f"at **{email}**? Reply yes to confirm, or no to cancel.",
+                f"at **{email}**?\n\nPurpose: **{purpose}**\n\nReply yes to "
+                "confirm, or no to cancel.",
                 lang,
             )
             return events + _set_stage("confirm")
@@ -786,6 +921,7 @@ def run_calendly_scheduling(
                         cfg,
                         name=name,
                         email=email,
+                        purpose=purpose,
                         timezone_name=timezone_name,
                         start_time=selected_slot,
                     )
@@ -803,6 +939,7 @@ def run_calendly_scheduling(
                 lines = [
                     f"You're booked: **{selected_label}**.",
                     f"Calendly will send the invitation to **{email}**.",
+                    f"Purpose: **{purpose}**.",
                 ]
                 if reschedule_url:
                     lines.append(f"[Reschedule]({reschedule_url})")
