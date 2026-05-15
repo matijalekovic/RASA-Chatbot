@@ -661,8 +661,11 @@ def _booking_body(
         },
         "tracking": {
             "utm_source": "1pax_chatbot",
+            "utm_medium": "chatbot",
             "utm_campaign": "website_consultation",
             "utm_content": purpose[:255],
+            "utm_term": "meeting_request",
+            "salesforce_uuid": "",
         },
         "questions_and_answers": [
             {
@@ -756,6 +759,68 @@ def _config_unavailable_message(cfg: CalendlyConfig) -> str:
         "chat yet. Once it is connected, I will be able to show live availability "
         "and book the meeting here."
     )
+
+
+def _prefilled_scheduling_link(
+    cfg: CalendlyConfig,
+    name: str,
+    email: str,
+    purpose: str,
+) -> str:
+    if not cfg.scheduling_link:
+        return ""
+
+    parsed = urllib.parse.urlsplit(cfg.scheduling_link)
+    params = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
+    params.update(
+        {
+            "name": name,
+            "email": email,
+            "a1": purpose,
+            "utm_source": "1pax_chatbot",
+            "utm_medium": "chatbot",
+            "utm_campaign": "website_consultation",
+            "utm_content": purpose[:255],
+            "utm_term": "meeting_request",
+        }
+    )
+    return urllib.parse.urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urllib.parse.urlencode(params),
+            parsed.fragment,
+        )
+    )
+
+
+def _booking_fallback_message(
+    cfg: CalendlyConfig,
+    name: str,
+    email: str,
+    purpose: str,
+    selected_label: Optional[str],
+) -> Optional[str]:
+    link = _prefilled_scheduling_link(cfg, name, email, purpose)
+    if not link:
+        return None
+
+    lines = [
+        "Calendly needs the final confirmation on its booking page for this "
+        "meeting. I prepared a pre-filled link with your details:",
+        f"[Finish booking in Calendly]({link})",
+    ]
+    if selected_label:
+        lines.append(f"Choose **{selected_label}** if it is still available.")
+    lines.extend(
+        [
+            f"Name: **{name}**",
+            f"Email: **{email}**",
+            f"Purpose: **{purpose}**",
+        ]
+    )
+    return "\n\n".join(lines)
 
 
 def run_calendly_scheduling(
@@ -925,7 +990,23 @@ def run_calendly_scheduling(
                         timezone_name=timezone_name,
                         start_time=selected_slot,
                     )
-                except CalendlyAPIError:
+                except CalendlyAPIError as exc:
+                    logger.warning(
+                        "Calendly direct booking failed with status %s; "
+                        "falling back to scheduling link when available.",
+                        exc.status,
+                    )
+                    fallback = _booking_fallback_message(
+                        cfg,
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        selected_label=selected_label,
+                    )
+                    if fallback:
+                        _utter(dispatcher, fallback, lang)
+                        return _clear_schedule_events() + events
+
                     _utter(
                         dispatcher,
                         "Calendly could not complete the booking right now. "
