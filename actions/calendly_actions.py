@@ -512,6 +512,7 @@ def _calendly_request(
             "Authorization": f"Bearer {cfg.access_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": "1PAX-Chatbot/1.0 (+https://www.1pax.com)",
         },
     )
 
