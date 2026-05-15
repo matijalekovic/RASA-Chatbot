@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     && rm -rf /var/lib/apt/lists/* \
-    && /opt/venv/bin/pip install --no-cache-dir "langdetect>=1.0.9"
+    && /opt/venv/bin/pip install --no-cache-dir "langdetect>=1.0.9" "tzdata>=2025.2"
 
 WORKDIR /app
 
