@@ -221,18 +221,48 @@ def _translate_to_english(text: str) -> str:
     )
 
 
+def _paragraph_chunks(paragraph: str, max_chars: int = 800) -> list[str]:
+    """Split one Markdown paragraph into line-safe translation chunks."""
+    if len(paragraph) <= max_chars:
+        return [paragraph]
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+    for line in paragraph.splitlines():
+        line_len = len(line) + 1
+        if current and current_len + line_len > max_chars:
+            chunks.append("\n".join(current))
+            current = []
+            current_len = 0
+        current.append(line)
+        current_len += line_len
+    if current:
+        chunks.append("\n".join(current))
+    return chunks
+
+
 def _translate_from_english(text: str, target_lang: str) -> str:
     lang_name = _LANG_NAMES.get((target_lang or "").upper(), target_lang)
-    return _gemini_translate(
-        f"Translate to {lang_name}: {text}",
-        (
-            "You are a translator. Output ONLY the translated text. "
-            "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
-            "Preserve Markdown links and URLs exactly; translate link labels only. "
-            "No explanations, no quotes, no notes."
-        ),
-        timeout=8.0,
+    system_instruction = (
+        "You are a translator. Output ONLY the translated text. "
+        "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
+        "Preserve Markdown links and URLs exactly; translate link labels only. "
+        "No explanations, no quotes, no notes."
     )
+    translated_paragraphs: list[str] = []
+    for paragraph in text.split("\n\n"):
+        translated_chunks = [
+            _gemini_translate(
+                f"Translate to {lang_name}: {chunk}",
+                system_instruction,
+                timeout=8.0,
+            )
+            for chunk in _paragraph_chunks(paragraph)
+            if chunk
+        ]
+        translated_paragraphs.append("\n".join(translated_chunks))
+    return "\n\n".join(translated_paragraphs)
 
 
 class Handler(BaseHTTPRequestHandler):

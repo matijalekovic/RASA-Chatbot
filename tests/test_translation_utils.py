@@ -267,6 +267,21 @@ class TranslationResponseTests(unittest.TestCase):
             "What is the budget for Sofia Airport?",
         )
 
+    def test_response_proxy_splits_long_markdown_for_translation(self):
+        calls = []
+
+        def fake_translate(prompt, system_instruction, timeout=8.0):
+            calls.append(prompt)
+            return prompt.replace("Translate to Serbian (Latin script, never Cyrillic): ", "SR:")
+
+        long_text = "\n".join([f"- **Item {index}** — details" for index in range(40)])
+        with patch.object(translation_server, "_gemini_translate", side_effect=fake_translate):
+            result = translation_server._translate_from_english(long_text, "SR")
+
+        self.assertGreater(len(calls), 1)
+        self.assertIn("SR:- **Item 0**", result)
+        self.assertIn("- **Item 39**", result)
+
     def test_short_english_prompt_is_not_treated_as_portuguese(self):
         tracker = FakeTracker(
             "What does 1PAX do?",
