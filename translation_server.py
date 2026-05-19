@@ -24,7 +24,8 @@ import time
 import unicodedata
 import urllib.error
 import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from concurrent.futures import ThreadPoolExecutor
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 _GEMINI_MODEL = "gemini-2.5-flash-lite"
 _GEMINI_URL = (
@@ -174,9 +175,14 @@ def _quick_schedule_translation(text: str, source_lang: str) -> str:
     return ""
 
 
-def _gemini_translate(prompt: str, system_instruction: str, timeout: float = 8.0) -> str:
+def _gemini_translate(
+    prompt: str,
+    system_instruction: str,
+    timeout: float = 8.0,
+    attempts: int = 2,
+) -> str:
     last_error = None
-    for attempt in range(2):
+    for attempt in range(max(1, attempts)):
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "systemInstruction": {
@@ -205,7 +211,7 @@ def _gemini_translate(prompt: str, system_instruction: str, timeout: float = 8.0
             ValueError,
         ) as exc:
             last_error = exc
-            if attempt == 0:
+            if attempt + 1 < max(1, attempts):
                 time.sleep(0.25)
     raise last_error or RuntimeError("translation failed")
 
@@ -242,6 +248,21 @@ def _paragraph_chunks(paragraph: str, max_chars: int = 800) -> list[str]:
     return chunks
 
 
+def _translation_prompt(chunk: str, lang_name: str) -> str:
+    return f"Translate to {lang_name}: {chunk}"
+
+
+def _translation_chunks(text: str, max_chars: int = 1400) -> list[str]:
+    chunks: list[str] = []
+    for paragraph in text.split("\n\n"):
+        paragraph_chunks = _paragraph_chunks(paragraph, max_chars=max_chars)
+        if paragraph_chunks:
+            chunks.extend(paragraph_chunks)
+        else:
+            chunks.append("")
+    return chunks
+
+
 def _translate_from_english(text: str, target_lang: str) -> str:
     lang_name = _LANG_NAMES.get((target_lang or "").upper(), target_lang)
     system_instruction = (
@@ -250,19 +271,32 @@ def _translate_from_english(text: str, target_lang: str) -> str:
         "Preserve Markdown links and URLs exactly; translate link labels only. "
         "No explanations, no quotes, no notes."
     )
-    translated_paragraphs: list[str] = []
-    for paragraph in text.split("\n\n"):
-        translated_chunks = [
-            _gemini_translate(
-                f"Translate to {lang_name}: {chunk}",
+    if len(text) <= 3200:
+        return _gemini_translate(
+            _translation_prompt(text, lang_name),
+            system_instruction,
+            timeout=10.0,
+            attempts=1,
+        )
+
+    chunks = _translation_chunks(text)
+    translated_chunks: list[str] = [""] * len(chunks)
+    with ThreadPoolExecutor(max_workers=min(4, len(chunks))) as executor:
+        futures = {
+            executor.submit(
+                _gemini_translate,
+                _translation_prompt(chunk, lang_name),
                 system_instruction,
-                timeout=8.0,
-            )
-            for chunk in _paragraph_chunks(paragraph)
+                9.0,
+                1,
+            ): index
+            for index, chunk in enumerate(chunks)
             if chunk
-        ]
-        translated_paragraphs.append("\n".join(translated_chunks))
-    return "\n\n".join(translated_paragraphs)
+        }
+        for future, index in futures.items():
+            translated_chunks[index] = future.result()
+
+    return "\n\n".join(translated_chunks)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -356,4 +390,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(os.environ.get("TRANSLATE_PORT", 5056))
     print(f"[translate] Listening on port {port}")
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()

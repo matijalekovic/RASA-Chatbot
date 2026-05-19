@@ -270,11 +270,11 @@ class TranslationResponseTests(unittest.TestCase):
     def test_response_proxy_splits_long_markdown_for_translation(self):
         calls = []
 
-        def fake_translate(prompt, system_instruction, timeout=8.0):
+        def fake_translate(prompt, system_instruction, timeout=8.0, attempts=1):
             calls.append(prompt)
             return prompt.replace("Translate to Serbian using the Latin alphabet: ", "SR:")
 
-        long_text = "\n".join([f"- **Item {index}** — details" for index in range(40)])
+        long_text = "\n".join([f"- **Item {index}** — details about project delivery, scope, and context" for index in range(90)])
         with patch.object(translation_server, "_gemini_translate", side_effect=fake_translate):
             result = translation_server._translate_from_english(long_text, "SR")
 

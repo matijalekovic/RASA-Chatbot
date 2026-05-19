@@ -560,7 +560,7 @@ def _proxy_translate_response(text: str, lang: str) -> Optional[str]:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=9.0) as resp:
+        with urllib.request.urlopen(req, timeout=12.0) as resp:
             result = json.loads(resp.read())
     except (
         TimeoutError,
@@ -612,7 +612,7 @@ def translate_response(text: str, lang: Optional[str]) -> str:
             "No explanations, no quotes, no notes."
         ),
         timeout=8.0,
-        attempts=2,
+        attempts=1,
     )
     if translated and not _looks_untranslated(text, translated, normalized):
         return translated
