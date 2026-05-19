@@ -529,6 +529,48 @@ def _static_translation(text: str, lang: Optional[str]) -> Optional[str]:
         booking = _sr_booking_translation(text)
         if booking:
             return booking
+        if (
+            text.startswith("**1. Airports & Railstations**")
+            and "**8. BIM Project Management**" in text
+        ):
+            return (
+                "**1. Aerodromi i železničke stanice** — Programiranje terminala, dizajn protoka, "
+                "BHS izvodljivost, multimodalni čvorovi, protivpožarna sigurnost i dizajn stanica.\n\n"
+                "**2. Urbanizam i master plan** — Strategija razvoja, planiranje aerodromskog grada, "
+                "simulacija saobraćaja, faziranje izgradnje i bezbednosne revizije.\n\n"
+                "**3. Inovacije i patenti** — Patentirani sistemi kolica i nameštaja, licenciranje, "
+                "savetovanje o putničkom iskustvu i komercijalno uvođenje vlasničkih inovacija.\n\n"
+                "**4. Budućnost mobilnosti** — Dizajn vertiportova i eVTOL objekata, urbani čvorovi "
+                "mobilnosti, MaaS integracija i savetovanje za pametne gradove.\n\n"
+                "**5. Kontrolni tornjevi i prateći objekti** — Izbor lokacije ATCT-a, analiza vidljivosti, "
+                "opremanje kontrolne sobe i dizajn pratećih objekata.\n\n"
+                "**6. Enterijer i maloprodaja** — Smernice za putničko iskustvo, komercijalna strategija, "
+                "maloprodajni koncept \"Crvena nit\", signalizacija i dizajn nameštaja.\n\n"
+                "**7. Rad i život** — Kancelarije, ambasade, objekti mešovite namene, tržni centri, "
+                "odmarališta i projekti urbane regeneracije.\n\n"
+                "**8. BIM upravljanje projektima** — Revit modelovanje, detekcija kolizija, digitalni blizanci, "
+                "BIM savetovanje i isporuka radnih paketa."
+            )
+        if (
+            text.startswith("**Leadership**\nMabel Miranda")
+            and "**Collaborators**" in text
+        ):
+            return (
+                "**Rukovodstvo**\n"
+                "Mabel Miranda · CEO i osnivač  |  Ali Fawaz · frakcioni CFO  |  "
+                "Fabiola Espinoza · poslovni razvoj  |  Bashan Yang · Šangaj i vizualizacija  |  "
+                "Carla Miranda · komunikacije i inovacije\n\n"
+                "**Arhitekte** (13)\n"
+                "Claudia Cornejo · Hanh Nguyen · Pedro Martins Branco · Marija Stevanovic · Boris Stojnic · "
+                "Diego Alonso Ampuero · Marko Soskic · Renzo Roncalla · Kevin Guzman · Yeniffer Cordero · "
+                "Wendy Florian · Deysi Nuñez · Maria Fernanda Bojorquez\n\n"
+                "**Specijalisti**\n"
+                "Tiago Cobrado · arhitektonski tehnolog  |  Matija Leković · AI i digitalni specijalista\n\n"
+                "**Operacije studija**\n"
+                "Andreja Zrnovic · dizajn i komunikacije  |  Olenka Tamara · administrativni asistent\n\n"
+                "**Saradnici**\n"
+                "Helene Henriot · planer aerodroma  |  Christos Panagos · arhitekta i stručnjak za 3D vizualizaciju"
+            )
         exact = {
             (
                 "**1PAX offers eight core service areas**, spanning the full lifecycle of "
