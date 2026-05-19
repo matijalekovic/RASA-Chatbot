@@ -14,6 +14,7 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .services_data import SERVICES_INFO
+from .site_links import append_site_link, service_url
 from .translation import get_lang, translate_response
 
 
@@ -29,6 +30,18 @@ SERVICES_DISPATCH: Dict[str, str] = {
     "interior":        "interior",
     "working_living":  "working_living",
     "bim":             "bim",
+}
+
+SERVICE_LINK_LABELS: Dict[str, str] = {
+    "services_list": "Our Projects",
+    "airports": "Airports and Railstations",
+    "urbanism": "Urbanism and Masterplan",
+    "innovation": "Innovation and Research",
+    "future_mobility": "Future of Mobility",
+    "control_towers": "Airports and Railstations",
+    "interior": "Retail and Interior Design",
+    "working_living": "Working and Living",
+    "bim": "BIM",
 }
 
 
@@ -74,7 +87,13 @@ class ActionAnswerServicesQuery(Action):
             )
             return lang_event
 
-        messages = SERVICES_INFO[data_key]
+        messages = list(SERVICES_INFO[data_key])
+        if messages:
+            messages[-1] = append_site_link(
+                messages[-1],
+                SERVICE_LINK_LABELS.get(data_key, "Our Projects"),
+                service_url(data_key),
+            )
 
         # Send each message part separately (multi-part responses)
         for msg in messages:

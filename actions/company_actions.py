@@ -13,6 +13,7 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .company_data import COMPANY_INFO
+from .site_links import append_site_link, company_url
 from .translation import get_lang, translate_response
 
 
@@ -56,6 +57,20 @@ COMPANY_DISPATCH: Dict[str, str] = {
     "ecoport":        "ecoport",
 }
 
+COMPANY_LINK_LABELS: Dict[str, str] = {
+    "offices": "Contact and offices",
+    "team": "The Team",
+    "culture": "The Team",
+    "mentorship": "The Team",
+    "careers": "Contact 1PAX",
+    "open_roles": "Contact 1PAX",
+    "pax_cart": "PAX Cart Patent",
+    "ecoport": "Ecoport Patent",
+    "ip": "Patents",
+    "innovation": "Innovation and Research",
+    "urbanism": "Urbanism and Masterplan",
+}
+
 
 class ActionAnswerCompanyQuery(Action):
     """Single router for all ask_company_* intents."""
@@ -97,7 +112,14 @@ class ActionAnswerCompanyQuery(Action):
             )
             return lang_event
 
-        messages = COMPANY_INFO[data_key]
+        messages = list(COMPANY_INFO[data_key])
+        link_label = COMPANY_LINK_LABELS.get(data_key, "About 1PAX")
+        if messages:
+            messages[-1] = append_site_link(
+                messages[-1],
+                link_label,
+                company_url(data_key),
+            )
 
         # Send each message part separately (multi-part responses)
         for msg in messages:

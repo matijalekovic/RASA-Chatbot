@@ -7,6 +7,7 @@ PYTHON=/opt/venv/bin/python
 RASA_PORT=${RASA_PORT:-5005}
 ACTION_PORT=${ACTION_PORT:-5055}
 TRANSLATE_PORT=${TRANSLATE_PORT:-5056}
+MCP_PORT=${MCP_PORT:-5057}
 BOOT_TIMEOUT_SECONDS=${BOOT_TIMEOUT_SECONDS:-300}
 MODEL_DIR=/app/models
 
@@ -108,6 +109,10 @@ trap cleanup EXIT INT TERM
 echo "[start] Starting translation proxy server on port ${TRANSLATE_PORT}..."
 PYTHONUNBUFFERED=1 "${PYTHON}" -u /app/translation_server.py 2>&1 | sed 's/^/[translate] /' &
 
+echo "[start] Starting MCP QA server on port ${MCP_PORT}..."
+PYTHONUNBUFFERED=1 MCP_TRANSPORT=http MCP_HOST=127.0.0.1 MCP_PORT="${MCP_PORT}" \
+  "${PYTHON}" -u /app/mcp_server.py 2>&1 | sed 's/^/[mcp] /' &
+
 echo "[start] Starting action server on port ${ACTION_PORT}..."
 PYTHONUNBUFFERED=1 "${RASA}" run actions --port "${ACTION_PORT}" 2>&1 | sed 's/^/[actions] /' &
 
@@ -120,6 +125,7 @@ PYTHONUNBUFFERED=1 "${RASA}" run \
   --endpoints /app/endpoints.yml 2>&1 | sed 's/^/[rasa] /' &
 
 wait_for_http "translation proxy" "http://127.0.0.1:${TRANSLATE_PORT}/health" "${BOOT_TIMEOUT_SECONDS}"
+wait_for_http "MCP QA server" "http://127.0.0.1:${MCP_PORT}/health" "${BOOT_TIMEOUT_SECONDS}"
 wait_for_http "action server" "http://127.0.0.1:${ACTION_PORT}/health" "${BOOT_TIMEOUT_SECONDS}"
 wait_for_http "rasa API" "http://127.0.0.1:${RASA_PORT}/status" "${BOOT_TIMEOUT_SECONDS}"
 

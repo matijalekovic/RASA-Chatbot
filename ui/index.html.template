@@ -127,6 +127,18 @@
     .bubble p:first-child { margin-top: 0; }
     .bubble p:last-child  { margin-bottom: 0; }
     .bubble a { color: inherit; text-decoration: underline; }
+    .bubble.has-media { padding: 8px; }
+    .bubble.has-media .media-body { padding: 3px 8px 5px; }
+    .project-cover {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 9px;
+      background: var(--bg);
+    }
+    .project-cover:last-child { margin-bottom: 0; }
 
     /* Timestamp */
     .ts {
@@ -248,7 +260,7 @@
 <div id="app">
   <header>
     <span class="logo">1PAX<span class="logo-dot"></span></span>
-    <span class="header-sub">Assistant — internal preview</span>
+    <span class="header-sub">Website assistant</span>
     <span class="status-dot" title="Online"></span>
   </header>
 
@@ -286,7 +298,98 @@
   const sendBtn    = document.getElementById("send");
   const typingEl   = document.getElementById("typing");
 
+  const UI_TEXT = {
+    "": {
+      htmlLang: "en",
+      title: "1PAX — Assistant",
+      headerSub: "Website assistant",
+      inputPlaceholder: "Ask about projects, team, services...",
+      send: "Send",
+      online: "Online",
+      noResponse: "I didn't get a response - please try again.",
+      unreachable: "Could not reach the assistant. Please check back shortly.",
+    },
+    FR: {
+      htmlLang: "fr",
+      title: "1PAX — Assistant",
+      headerSub: "Assistant du site",
+      inputPlaceholder: "Posez une question sur les projets, l'équipe, les services...",
+      send: "Envoyer",
+      online: "En ligne",
+      noResponse: "Je n'ai pas reçu de réponse - veuillez réessayer.",
+      unreachable: "Impossible de joindre l'assistant. Veuillez réessayer dans un instant.",
+    },
+    ES: {
+      htmlLang: "es",
+      title: "1PAX — Asistente",
+      headerSub: "Asistente del sitio",
+      inputPlaceholder: "Pregunta sobre proyectos, equipo, servicios...",
+      send: "Enviar",
+      online: "En línea",
+      noResponse: "No recibí respuesta - inténtalo de nuevo.",
+      unreachable: "No se pudo contactar con el asistente. Inténtalo de nuevo en unos momentos.",
+    },
+    "PT-PT": {
+      htmlLang: "pt-PT",
+      title: "1PAX — Assistente",
+      headerSub: "Assistente do site",
+      inputPlaceholder: "Pergunte sobre projetos, equipa, serviços...",
+      send: "Enviar",
+      online: "Online",
+      noResponse: "Não recebi resposta - tente novamente.",
+      unreachable: "Não foi possível contactar o assistente. Tente novamente dentro de instantes.",
+    },
+    "ZH-HANS": {
+      htmlLang: "zh-Hans",
+      title: "1PAX — 助手",
+      headerSub: "网站助手",
+      inputPlaceholder: "询问项目、团队、服务...",
+      send: "发送",
+      online: "在线",
+      noResponse: "我没有收到回复 - 请重试。",
+      unreachable: "暂时无法连接助手。请稍后再试。",
+    },
+    SR: {
+      htmlLang: "sr-Latn",
+      title: "1PAX — Asistent",
+      headerSub: "Asistent sajta",
+      inputPlaceholder: "Pitajte o projektima, timu, uslugama...",
+      send: "Pošalji",
+      online: "Online",
+      noResponse: "Nisam dobio odgovor - pokušajte ponovo.",
+      unreachable: "Nije moguće povezati se sa asistentom. Pokušajte ponovo uskoro.",
+    },
+  };
+
+  let currentLang = localStorage.getItem("pax_lang") ?? "";
+
+  function uiText(key) {
+    return (UI_TEXT[currentLang] || UI_TEXT[""])[key] ?? UI_TEXT[""][key];
+  }
+
+  function updateStaticText() {
+    const copy = UI_TEXT[currentLang] || UI_TEXT[""];
+    document.documentElement.lang = copy.htmlLang;
+    document.title = copy.title;
+    document.querySelector(".header-sub").textContent = copy.headerSub;
+    document.querySelector(".status-dot")?.setAttribute("title", copy.online);
+    inputEl.placeholder = copy.inputPlaceholder;
+    inputEl.setAttribute("aria-label", copy.inputPlaceholder);
+    sendBtn.textContent = copy.send;
+    sendBtn.setAttribute("aria-label", copy.send);
+  }
+
+  updateStaticText();
+
   // ── Markdown-lite renderer ──────────────────────────────────────────────────
+  function escAttr(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
   function renderMarkdown(text) {
     // Escape HTML first
     let s = text
@@ -299,7 +402,11 @@
     // Italic: *text* (single asterisk, not double)
     s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
     // Links: [text](url)
-    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, (_m, label, url) => {
+      const isSiteUrl = /^https:\/\/(www\.)?1pax\.com\b/.test(url);
+      const target = isSiteUrl ? "_top" : "_blank";
+      return `<a href="${url}" target="${target}" rel="noopener">${label}</a>`;
+    });
 
     // Bullet lists — collect consecutive bullet lines into <ul>
     const lines = s.split("\n");
@@ -331,7 +438,7 @@
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  function appendMessage(role, text) {
+  function appendMessage(role, text, imageUrl = "") {
     const welcome = document.getElementById("welcome");
     if (welcome) welcome.remove();
 
@@ -339,8 +446,14 @@
     wrapper.className = `message ${role}`;
 
     const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.innerHTML = renderMarkdown(text);
+    bubble.className = `bubble${imageUrl ? " has-media" : ""}`;
+    const mediaHtml = imageUrl
+      ? `<img class="project-cover" src="${escAttr(imageUrl)}" alt="Project cover image" loading="lazy">`
+      : "";
+    const textHtml = text ? renderMarkdown(text) : "";
+    bubble.innerHTML = imageUrl && textHtml
+      ? `${mediaHtml}<div class="media-body">${textHtml}</div>`
+      : `${mediaHtml}${textHtml}`;
 
     const ts = document.createElement("div");
     ts.className = "ts";
@@ -349,7 +462,17 @@
     wrapper.appendChild(bubble);
     wrapper.appendChild(ts);
     messagesEl.appendChild(wrapper);
+    bubble.querySelector(".project-cover")?.addEventListener("load", () => {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }, { once: true });
+    bubble.querySelector(".project-cover")?.addEventListener("error", event => {
+      event.currentTarget.remove();
+    }, { once: true });
     messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function appendBotReply(reply) {
+    if (reply.text || reply.image) appendMessage("bot", reply.text || "", reply.image || "");
   }
 
   function setLoading(on) {
@@ -377,15 +500,15 @@
       const replies = await res.json();
       setLoading(false);
       if (!replies || replies.length === 0) {
-        appendMessage("bot", "I didn't get a response — please try again.");
+        appendMessage("bot", uiText("noResponse"));
       } else {
         for (const reply of replies) {
-          if (reply.text) appendMessage("bot", reply.text);
+          appendBotReply(reply);
         }
       }
     } catch (err) {
       setLoading(false);
-      appendMessage("bot", "⚠️ Could not reach the assistant. Please check back shortly.");
+      appendMessage("bot", uiText("unreachable"));
       console.error(err);
     }
   }
