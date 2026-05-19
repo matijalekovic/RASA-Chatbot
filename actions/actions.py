@@ -1261,6 +1261,67 @@ class ActionHandleOutOfScope(Action):
             )
             return [SlotSet("project_name", fuzzy_key)] + lang_event
 
+        # ── Production safety net: route common non-project flows from raw text ─
+        # Locally trained models can occasionally underperform when loaded in a
+        # different Linux runtime. Keep the core website/chat flows usable even
+        # when DIET drops to nlu_fallback.
+        _SCHEDULE_SIGNALS = {
+            "schedule",
+            "meeting",
+            "book a call",
+            "book call",
+            "appointment",
+            "calendly",
+            "reservation",
+            "sastanak",
+            "zakaz",
+            "rezerv",
+            "poziv",
+        }
+        if any(sig in lower_text for sig in _SCHEDULE_SIGNALS):
+            from .calendly_actions import run_calendly_scheduling
+
+            return run_calendly_scheduling(dispatcher, tracker, domain)
+
+        _SERVICE_SIGNALS = {
+            "service",
+            "services",
+            "offer",
+            "provide",
+            "capabilities",
+            "bim",
+            "urbanism",
+            "masterplan",
+            "master plan",
+            "future mobility",
+            "vertiport",
+            "interior",
+            "retail",
+            "control tower",
+        }
+        if any(sig in lower_text for sig in _SERVICE_SIGNALS):
+            from .services_actions import ActionAnswerServicesQuery
+
+            return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
+
+        _TEAM_SIGNALS = {
+            "team",
+            "staff",
+            "people",
+            "member",
+            "members",
+            "roster",
+            "employee",
+            "employees",
+            "leadership",
+            "architects",
+            "specialists",
+        }
+        if any(sig in lower_text for sig in _TEAM_SIGNALS):
+            from .team_actions import ActionAnswerTeamQuery
+
+            return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
+
         # ── Normal out-of-scope / fallback handling ───────────────────────────────
         project_key = tracker.get_slot("project_name")
 

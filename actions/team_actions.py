@@ -38,6 +38,24 @@ TEAM_DISPATCH: Dict[str, str] = {
 }
 
 
+def _infer_team_info_type(text: str) -> str:
+    """Best-effort router for fallback paths when NLU confidence collapses."""
+    normalized = text.lower()
+    if any(token in normalized for token in ("leader", "leadership", "management", "founder", "ceo", "cfo")):
+        return "leadership"
+    if any(token in normalized for token in ("architect", "architecture", "design team", "designer")):
+        return "architects"
+    if any(token in normalized for token in ("specialist", "bim", "ai", "technical", "visualization")):
+        return "specialists"
+    if any(token in normalized for token in ("operations", "admin", "administrative", "support")):
+        return "operations"
+    if any(token in normalized for token in ("collaborator", "consultant", "partner")):
+        return "collaborators"
+    if any(token in normalized for token in ("team", "staff", "people", "members", "roster", "employees")):
+        return "overview"
+    return ""
+
+
 # ── Name lookup helpers ────────────────────────────────────────────────────────
 
 def _ascii_norm(s: str) -> str:
@@ -239,7 +257,10 @@ class ActionAnswerTeamQuery(Action):
             )
 
         # ── Group dispatch ───────────────────────────────────────────────────
-        info_type = intent.replace("ask_team_", "")
+        if intent.startswith("ask_team_"):
+            info_type = intent.replace("ask_team_", "")
+        else:
+            info_type = _infer_team_info_type(tracker.latest_message.get("text", ""))
         data_key = TEAM_DISPATCH.get(info_type)
 
         if not data_key or data_key not in TEAM_INFO:
