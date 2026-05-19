@@ -7,9 +7,8 @@ ActionHandleOutOfScope     — context-aware handler for unrecognised inputs.
 """
 
 import random
-import re
 import unicodedata
-from difflib import SequenceMatcher, get_close_matches
+from difflib import get_close_matches
 from typing import Any, Dict, List, Optional, Text, Tuple
 
 from rasa_sdk import Action, Tracker
@@ -17,7 +16,6 @@ from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet
 
 from .projects_data import PROJECTS, CATEGORIES
-from .site_links import absolute_url, append_site_link, company_url, project_cover_image_url, project_url
 from .translation import get_lang, translate_response
 
 
@@ -52,14 +50,6 @@ _DETAIL_SUFFIXES = [
     "",
     "",
 ]
-
-_PROJECT_LINK_PREFIXES = {
-    "FR": "Voir sur le site web 1PAX :",
-    "ES": "Ver en el sitio web de 1PAX:",
-    "PT-PT": "Ver no site da 1PAX:",
-    "ZH-HANS": "在 1PAX 网站查看：",
-    "SR": "Pogledajte na 1PAX sajtu:",
-}
 
 _OUT_OF_SCOPE_WITH_CONTEXT = [
     (
@@ -234,11 +224,6 @@ _NAME_INDEX.update({
     "cayenne masterplan":          "cayenne_airport_masterplan",
     "cayenne interior":            "cayenne_interior_design",
     "cayenne offices":             "cayenne_airport_offices",
-    "cayenne airport offices":     "cayenne_airport_offices",
-    "cayenne airport office buildings": "cayenne_airport_offices",
-    "cayenne office buildings":    "cayenne_airport_offices",
-    "felix eboue offices":         "cayenne_airport_offices",
-    "felix eboue office buildings": "cayenne_airport_offices",
     "air guyane hangar":           "air_guyane_hangar",
     # Pointe-à-Pitre — ASCII-normalized variants (accent + hyphen handling)
     "pointe a pitre t1":           "pointe_a_pitre_t1",
@@ -482,51 +467,6 @@ def _ascii_norm(text: str) -> str:
     return ascii_only.replace("-", " ").lower()
 
 
-def _meaningful_project_tokens(text: str) -> List[str]:
-    """Tokens worth trusting for fuzzy project matching."""
-    return [
-        word.strip()
-        for word in _ascii_norm(text).split()
-        if len(word.strip()) >= 3 and word.strip() not in _SKIP_WORDS
-    ]
-
-
-def _has_meaningful_project_overlap(query: str, candidate: str) -> bool:
-    """
-    Full-phrase fuzzy matching must share a real place/name token, not only
-    generic sector words such as "airport". This prevents Dubai Airport from
-    drifting into Jaipur's "JAI airport" alias.
-    """
-    query_tokens = _meaningful_project_tokens(query)
-    candidate_tokens = _meaningful_project_tokens(candidate)
-    if not query_tokens or not candidate_tokens:
-        return False
-    if set(query_tokens) & set(candidate_tokens):
-        return True
-    return any(
-        len(q) >= 4
-        and len(c) >= 4
-        and SequenceMatcher(None, q, c).ratio() >= 0.84
-        for q in query_tokens
-        for c in candidate_tokens
-    )
-
-
-def _exact_project_phrase_match(text: str) -> Optional[str]:
-    """Find the longest exact project alias embedded in free text."""
-    lower = re.sub(r"[?!.,;:\"']", " ", text.lower())
-    normed = _ascii_norm(lower)
-
-    for candidate_text in (lower, normed):
-        words = candidate_text.split()
-        for size in range(min(6, len(words)), 0, -1):
-            for i in range(len(words) - size + 1):
-                phrase = " ".join(words[i:i + size])
-                if phrase in _NAME_INDEX:
-                    return _NAME_INDEX[phrase]
-    return None
-
-
 def _fuzzy_match_project(text: str) -> Optional[str]:
     """
     Try to find a project key from free text using fuzzy matching.
@@ -539,13 +479,26 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
       1.  Word-level fuzzy city match (skip generic transport/function words)
       2.  Fuzzy full-text match against all known names/aliases
     """
-    exact_key = _exact_project_phrase_match(text)
-    if exact_key:
-        return exact_key
-
-    lower = re.sub(r"[?!.,;:\"']", " ", text.lower())  # strip punctuation before split
+    import re as _re
+    lower = _re.sub(r"[?!.,;:\"']", " ", text.lower())  # strip punctuation before split
     normed = _ascii_norm(lower)
     normed_words = normed.split()
+
+    # 0a. Exact phrase lookup — original text (catches standard aliases + single words)
+    all_words = lower.split()
+    for size in range(min(4, len(all_words)), 0, -1):
+        for i in range(len(all_words) - size + 1):
+            phrase = ' '.join(all_words[i:i + size])
+            if phrase in _NAME_INDEX:
+                return _NAME_INDEX[phrase]
+
+    # 0b. Exact phrase lookup — ASCII-normalised (catches "Pointe-à-Pitre T1", etc.)
+    if normed != lower:
+        for size in range(min(4, len(normed_words)), 0, -1):
+            for i in range(len(normed_words) - size + 1):
+                phrase = ' '.join(normed_words[i:i + size])
+                if phrase in _NAME_INDEX:
+                    return _NAME_INDEX[phrase]
 
     # 1. Match each meaningful word against unambiguous city names (fuzzy)
     for word in normed_words:
@@ -557,10 +510,9 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
 
     # 2. Fuzzy full-text match against all known display names / aliases
     # Cutoff 0.80 prevents false matches like "jfk airport" → "sof airport"
-    matches = get_close_matches(normed, _NAME_INDEX.keys(), n=3, cutoff=0.80)
-    for match in matches:
-        if _has_meaningful_project_overlap(normed, match):
-            return _NAME_INDEX[match]
+    matches = get_close_matches(normed, _NAME_INDEX.keys(), n=1, cutoff=0.80)
+    if matches:
+        return _NAME_INDEX[matches[0]]
 
     return None
 
@@ -599,30 +551,6 @@ def _fmt_detail(label: str, value: str, emoji: str = "", project_name: str = "")
     suffix = random.choice(_DETAIL_SUFFIXES)
     header = f"**{project_name}**\n\n" if project_name else ""
     return f"{header}{prefix}**{label}:** {value}{suffix}"
-
-
-def _project_response_text(text: str, lang: Optional[str], project_key: str, project: Dict) -> str:
-    """Translate a project response, then append the website link unchanged."""
-    translated = translate_response(text, lang)
-    url = project_url(project_key, project.get("category"))
-    prefix = _PROJECT_LINK_PREFIXES.get((lang or "").upper(), "View on the 1PAX website:")
-    return f"{translated}\n\n{prefix} [{project['display_name']}]({url})"
-
-
-def _utter_project_response(
-    dispatcher: CollectingDispatcher,
-    text: str,
-    lang: Optional[str],
-    project_key: str,
-    project: Dict,
-    include_cover: bool = False,
-) -> None:
-    response = _project_response_text(text, lang, project_key, project)
-    cover_image = project_cover_image_url(project_key, project.get("category")) if include_cover else ""
-    if cover_image:
-        dispatcher.utter_message(text=response, image=cover_image)
-    else:
-        dispatcher.utter_message(text=response)
 
 
 # ── Intent → info-type dispatch map ─────────────────────────────────────────
@@ -720,29 +648,23 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
         if ev in PROJECTS:
             return ev, PROJECTS[ev]
 
-    # 2. Prefer a more specific exact alias in the whole message over a
-    # shorter extracted entity such as "cayenne airport".
-    exact_key = _exact_project_phrase_match(raw_text)
-    if exact_key:
-        return exact_key, PROJECTS.get(exact_key)
-
-    # 3. Fuzzy match on each meaningful entity value
+    # 2. Fuzzy match on each meaningful entity value
     for ev in meaningful:
         fuzzy_key = _fuzzy_match_project(ev)
         if fuzzy_key:
             return fuzzy_key, PROJECTS.get(fuzzy_key)
 
-    # 4. Meaningful entity was present but didn't match — signal not found.
+    # 3. Meaningful entity was present but didn't match — signal not found.
     # Do NOT fall through to slot (it would return the wrong project).
     if meaningful:
         return None, None
 
-    # 5. No meaningful entity — try fuzzy on the full message text
+    # 4. No meaningful entity — try fuzzy on the full message text
     fuzzy_key = _fuzzy_match_project(raw_text)
     if fuzzy_key:
         return fuzzy_key, PROJECTS.get(fuzzy_key)
 
-    # 6. Fall back to slot (conversation context).
+    # 5. Fall back to slot (conversation context).
     # Rasa auto-fills project_name from the entity BEFORE the action runs, so
     # the slot may now hold a generic/invalid entity text (e.g. "depot"). If the
     # current slot value is not a valid PROJECTS key, scan the event history for
@@ -768,210 +690,6 @@ def _intent_to_info_type(intent_name: str) -> str:
     if intent_name.startswith(prefix):
         return intent_name[len(prefix):]
     return "about_project"
-
-
-_REGION_FILTERS: Dict[str, Tuple[str, Tuple[str, ...], Tuple[str, ...]]] = {
-    "africa": (
-        "Africa",
-        ("africa", "african", "guinea", "conakry", "cabo verde", "cape verde", "rwanda", "kigali"),
-        ("guinea", "cabo verde", "cape verde", "rwanda"),
-    ),
-    "europe": (
-        "Europe",
-        (
-            "europe",
-            "european",
-            "serbia",
-            "belgrade",
-            "bulgaria",
-            "sofia",
-            "france",
-            "portugal",
-            "latvia",
-            "riga",
-            "belgium",
-        ),
-        (
-            "serbia",
-            "bulgaria",
-            "france",
-            "portugal",
-            "latvia",
-            "belgium",
-            "guadeloupe",
-        ),
-    ),
-    "middle_east": (
-        "the Middle East",
-        ("middle east", "qatar", "doha", "iran", "mashhad"),
-        ("qatar", "iran"),
-    ),
-    "asia": (
-        "Asia",
-        (
-            "asia",
-            "asian",
-            "maldives",
-            "china",
-            "fuzhou",
-            "lanzhou",
-            "india",
-            "jaipur",
-            "ahmedabad",
-            "kazakhstan",
-            "almaty",
-            "japan",
-            "tokyo",
-            "thailand",
-            "bangkok",
-            "singapore",
-            "qatar",
-            "iran",
-        ),
-        (
-            "maldives",
-            "china",
-            "india",
-            "kazakhstan",
-            "japan",
-            "thailand",
-            "singapore",
-            "qatar",
-            "iran",
-        ),
-    ),
-    "south_america": (
-        "South America",
-        (
-            "south america",
-            "south american",
-            "latin america",
-            "latin american",
-            "peru",
-            "lima",
-            "cusco",
-            "panama",
-            "chile",
-            "santiago",
-            "bolivia",
-            "french guiana",
-            "cayenne",
-        ),
-        ("peru", "panama", "chile", "bolivia", "french guiana"),
-    ),
-}
-
-_CATEGORY_FILTERS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("Airports and Transportation", (
-        "airport",
-        "airports",
-        "aviation",
-        "transport",
-        "transportation",
-        "metro",
-        "station",
-        "stations",
-        "train",
-        "rail",
-        "railway",
-        "transit",
-        "terminal",
-    )),
-    ("Future of Mobility", (
-        "future of mobility",
-        "mobility",
-        "evtol",
-        "vertiport",
-        "heliport",
-        "drone",
-        "taxidrone",
-    )),
-    ("Industrial Buildings", (
-        "industrial",
-        "fire station",
-        "control tower",
-        "tower",
-        "hangar",
-        "mro",
-        "baggage",
-    )),
-    ("Working and Living", (
-        "office",
-        "offices",
-        "working",
-        "living",
-        "embassy",
-        "delegation",
-        "housing",
-    )),
-    ("Urbanism and Masterplan", (
-        "urban",
-        "urbanism",
-        "masterplan",
-        "master plan",
-        "planning",
-    )),
-    ("Interior Design", (
-        "interior",
-        "interiors",
-        "retail",
-        "commercial",
-        "food hall",
-        "food court",
-        "wayfinding",
-        "signage",
-    )),
-)
-
-
-def _contains_query_term(normalized_text: str, term: str) -> bool:
-    return f" {term} " in normalized_text or f" {term}s " in normalized_text
-
-
-def _filtered_project_keys(raw_text: str) -> Tuple[Optional[List[str]], str]:
-    """
-    Return filtered project keys for category/region list requests.
-    None means "no filter requested"; an empty list means "filter requested but
-    no projects matched."
-    """
-    normalized = f" {' '.join(re.sub(r'[^a-z0-9]+', ' ', _ascii_norm(raw_text)).split())} "
-    categories = [
-        category
-        for category, terms in _CATEGORY_FILTERS
-        if any(_contains_query_term(normalized, term) for term in terms)
-    ]
-
-    region_label = ""
-    region_needles: Tuple[str, ...] = ()
-    for _, (label, query_terms, project_needles) in _REGION_FILTERS.items():
-        if any(_contains_query_term(normalized, term) for term in query_terms):
-            region_label = label
-            region_needles = project_needles
-            break
-
-    if not categories and not region_label:
-        return None, ""
-
-    keys = list(PROJECTS.keys())
-    if categories:
-        category_set = set(categories)
-        keys = [key for key in keys if PROJECTS[key].get("category") in category_set]
-    if region_needles:
-        keys = [
-            key
-            for key in keys
-            if any(needle in _ascii_norm(PROJECTS[key].get("location", "")) for needle in region_needles)
-        ]
-
-    if categories and region_label:
-        category_label = " or ".join(categories)
-        description = f"{category_label} projects in {region_label}"
-    elif categories:
-        description = " or ".join(categories)
-    else:
-        description = f"projects in {region_label}"
-
-    return keys, description
 
 
 # ── Actions ──────────────────────────────────────────────────────────────────
@@ -1022,8 +740,7 @@ class ActionAnswerProjectQuery(Action):
                         "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects.",
                     ]), lang
                 ))
-            reset_events = [SlotSet("project_name", None)] if entity_value else []
-            return reset_events + lang_event
+            return lang_event
 
         if not project:
             dispatcher.utter_message(text=translate_response(random.choice([
@@ -1047,24 +764,18 @@ class ActionAnswerProjectQuery(Action):
         if info_type == "video":
             _photo_words = {"photo", "photos", "image", "images", "picture", "pictures", "pic", "pics"}
             if any(w in raw_msg.split() for w in _photo_words):
-                if project_cover_image_url(project_key, project.get("category")):
-                    _utter_project_response(
-                        dispatcher,
-                        f"Here's the website cover image for **{project['display_name']}**.",
+                if project.get("video_url"):
+                    dispatcher.utter_message(text=translate_response(
+                        f"I don't have individual project photos, but there's a video of "
+                        f"**{project['display_name']}** you can check out:\n\n{project['video_url']}",
                         lang,
-                        project_key,
-                        project,
-                        include_cover=True,
-                    )
+                    ))
                 else:
-                    _utter_project_response(
-                        dispatcher,
-                        f"We don't have a cover image for **{project['display_name']}** yet, "
-                        "but you can still view the project on the 1PAX website.",
+                    dispatcher.utter_message(text=translate_response(
+                        f"We don't have photos or media for **{project['display_name']}** yet — "
+                        f"check [1pax.com](https://1pax.com) for the latest.",
                         lang,
-                        project_key,
-                        project,
-                    )
+                    ))
                 return [SlotSet("project_name", project_key)] + lang_event
 
         # Special case: "ask_about_project" with no new entity = "what else can you tell me"
@@ -1075,14 +786,7 @@ class ActionAnswerProjectQuery(Action):
                 info_type = "facts"
 
         formatter = INFO_DISPATCH.get(info_type, _fmt_teaser)
-        _utter_project_response(
-            dispatcher,
-            formatter(project),
-            lang,
-            project_key,
-            project,
-            include_cover=(info_type == "about_project"),
-        )
+        dispatcher.utter_message(text=translate_response(formatter(project), lang))
         return [SlotSet("project_name", project_key)] + lang_event
 
 
@@ -1112,55 +816,26 @@ class ActionListProjects(Action):
             )
             return lang_event
 
-        filtered_keys, filter_description = _filtered_project_keys(
-            tracker.latest_message.get("text", "")
-        )
-
-        if filtered_keys is not None and not filtered_keys:
-            dispatcher.utter_message(text=translate_response(
-                f"I couldn't find any 1PAX projects matching **{filter_description}**. "
-                "Try asking for all airport projects, projects in Europe, or the full portfolio.",
-                lang,
-            ))
-            return lang_event
-
-        if filtered_keys is None:
-            active_keys = set(PROJECTS.keys())
-            lines = [random.choice([
-                "Here are 1PAX's architectural projects:\n",
-                "1PAX's portfolio spans 6 categories — here's the full list:\n",
-                "These are all 58 1PAX projects across our portfolio:\n",
-            ])]
-        else:
-            active_keys = set(filtered_keys)
-            lines = [f"Here are 1PAX projects matching **{filter_description}**:\n"]
+        lines = [random.choice([
+            "Here are 1PAX's architectural projects:\n",
+            "1PAX's portfolio spans 6 categories — here's the full list:\n",
+            "These are all 58 1PAX projects across our portfolio:\n",
+        ])]
 
         for category, project_keys in CATEGORIES.items():
-            visible_keys = [key for key in project_keys if key in active_keys]
-            if not visible_keys:
-                continue
             lines.append(f"**{category}**")
-            for key in visible_keys:
+            for key in project_keys:
                 p = PROJECTS[key]
                 lines.append(
                     f"  • **{p['display_name']}** — {p['location']} ({p['year']})"
                 )
             lines.append("")
 
-        if filtered_keys is None:
-            lines.append(random.choice([
-                "Ask me anything about a project — cost, design challenge, team, and more!",
-                "Just name a project and I'll tell you all about it — budget, approach, sustainability, and more.",
-                "Pick any project and ask away — I can cover cost, location, design approach, and much more.",
-            ]))
-        else:
-            lines.append(
-                "Pick any project from that list and I can go deeper on budget, scope, design approach, or status."
-            )
-        lines.append(
-            f"\nExplore the portfolio on the website: "
-            f"[Our Projects]({absolute_url('/projects')})"
-        )
+        lines.append(random.choice([
+            "Ask me anything about a project — cost, design challenge, team, and more!",
+            "Just name a project and I'll tell you all about it — budget, approach, sustainability, and more.",
+            "Pick any project and ask away — I can cover cost, location, design approach, and much more.",
+        ]))
 
         dispatcher.utter_message(text=translate_response("\n".join(lines), lang))
         return lang_event
@@ -1224,22 +899,6 @@ class ActionHandleOutOfScope(Action):
             ))
             return [SlotSet("project_name", None)] + lang_event
 
-        _FELLOWSHIP_SIGNALS = {
-            "grad fellowship",
-            "graduate fellowship",
-            "fellowship program",
-            "1pax fellowship",
-        }
-        if any(sig in lower_text for sig in _FELLOWSHIP_SIGNALS):
-            from .company_data import COMPANY_INFO
-
-            messages = list(COMPANY_INFO.get("diversity", []))
-            if messages:
-                messages[-1] = append_site_link(messages[-1], "About 1PAX", company_url("diversity"))
-            for msg in messages:
-                dispatcher.utter_message(text=translate_response(msg, lang))
-            return [SlotSet("project_name", None)] + lang_event
-
         # ── Safety net: try to fuzzy-match a project from the raw message ────────
         # This catches cases where NLU misfires on bare project names or typos
         # (e.g. "fuzhou airport", "greyfoot paris", "aik bankk") before giving up.
@@ -1251,76 +910,10 @@ class ActionHandleOutOfScope(Action):
         fuzzy_key = None if _is_genuine_oos else _fuzzy_match_project(user_text)
         if fuzzy_key and fuzzy_key in PROJECTS:
             p = PROJECTS[fuzzy_key]
-            _utter_project_response(
-                dispatcher,
-                _fmt_teaser(p),
-                lang,
-                fuzzy_key,
-                p,
-                include_cover=True,
-            )
+            for text in _fmt_teaser(p).split("\n\n"):
+                if text.strip():
+                    dispatcher.utter_message(text=translate_response(text.strip(), lang))
             return [SlotSet("project_name", fuzzy_key)] + lang_event
-
-        # ── Production safety net: route common non-project flows from raw text ─
-        # Locally trained models can occasionally underperform when loaded in a
-        # different Linux runtime. Keep the core website/chat flows usable even
-        # when DIET drops to nlu_fallback.
-        _SCHEDULE_SIGNALS = {
-            "schedule",
-            "meeting",
-            "book a call",
-            "book call",
-            "appointment",
-            "calendly",
-            "reservation",
-            "sastanak",
-            "zakaz",
-            "rezerv",
-            "poziv",
-        }
-        if any(sig in lower_text for sig in _SCHEDULE_SIGNALS):
-            from .calendly_actions import run_calendly_scheduling
-
-            return run_calendly_scheduling(dispatcher, tracker, domain)
-
-        _SERVICE_SIGNALS = {
-            "service",
-            "services",
-            "offer",
-            "provide",
-            "capabilities",
-            "bim",
-            "urbanism",
-            "masterplan",
-            "master plan",
-            "future mobility",
-            "vertiport",
-            "interior",
-            "retail",
-            "control tower",
-        }
-        if any(sig in lower_text for sig in _SERVICE_SIGNALS):
-            from .services_actions import ActionAnswerServicesQuery
-
-            return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
-
-        _TEAM_SIGNALS = {
-            "team",
-            "staff",
-            "people",
-            "member",
-            "members",
-            "roster",
-            "employee",
-            "employees",
-            "leadership",
-            "architects",
-            "specialists",
-        }
-        if any(sig in lower_text for sig in _TEAM_SIGNALS):
-            from .team_actions import ActionAnswerTeamQuery
-
-            return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
 
         # ── Normal out-of-scope / fallback handling ───────────────────────────────
         project_key = tracker.get_slot("project_name")

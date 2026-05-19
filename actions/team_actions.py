@@ -12,7 +12,6 @@ Individual intent (ask_about_team_member)
 """
 
 import random
-import re
 import unicodedata
 from difflib import get_close_matches
 from typing import Any, Optional, Text, Dict, List
@@ -22,7 +21,6 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .team_data import TEAM_INFO, PERSONS
-from .site_links import append_site_link, team_url
 from .translation import get_lang, translate_response
 
 
@@ -36,24 +34,6 @@ TEAM_DISPATCH: Dict[str, str] = {
     "operations":    "operations",
     "collaborators": "collaborators",
 }
-
-
-def _infer_team_info_type(text: str) -> str:
-    """Best-effort router for fallback paths when NLU confidence collapses."""
-    normalized = text.lower()
-    if any(token in normalized for token in ("leader", "leadership", "management", "founder", "ceo", "cfo")):
-        return "leadership"
-    if any(token in normalized for token in ("architect", "architecture", "design team", "designer")):
-        return "architects"
-    if any(token in normalized for token in ("specialist", "bim", "ai", "technical", "visualization")):
-        return "specialists"
-    if any(token in normalized for token in ("operations", "admin", "administrative", "support")):
-        return "operations"
-    if any(token in normalized for token in ("collaborator", "consultant", "partner")):
-        return "collaborators"
-    if any(token in normalized for token in ("team", "staff", "people", "members", "roster", "employees")):
-        return "overview"
-    return ""
 
 
 # ── Name lookup helpers ────────────────────────────────────────────────────────
@@ -92,7 +72,6 @@ _ROLE_ALIASES = {
     "chief financial officer": "ali_fawaz",
     "business development manager": "fabiola_espinoza",
     "bd manager": "fabiola_espinoza",
-    "bd": "fabiola_espinoza",
     "business development": "fabiola_espinoza",
     "communications officer": "carla_miranda",
     "chief communications": "carla_miranda",
@@ -111,13 +90,9 @@ _ROLE_ALIASES = {
     "senior project manager": "claudia_cornejo",
     "bim manager": "marko_soskic",
     "bim specialist": "kevin_guzman",
-    "ai": "matija_lekovic",
-    "artificial intelligence": "matija_lekovic",
     "ai specialist": "matija_lekovic",
     "ai and digital specialist": "matija_lekovic",
     "ai and digital": "matija_lekovic",
-    "ai tools": "matija_lekovic",
-    "digital workflows": "matija_lekovic",
     "digital specialist": "matija_lekovic",
     "architectural technologist": "tiago_cobrado",
     "construction phasing": "boris_stojnic",
@@ -151,17 +126,6 @@ _ROLE_ALIASES = {
 _PERSON_INDEX.update(_ROLE_ALIASES)
 
 
-def _lookup_person_in_text(text: str) -> Optional[str]:
-    """Find an explicit person/role alias inside a full user message."""
-    normalized = f" {' '.join(re.sub(r'[^a-z0-9]+', ' ', _ascii_norm(text)).split())} "
-    for alias, person_key in sorted(_PERSON_INDEX.items(), key=lambda item: len(item[0]), reverse=True):
-        if len(alias) < 2:
-            continue
-        if f" {alias} " in normalized:
-            return person_key
-    return None
-
-
 def _lookup_person(value: str) -> Optional[str]:
     """Return canonical person key for a given entity value."""
     norm = _ascii_norm(value.strip())
@@ -170,41 +134,13 @@ def _lookup_person(value: str) -> Optional[str]:
     if norm in _PERSON_INDEX:
         return _PERSON_INDEX[norm]
 
-    # Fuzzy match. Keep this away from very short tokens so "AI" never drifts
-    # into "Ali", and pronouns like "her" never become a person lookup.
-    if len(norm) < 4:
-        return None
-
+    # Fuzzy match
     candidates = list(_PERSON_INDEX.keys())
     matches = get_close_matches(norm, candidates, n=1, cutoff=0.72)
     if matches:
         return _PERSON_INDEX[matches[0]]
 
     return None
-
-
-def _message_has_resolvable_project(tracker: Tracker) -> bool:
-    """Return True when a team-routed message clearly names a known project."""
-    entity_values = list(tracker.get_latest_entity_values("project"))
-    if not entity_values:
-        return False
-
-    # Imported lazily to avoid coupling module import order in the action server.
-    from .actions import _GENERIC_PROJECT_REF, _exact_project_phrase_match, _fuzzy_match_project
-    from .projects_data import PROJECTS
-
-    raw_text = tracker.latest_message.get("text", "")
-    if _exact_project_phrase_match(raw_text):
-        return True
-
-    for value in entity_values:
-        norm = (value or "").strip().lower()
-        if len(norm) <= 3 or norm in _GENERIC_PROJECT_REF:
-            continue
-        if value in PROJECTS or _fuzzy_match_project(value):
-            return True
-
-    return False
 
 
 # ── Action ─────────────────────────────────────────────────────────────────────
@@ -232,35 +168,13 @@ class ActionAnswerTeamQuery(Action):
         lang_event = [SlotSet("language", lang)] if lang else []
 
         intent = tracker.latest_message.get("intent", {}).get("name", "")
-        explicit_person_key = _lookup_person_in_text(tracker.latest_message.get("text", ""))
-
-        if not explicit_person_key and _message_has_resolvable_project(tracker):
-            from .actions import ActionAnswerProjectQuery
-
-            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         # ── Individual person lookup ─────────────────────────────────────────
         if intent == "ask_about_team_member":
-            return self._handle_person_query(
-                dispatcher,
-                tracker,
-                lang,
-                resolved_person_key=explicit_person_key,
-            )
-
-        if explicit_person_key:
-            return self._handle_person_query(
-                dispatcher,
-                tracker,
-                lang,
-                resolved_person_key=explicit_person_key,
-            )
+            return self._handle_person_query(dispatcher, tracker, lang)
 
         # ── Group dispatch ───────────────────────────────────────────────────
-        if intent.startswith("ask_team_"):
-            info_type = intent.replace("ask_team_", "")
-        else:
-            info_type = _infer_team_info_type(tracker.latest_message.get("text", ""))
+        info_type = intent.replace("ask_team_", "")
         data_key = TEAM_DISPATCH.get(info_type)
 
         if not data_key or data_key not in TEAM_INFO:
@@ -274,11 +188,7 @@ class ActionAnswerTeamQuery(Action):
             )
             return lang_event
 
-        messages = list(TEAM_INFO[data_key])
-        if messages:
-            messages[-1] = append_site_link(messages[-1], "The Team", team_url())
-
-        for msg in messages:
+        for msg in TEAM_INFO[data_key]:
             dispatcher.utter_message(text=translate_response(msg, lang))
 
         return lang_event
@@ -290,31 +200,24 @@ class ActionAnswerTeamQuery(Action):
         dispatcher: CollectingDispatcher,
         tracker: Tracker,
         lang: Optional[str] = None,
-        resolved_person_key: Optional[str] = None,
     ) -> List[Dict[Text, Any]]:
         """Look up a person by entity value and return their bio."""
 
         # Extract person entity from current message — try ALL entities to be
         # robust against spurious short-token extractions like 'the'
-        person_key = resolved_person_key
-        if not person_key:
-            for entity in tracker.latest_message.get("entities", []):
-                if entity.get("entity") == "person":
-                    raw_value = entity.get("value", "")
-                    person_key = _lookup_person(raw_value)
-                    if person_key:
-                        break
+        person_key = None
+        for entity in tracker.latest_message.get("entities", []):
+            if entity.get("entity") == "person":
+                raw_value = entity.get("value", "")
+                person_key = _lookup_person(raw_value)
+                if person_key:
+                    break
 
         # Fallback: check person_name slot (cross-turn context)
         if not person_key:
             slot_val = tracker.get_slot("person_name")
             if slot_val:
                 person_key = _lookup_person(slot_val)
-
-        # Final fallback for direct API calls where the entity mapper missed a
-        # role alias but the text itself is explicit, e.g. "who is the CEO?"
-        if not person_key:
-            person_key = _lookup_person_in_text(tracker.latest_message.get("text", ""))
 
         lang_event = [SlotSet("language", lang)] if lang else []
 
@@ -330,11 +233,7 @@ class ActionAnswerTeamQuery(Action):
             return lang_event
 
         person = PERSONS[person_key]
-        messages = list(person["bio"])
-        if messages:
-            messages[-1] = append_site_link(messages[-1], "The Team", team_url())
-
-        for msg in messages:
+        for msg in person["bio"]:
             dispatcher.utter_message(text=translate_response(msg, lang))
 
         # Light follow-up
@@ -347,4 +246,4 @@ class ActionAnswerTeamQuery(Action):
         if suffix:
             dispatcher.utter_message(text=translate_response(suffix, lang))
 
-        return [SlotSet("person_name", person_key)] + lang_event
+        return lang_event

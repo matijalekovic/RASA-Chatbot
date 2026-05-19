@@ -20,4 +20,5 @@ __pycache__/
 tests/
 docs/
 
-# Models are trained locally and uploaded with production deploy bundles.
+# Models are built inside the Linux image (Dockerfile), not copied from host.
+models/*.tar.gz

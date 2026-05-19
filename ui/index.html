@@ -119,18 +119,6 @@
     .message.user .bubble em { color: rgba(255,255,255,0.6); }
     .bubble a { color: inherit; text-decoration: underline; text-underline-offset: 2px; opacity: 0.85; }
     .bubble a:hover { opacity: 1; }
-    .bubble.has-media { padding: 8px; }
-    .bubble.has-media .media-body { padding: 2px 6px 4px; }
-    .project-cover {
-      display: block;
-      width: 100%;
-      max-height: 220px;
-      object-fit: cover;
-      border-radius: 12px;
-      margin-bottom: 9px;
-      background: var(--bg);
-    }
-    .project-cover:last-child { margin-bottom: 0; }
 
     /* Section headers — standalone **Category** lines */
     .bubble .md-h4 {
@@ -318,7 +306,7 @@
 <div id="app">
   <header>
     <span class="logo">1PAX</span>
-    <span class="header-sub">Website assistant</span>
+    <span class="header-sub">Assistant · internal preview</span>
     <div class="lang-selector">
       <button class="lang-btn active" data-lang="">EN</button>
       <button class="lang-btn" data-lang="FR">FR</button>
@@ -341,10 +329,8 @@
 </div>
 
 <script>
-  const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  const CHAT_URL = IS_LOCAL
-    ? "http://localhost:5005/webhooks/rest/webhook"
-    : "/api/chat";
+  const RASA_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:5005" : "";
 
   const SESSION_ID = "u_" + Math.random().toString(36).slice(2, 10);
   const messagesEl = document.getElementById("messages");
@@ -353,104 +339,6 @@
   const typingEl   = document.getElementById("typing");
 
   // ── Language selection ───────────────────────────────────────────────────────
-
-  const UI_TEXT = {
-    "": {
-      htmlLang: "en",
-      title: "1PAX — Assistant",
-      headerSub: "Website assistant",
-      inputPlaceholder: "Ask about projects, team, services...",
-      send: "Send",
-      online: "Online",
-      loading: "Assistant is loading - this takes about a minute on first start. Retrying...",
-      stillLoading: ({ seconds }) => `Still loading... (~${seconds}s remaining)`,
-      loadTimeout: "Assistant took too long to start. Please refresh and try again.",
-      noResponse: "I didn't get a response - please try again.",
-      unreachable: "Could not reach the assistant. Please check back shortly.",
-    },
-    FR: {
-      htmlLang: "fr",
-      title: "1PAX — Assistant",
-      headerSub: "Assistant du site",
-      inputPlaceholder: "Posez une question sur les projets, l'équipe, les services...",
-      send: "Envoyer",
-      online: "En ligne",
-      loading: "L'assistant démarre - cela prend environ une minute au premier lancement. Nouvel essai...",
-      stillLoading: ({ seconds }) => `Chargement en cours... (~${seconds}s restantes)`,
-      loadTimeout: "L'assistant a mis trop de temps à démarrer. Actualisez la page et réessayez.",
-      noResponse: "Je n'ai pas reçu de réponse - veuillez réessayer.",
-      unreachable: "Impossible de joindre l'assistant. Veuillez réessayer dans un instant.",
-    },
-    ES: {
-      htmlLang: "es",
-      title: "1PAX — Asistente",
-      headerSub: "Asistente del sitio",
-      inputPlaceholder: "Pregunta sobre proyectos, equipo, servicios...",
-      send: "Enviar",
-      online: "En línea",
-      loading: "El asistente se está cargando - tarda aproximadamente un minuto en el primer inicio. Reintentando...",
-      stillLoading: ({ seconds }) => `Todavía cargando... (~${seconds}s restantes)`,
-      loadTimeout: "El asistente tardó demasiado en iniciar. Actualiza la página e inténtalo de nuevo.",
-      noResponse: "No recibí respuesta - inténtalo de nuevo.",
-      unreachable: "No se pudo contactar con el asistente. Inténtalo de nuevo en unos momentos.",
-    },
-    "PT-PT": {
-      htmlLang: "pt-PT",
-      title: "1PAX — Assistente",
-      headerSub: "Assistente do site",
-      inputPlaceholder: "Pergunte sobre projetos, equipa, serviços...",
-      send: "Enviar",
-      online: "Online",
-      loading: "O assistente está a carregar - isto demora cerca de um minuto no primeiro arranque. A tentar novamente...",
-      stillLoading: ({ seconds }) => `Ainda a carregar... (~${seconds}s restantes)`,
-      loadTimeout: "O assistente demorou demasiado a iniciar. Atualize a página e tente novamente.",
-      noResponse: "Não recebi resposta - tente novamente.",
-      unreachable: "Não foi possível contactar o assistente. Tente novamente dentro de instantes.",
-    },
-    "ZH-HANS": {
-      htmlLang: "zh-Hans",
-      title: "1PAX — 助手",
-      headerSub: "网站助手",
-      inputPlaceholder: "询问项目、团队、服务...",
-      send: "发送",
-      online: "在线",
-      loading: "助手正在加载 - 首次启动大约需要一分钟。正在重试...",
-      stillLoading: ({ seconds }) => `仍在加载...（约剩 ${seconds} 秒）`,
-      loadTimeout: "助手启动时间过长。请刷新后重试。",
-      noResponse: "我没有收到回复 - 请重试。",
-      unreachable: "暂时无法连接助手。请稍后再试。",
-    },
-    SR: {
-      htmlLang: "sr-Latn",
-      title: "1PAX — Asistent",
-      headerSub: "Asistent sajta",
-      inputPlaceholder: "Pitajte o projektima, timu, uslugama...",
-      send: "Pošalji",
-      online: "Online",
-      loading: "Asistent se učitava - pri prvom pokretanju to traje oko minut. Pokušavam ponovo...",
-      stillLoading: ({ seconds }) => `Još se učitava... (~${seconds}s preostalo)`,
-      loadTimeout: "Asistentu je trebalo predugo da se pokrene. Osvežite stranicu i pokušajte ponovo.",
-      noResponse: "Nisam dobio odgovor - pokušajte ponovo.",
-      unreachable: "Nije moguće povezati se sa asistentom. Pokušajte ponovo uskoro.",
-    },
-  };
-
-  function uiText(key, vars = {}) {
-    const value = (UI_TEXT[currentLang] || UI_TEXT[""])[key] ?? UI_TEXT[""][key];
-    return typeof value === "function" ? value(vars) : value;
-  }
-
-  function updateStaticText() {
-    const copy = UI_TEXT[currentLang] || UI_TEXT[""];
-    document.documentElement.lang = copy.htmlLang;
-    document.title = copy.title;
-    document.querySelector(".header-sub").textContent = copy.headerSub;
-    document.querySelector(".status-dot")?.setAttribute("title", copy.online);
-    inputEl.placeholder = copy.inputPlaceholder;
-    inputEl.setAttribute("aria-label", copy.inputPlaceholder);
-    sendBtn.textContent = copy.send;
-    sendBtn.setAttribute("aria-label", copy.send);
-  }
 
   // Country → DeepL target code (pre-selects based on IP; user can override)
   const COUNTRY_LANG = {
@@ -470,7 +358,6 @@
     document.querySelectorAll(".lang-btn").forEach(b =>
       b.classList.toggle("active", b.dataset.lang === code)
     );
-    updateStaticText();
   }
   // Apply stored preference immediately
   setLang(currentLang);
@@ -503,13 +390,6 @@
   function esc(s) {
     return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
-  function escAttr(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
   function decodeEnt(s) {
     return s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
   }
@@ -518,11 +398,8 @@
     s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/_([^_\n]+)_/g, "<em>$1</em>");
     s = s.replace(/(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
-    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_m, label, url) => {
-      const isSiteUrl = /^https:\/\/(www\.)?1pax\.com\b/.test(url);
-      const target = isSiteUrl ? "_top" : "_blank";
-      return `<a href="${url}" target="${target}" rel="noopener">${label}</a>`;
-    });
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener">$1</a>');
     return s;
   }
 
@@ -625,36 +502,20 @@
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  function appendMessage(role, text, imageUrl = "") {
+  function appendMessage(role, text) {
     document.getElementById("welcome")?.remove();
     const wrap   = document.createElement("div");
     wrap.className = `message ${role}`;
     const bubble = document.createElement("div");
-    bubble.className = `bubble${imageUrl ? " has-media" : ""}`;
-    const mediaHtml = imageUrl
-      ? `<img class="project-cover" src="${escAttr(imageUrl)}" alt="Project cover image" loading="lazy">`
-      : "";
-    const textHtml = text ? renderMarkdown(text) : "";
-    bubble.innerHTML = imageUrl && textHtml
-      ? `${mediaHtml}<div class="media-body">${textHtml}</div>`
-      : `${mediaHtml}${textHtml}`;
+    bubble.className = "bubble";
+    bubble.innerHTML = renderMarkdown(text);
     const ts = document.createElement("div");
     ts.className = "ts";
     ts.textContent = now();
     wrap.appendChild(bubble);
     wrap.appendChild(ts);
     messagesEl.appendChild(wrap);
-    bubble.querySelector(".project-cover")?.addEventListener("load", () => {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }, { once: true });
-    bubble.querySelector(".project-cover")?.addEventListener("error", event => {
-      event.currentTarget.remove();
-    }, { once: true });
     messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-
-  function appendBotReply(reply) {
-    if (reply.text || reply.image) appendMessage("bot", reply.text || "", reply.image || "");
   }
 
   function setLoading(on) {
@@ -695,7 +556,7 @@
     typingEl.classList.remove("hidden");
     messagesEl.scrollTop = messagesEl.scrollHeight;
     try {
-      const res = await fetch(CHAT_URL, {
+      const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -707,7 +568,7 @@
       typingEl.classList.add("hidden");
       if (res.ok) {
         const replies = await res.json();
-        for (const r of replies) appendBotReply(r);
+        for (const r of replies) if (r.text) appendMessage("bot", r.text);
       }
     } catch {
       typingEl.classList.add("hidden");
@@ -729,7 +590,7 @@
     const englishMsg = _cachedEnglish ?? await translateToEnglish(msg, currentLang);
 
     try {
-      const res = await fetch(CHAT_URL, {
+      const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -741,13 +602,13 @@
 
       if (res.status === 502 || res.status === 503) {
         setLoading(false);
-        if (_retries === 0) appendMessage("bot", uiText("loading"));
+        if (_retries === 0) appendMessage("bot", "⏳ Assistant is loading — this takes about a minute on first start. Retrying…");
         if (_retries < 24) {
           if (_retries > 0 && _retries % 4 === 0)
-            appendMessage("bot", uiText("stillLoading", { seconds: Math.round((24 - _retries) * 5) }));
+            appendMessage("bot", `⏳ Still loading… (~${Math.round((24 - _retries) * 5)}s remaining)`);
           setTimeout(() => send(msg, _retries + 1, englishMsg), 5000);
         } else {
-          appendMessage("bot", uiText("loadTimeout"));
+          appendMessage("bot", "⚠️ Assistant took too long to start. Please refresh and try again.");
         }
         return;
       }
@@ -756,14 +617,14 @@
       const replies = await res.json();
       setLoading(false);
       if (!replies?.length) {
-        appendMessage("bot", uiText("noResponse"));
+        appendMessage("bot", "I didn't get a response — please try again.");
       } else {
-        for (const r of replies) appendBotReply(r);
+        for (const r of replies) if (r.text) appendMessage("bot", r.text);
       }
       inputEl.focus();
     } catch (err) {
       setLoading(false);
-      appendMessage("bot", uiText("unreachable"));
+      appendMessage("bot", "⚠️ Could not reach the assistant. Please check back shortly.");
       console.error(err);
       inputEl.focus();
     }

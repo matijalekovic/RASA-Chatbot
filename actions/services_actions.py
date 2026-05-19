@@ -14,7 +14,6 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .services_data import SERVICES_INFO
-from .site_links import append_site_link, service_url
 from .translation import get_lang, translate_response
 
 
@@ -31,42 +30,6 @@ SERVICES_DISPATCH: Dict[str, str] = {
     "working_living":  "working_living",
     "bim":             "bim",
 }
-
-SERVICE_LINK_LABELS: Dict[str, str] = {
-    "services_list": "Our Projects",
-    "airports": "Airports and Railstations",
-    "urbanism": "Urbanism and Masterplan",
-    "innovation": "Innovation and Research",
-    "future_mobility": "Future of Mobility",
-    "control_towers": "Airports and Railstations",
-    "interior": "Retail and Interior Design",
-    "working_living": "Working and Living",
-    "bim": "BIM",
-}
-
-
-def _infer_service_info_type(text: str) -> str:
-    """Best-effort router for fallback paths when NLU confidence collapses."""
-    normalized = text.lower()
-    if any(token in normalized for token in ("bim", "model", "revit")):
-        return "bim"
-    if any(token in normalized for token in ("control tower", "tower")):
-        return "control_towers"
-    if any(token in normalized for token in ("interior", "retail", "food hall", "lounge")):
-        return "interior"
-    if any(token in normalized for token in ("working", "living", "office", "residential", "workplace")):
-        return "working_living"
-    if any(token in normalized for token in ("future mobility", "vertiport", "evtol", "mobility")):
-        return "future_mobility"
-    if any(token in normalized for token in ("innovation", "research", "ai", "patent")):
-        return "innovation"
-    if any(token in normalized for token in ("urban", "urbanism", "masterplan", "master plan", "city")):
-        return "urbanism"
-    if any(token in normalized for token in ("airport", "terminal", "rail", "station")):
-        return "airports"
-    if any(token in normalized for token in ("service", "services", "offer", "provide", "capabilities")):
-        return "list"
-    return ""
 
 
 class ActionAnswerServicesQuery(Action):
@@ -96,10 +59,8 @@ class ActionAnswerServicesQuery(Action):
         # Strip prefix: "ask_services_list" → "list", "ask_service_airports" → "airports"
         if intent == "ask_services_list":
             info_type = "list"
-        elif intent.startswith("ask_service_"):
-            info_type = intent.replace("ask_service_", "")
         else:
-            info_type = _infer_service_info_type(tracker.latest_message.get("text", ""))
+            info_type = intent.replace("ask_service_", "")
 
         data_key = SERVICES_DISPATCH.get(info_type)
 
@@ -113,13 +74,7 @@ class ActionAnswerServicesQuery(Action):
             )
             return lang_event
 
-        messages = list(SERVICES_INFO[data_key])
-        if messages:
-            messages[-1] = append_site_link(
-                messages[-1],
-                SERVICE_LINK_LABELS.get(data_key, "Our Projects"),
-                service_url(data_key),
-            )
+        messages = SERVICES_INFO[data_key]
 
         # Send each message part separately (multi-part responses)
         for msg in messages:

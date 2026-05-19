@@ -15,8 +15,14 @@ WORKDIR /app
 # Copy project files
 COPY . /app
 
-# Use the pre-trained model artifact uploaded with the deploy bundle.
-RUN test -n "$(find /app/models -maxdepth 1 -name '*.tar.gz' -print -quit)"
+# Re-train inside the Linux build environment so runtime model weights match
+# Railway's TensorFlow stack (fixes cross-platform checkpoint mismatch).
+RUN rm -f /app/models/*.tar.gz \
+    && /opt/venv/bin/rasa train \
+         --config /app/config.yml \
+         --domain /app/domain.yml \
+         --data /app/data \
+         --out /app/models
 
 # nginx config — run workers as root, remove default site, fix permissions
 COPY conf/nginx.conf /etc/nginx/conf.d/chatbot.conf
