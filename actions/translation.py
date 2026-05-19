@@ -526,7 +526,34 @@ def _sr_booking_translation(text: str) -> Optional[str]:
 def _static_translation(text: str, lang: Optional[str]) -> Optional[str]:
     normalized = _normalized_lang(lang)
     if normalized == "SR":
-        return _sr_booking_translation(text)
+        booking = _sr_booking_translation(text)
+        if booking:
+            return booking
+        exact = {
+            (
+                "**1PAX offers eight core service areas**, spanning the full lifecycle of "
+                "mobility infrastructure and architectural projects:"
+            ): (
+                "**1PAX nudi osam ključnih oblasti usluga**, koje pokrivaju ceo životni ciklus "
+                "infrastrukture mobilnosti i arhitektonskih projekata:"
+            ),
+            (
+                "**The 1PAX team** brings together architects, planners, engineers, BIM specialists, "
+                "visualization experts, and innovators — based in Paris, Belgrade, Shanghai, Barcelona, and Lima."
+            ): (
+                "**1PAX tim** okuplja arhitekte, planere, inženjere, BIM stručnjake, "
+                "eksperte za vizualizaciju i inovatore — sa bazama u Parizu, Beogradu, "
+                "Šangaju, Barseloni i Limi."
+            ),
+            (
+                "Want to know more about a specific person or group? Ask — for example: "
+                "*\"Tell me about Mabel Miranda\"*, *\"Who are the architects?\"*, or *\"Who handles BIM?\"*"
+            ): (
+                "Želite da saznate više o određenoj osobi ili grupi? Pitajte, na primer: "
+                "*\"Recite mi nešto o Mabel Mirandi\"*, *\"Ko su arhitekte?\"*, ili *\"Ko vodi BIM?\"*"
+            ),
+        }
+        return exact.get(text)
     return None
 
 
