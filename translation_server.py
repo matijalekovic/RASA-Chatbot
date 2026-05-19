@@ -271,7 +271,7 @@ def _translate_from_english(text: str, target_lang: str) -> str:
         "Preserve Markdown links and URLs exactly; translate link labels only. "
         "No explanations, no quotes, no notes."
     )
-    if len(text) <= 3200:
+    if len(text) <= 700:
         return _gemini_translate(
             _translation_prompt(text, lang_name),
             system_instruction,
