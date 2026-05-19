@@ -57,6 +57,32 @@ COMPANY_DISPATCH: Dict[str, str] = {
 }
 
 
+def _infer_company_info_type(text: str) -> str:
+    """Best-effort router for fallback paths when NLU confidence collapses."""
+    normalized = text.lower()
+    if any(token in normalized for token in ("founder", "founded", "mabel", "ceo")):
+        return "founder"
+    if any(token in normalized for token in ("office", "location", "where are you", "based")):
+        return "offices"
+    if any(token in normalized for token in ("mission", "purpose")):
+        return "mission"
+    if any(token in normalized for token in ("history", "heritage", "story")):
+        return "history"
+    if any(token in normalized for token in ("approach", "method", "process", "work")):
+        return "approach"
+    if any(token in normalized for token in ("sustainability", "sustainable", "green")):
+        return "sustainability"
+    if any(token in normalized for token in ("team", "people", "staff")):
+        return "team"
+    if any(token in normalized for token in ("client", "clients")):
+        return "clients"
+    if any(token in normalized for token in ("career", "job", "role", "hiring")):
+        return "careers"
+    if any(token in normalized for token in ("1pax", "company", "studio", "firm", "about")):
+        return "overview"
+    return ""
+
+
 class ActionAnswerCompanyQuery(Action):
     """Single router for all ask_company_* intents."""
 
@@ -82,7 +108,10 @@ class ActionAnswerCompanyQuery(Action):
         intent = tracker.latest_message.get("intent", {}).get("name", "")
 
         # Strip prefix: "ask_company_overview" → "overview"
-        info_type = intent.replace("ask_company_", "")
+        if intent.startswith("ask_company_"):
+            info_type = intent.replace("ask_company_", "")
+        else:
+            info_type = _infer_company_info_type(tracker.latest_message.get("text", ""))
 
         data_key = COMPANY_DISPATCH.get(info_type)
 

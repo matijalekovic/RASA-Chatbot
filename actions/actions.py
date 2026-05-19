@@ -899,6 +899,89 @@ class ActionHandleOutOfScope(Action):
             ))
             return [SlotSet("project_name", None)] + lang_event
 
+        # ── Production safety net: route core flows from raw text ─────────────
+        _PROJECT_LIST_SIGNALS = {
+            "project",
+            "projects",
+            "portfolio",
+            "show me all",
+            "list all",
+            "what have you designed",
+        }
+        _PROJECT_DETAIL_WORDS = {"sofia", "airport", "metro", "tower", "terminal", "belgrade"}
+        if (
+            any(sig in lower_text for sig in _PROJECT_LIST_SIGNALS)
+            and not any(word in lower_text for word in _PROJECT_DETAIL_WORDS)
+        ):
+            return ActionListProjects().run(dispatcher, tracker, domain)
+
+        _SCHEDULE_SIGNALS = {
+            "schedule",
+            "meeting",
+            "book a call",
+            "book call",
+            "appointment",
+            "calendly",
+        }
+        if any(sig in lower_text for sig in _SCHEDULE_SIGNALS):
+            from .calendly_actions import run_calendly_scheduling
+
+            return run_calendly_scheduling(dispatcher, tracker, domain)
+
+        _SERVICE_SIGNALS = {
+            "service",
+            "services",
+            "offer",
+            "provide",
+            "capabilities",
+            "bim",
+            "urbanism",
+            "masterplan",
+            "future mobility",
+            "vertiport",
+            "interior",
+            "control tower",
+        }
+        if any(sig in lower_text for sig in _SERVICE_SIGNALS):
+            from .services_actions import ActionAnswerServicesQuery
+
+            return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
+
+        _TEAM_SIGNALS = {
+            "team",
+            "staff",
+            "people",
+            "member",
+            "members",
+            "roster",
+            "employee",
+            "employees",
+            "leadership",
+            "architects",
+            "specialists",
+        }
+        if any(sig in lower_text for sig in _TEAM_SIGNALS):
+            from .team_actions import ActionAnswerTeamQuery
+
+            return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
+
+        _COMPANY_SIGNALS = {
+            "1pax",
+            "company",
+            "studio",
+            "firm",
+            "founder",
+            "mission",
+            "offices",
+            "clients",
+            "sustainability",
+            "careers",
+        }
+        if any(sig in lower_text for sig in _COMPANY_SIGNALS):
+            from .company_actions import ActionAnswerCompanyQuery
+
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         # ── Safety net: try to fuzzy-match a project from the raw message ────────
         # This catches cases where NLU misfires on bare project names or typos
         # (e.g. "fuzhou airport", "greyfoot paris", "aik bankk") before giving up.

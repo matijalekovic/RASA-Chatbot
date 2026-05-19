@@ -32,6 +32,30 @@ SERVICES_DISPATCH: Dict[str, str] = {
 }
 
 
+def _infer_service_info_type(text: str) -> str:
+    """Best-effort router for fallback paths when NLU confidence collapses."""
+    normalized = text.lower()
+    if any(token in normalized for token in ("bim", "model", "revit")):
+        return "bim"
+    if any(token in normalized for token in ("control tower", "tower")):
+        return "control_towers"
+    if any(token in normalized for token in ("interior", "retail", "food hall", "lounge")):
+        return "interior"
+    if any(token in normalized for token in ("working", "living", "office", "residential", "workplace")):
+        return "working_living"
+    if any(token in normalized for token in ("future mobility", "vertiport", "evtol", "mobility")):
+        return "future_mobility"
+    if any(token in normalized for token in ("innovation", "research", "ai", "patent")):
+        return "innovation"
+    if any(token in normalized for token in ("urban", "urbanism", "masterplan", "master plan", "city")):
+        return "urbanism"
+    if any(token in normalized for token in ("airport", "terminal", "rail", "station")):
+        return "airports"
+    if any(token in normalized for token in ("service", "services", "offer", "provide", "capabilities")):
+        return "list"
+    return ""
+
+
 class ActionAnswerServicesQuery(Action):
     """Single router for all ask_service_* and ask_services_list intents."""
 
@@ -59,8 +83,10 @@ class ActionAnswerServicesQuery(Action):
         # Strip prefix: "ask_services_list" → "list", "ask_service_airports" → "airports"
         if intent == "ask_services_list":
             info_type = "list"
-        else:
+        elif intent.startswith("ask_service_"):
             info_type = intent.replace("ask_service_", "")
+        else:
+            info_type = _infer_service_info_type(tracker.latest_message.get("text", ""))
 
         data_key = SERVICES_DISPATCH.get(info_type)
 
