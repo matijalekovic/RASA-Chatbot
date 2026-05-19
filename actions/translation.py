@@ -58,7 +58,7 @@ _LANG_NAMES = {
     "PT-BR":   "Brazilian Portuguese",
     "ZH-HANS": "Simplified Chinese",
     "ZH-HANT": "Traditional Chinese",
-    "SR":      "Serbian (Latin script, never Cyrillic)",
+    "SR":      "Serbian using the Latin alphabet",
     "DE":      "German",
     "IT":      "Italian",
     "NL":      "Dutch",

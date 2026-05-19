@@ -272,7 +272,7 @@ class TranslationResponseTests(unittest.TestCase):
 
         def fake_translate(prompt, system_instruction, timeout=8.0):
             calls.append(prompt)
-            return prompt.replace("Translate to Serbian (Latin script, never Cyrillic): ", "SR:")
+            return prompt.replace("Translate to Serbian using the Latin alphabet: ", "SR:")
 
         long_text = "\n".join([f"- **Item {index}** — details" for index in range(40)])
         with patch.object(translation_server, "_gemini_translate", side_effect=fake_translate):
