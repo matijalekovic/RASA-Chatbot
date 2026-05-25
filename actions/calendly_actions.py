@@ -347,12 +347,89 @@ def _ascii_norm(value: str) -> str:
     ).lower()
 
 
+def _sr_scheduler_text(text: str) -> Optional[str]:
+    exact = {
+        "No problem. I will leave the meeting scheduling there.": (
+            "Nema problema. Zaustaviću zakazivanje sastanka."
+        ),
+        "Of course. I can help schedule a meeting with 1PAX. What name should I put on the invite?": (
+            "Naravno. Mogu da pomognem oko zakazivanja sastanka sa 1PAX-om. "
+            "Koje ime da stavim na pozivnicu?"
+        ),
+        "What is the purpose of the meeting? A short note is enough, for example: project consultation, partnership, proposal, careers, press, or a general introduction.": (
+            "Koji je povod sastanka? Dovoljna je kratka napomena, na primer: "
+            "konsultacije o projektu, partnerstvo, ponuda, karijera, mediji ili opšte upoznavanje."
+        ),
+        "Great. When would you like to meet? You can say *tomorrow afternoon*, *next Tuesday morning*, or *any time next week*.": (
+            "Odlično. Kada biste želeli sastanak? Možete reći *sutra popodne*, "
+            "*sledećeg utorka ujutru* ili *bilo kada sledeće nedelje*."
+        ),
+        "I did not catch which time you wanted. Please reply with one of the numbers, or tell me another day/time.": (
+            "Nisam razumeo koje vreme želite. Molim vas odgovorite jednim od brojeva, "
+            "ili mi recite drugi dan/vreme."
+        ),
+        "I lost the selected time. Let me show the available slots again.": (
+            "Izgubio sam izabrani termin. Prikazaću dostupne termine ponovo."
+        ),
+        "Please reply yes to book that time, or no to cancel.": (
+            "Odgovorite da za rezervaciju tog termina, ili ne za otkazivanje."
+        ),
+        "Calendly could not complete the booking inside the chat right now. Please choose another time, or try again shortly.": (
+            "Calendly trenutno ne može da završi rezervaciju u chatu. "
+            "Molim vas izaberite drugi termin ili pokušajte ponovo uskoro."
+        ),
+        "I could not find open Calendly times in that window. Try another option, like *tomorrow morning* or *next week*.": (
+            "Nisam pronašao slobodne Calendly termine u tom periodu. "
+            "Pokušajte drugu opciju, na primer *sutra ujutru* ili *sledeće nedelje*."
+        ),
+        "I could not find times in that exact part of the day, but these nearby options are open.": (
+            "Nisam pronašao termine baš u tom delu dana, ali ovi bliski termini su dostupni."
+        ),
+    }
+    if text in exact:
+        return exact[text]
+
+    if text.startswith("Thanks, ") and "What email address should Calendly send the invitation to?" in text:
+        name = text.removeprefix("Thanks, ").split(".", 1)[0]
+        return f"Hvala, {name}. Na koju email adresu Calendly treba da pošalje pozivnicu?"
+
+    if text.startswith("Calendly could not be reached right now. Please try again shortly."):
+        fallback = ""
+        match = re.search(r"\[Schedule a meeting\]\(([^)]+)\)", text)
+        if match:
+            fallback = f"\n\nMožete zakazati i direktno ovde: [Zakažite sastanak]({match.group(1)})"
+        return f"Calendly trenutno nije dostupan. Molim vas pokušajte ponovo uskoro.{fallback}"
+
+    if text.startswith("I can help with meetings, but live Calendly booking is not connected inside the chat yet."):
+        match = re.search(r"\[Schedule a meeting\]\(([^)]+)\)", text)
+        if match:
+            return (
+                "Mogu da pomognem oko sastanaka, ali zakazivanje uživo preko Calendlyja "
+                "trenutno nije povezano u chatu. Možete zakazati direktno ovde: "
+                f"[Zakažite sastanak]({match.group(1)})"
+            )
+
+    if text.startswith("I can help schedule meetings, but direct Calendly booking is not connected"):
+        return (
+            "Mogu da pomognem oko zakazivanja sastanaka, ali direktno Calendly zakazivanje "
+            "trenutno nije povezano u chatu."
+        )
+
+    return None
+
+
 def _utter(
     dispatcher: CollectingDispatcher,
     text: str,
     lang: Optional[str],
     already_localized: bool = False,
 ) -> None:
+    if _is_sr(lang) and not already_localized:
+        sr_text = _sr_scheduler_text(text)
+        if sr_text:
+            dispatcher.utter_message(text=sr_text)
+            return
+
     dispatcher.utter_message(
         text=text if already_localized else translate_response(text, lang)
     )
