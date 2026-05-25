@@ -48,10 +48,17 @@ _TRANSLATION_TIMEOUT_SECONDS = float(os.environ.get("TRANSLATION_TIMEOUT_SECONDS
 _TRANSLATION_BATCH_TIMEOUT_SECONDS = float(
     os.environ.get("TRANSLATION_BATCH_TIMEOUT_SECONDS", "5.0")
 )
+_TRANSLATION_PROXY_TIMEOUT_SECONDS = float(
+    os.environ.get("TRANSLATION_PROXY_TIMEOUT_SECONDS", "12.0")
+)
 _MAX_INDIVIDUAL_TRANSLATION_FALLBACKS = int(
     os.environ.get("MAX_INDIVIDUAL_TRANSLATION_FALLBACKS", "3")
 )
 _BATCH_DELIMITER = "<<<1PAX_TRANSLATION_SPLIT_DO_NOT_TRANSLATE>>>"
+_TRANSLATION_PROXY_URL = os.environ.get(
+    "TRANSLATION_PROXY_URL",
+    f"http://127.0.0.1:{os.environ.get('TRANSLATE_PORT', '5056')}/translate",
+).strip()
 _TRANSLATION_CACHE: OrderedDict[tuple[str, str], str] = OrderedDict()
 _TRANSLATION_CACHE_LOCK = threading.Lock()
 
@@ -173,6 +180,57 @@ def _gemini_call(prompt: str, system_instruction: str, timeout: float = 6.0) -> 
         return None
 
 
+def _proxy_translate_texts(
+    texts: list[str],
+    lang: str,
+    timeout: float = _TRANSLATION_PROXY_TIMEOUT_SECONDS,
+) -> Optional[list[str]]:
+    """Ask the local translation proxy to translate English responses."""
+    if not _TRANSLATION_PROXY_URL:
+        return None
+
+    body = {
+        "texts": texts,
+        "target_lang": lang,
+    }
+    req = urllib.request.Request(
+        _TRANSLATION_PROXY_URL,
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            result = json.loads(resp.read())
+    except (
+        TimeoutError,
+        socket.timeout,
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        OSError,
+        ValueError,
+    ) as exc:
+        logger.warning(f"Translation proxy call failed: {exc}")
+        return None
+
+    if result.get("translation_enabled") is False or result.get("translation_error"):
+        return None
+
+    translated = result.get("texts")
+    if (
+        isinstance(translated, list)
+        and len(translated) == len(texts)
+        and all(isinstance(item, str) for item in translated)
+    ):
+        return translated
+
+    if len(texts) == 1 and isinstance(result.get("text"), str):
+        return [result["text"]]
+
+    logger.warning("Translation proxy returned an unexpected response shape.")
+    return None
+
+
 def _normalize_lang(lang: Optional[str]) -> Optional[str]:
     if not lang:
         return None
@@ -244,6 +302,12 @@ def _extract_delimited_batch(raw_text: str, expected_len: int) -> Optional[list[
 
 
 def _translate_one_uncached(text: str, lang: str) -> str:
+    proxied = _proxy_translate_texts([text], lang)
+    if proxied is not None:
+        output = proxied[0]
+        _cache_put(lang, text, output)
+        return output
+
     lang_name = _LANG_NAMES.get(lang, lang)
     translated = _gemini_call(
         prompt=f"Translate to {lang_name}: {text}",
@@ -254,9 +318,11 @@ def _translate_one_uncached(text: str, lang: str) -> str:
         ),
         timeout=_TRANSLATION_TIMEOUT_SECONDS,
     )
-    output = translated if translated is not None else text
-    _cache_put(lang, text, output)
-    return output
+    if translated is not None:
+        _cache_put(lang, text, translated)
+        return translated
+
+    return text
 
 
 def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
@@ -292,6 +358,22 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
 
     if len(pending) > 1:
         pending_texts = [text for _, text in pending]
+        proxied_batch = _proxy_translate_texts(
+            pending_texts,
+            lang_code,
+            timeout=_TRANSLATION_PROXY_TIMEOUT_SECONDS,
+        )
+        if proxied_batch is not None:
+            for (index, source), item in zip(pending, proxied_batch):
+                translated[index] = item
+                _cache_put(lang_code, source, item)
+
+    remaining_for_batch = [
+        (index, source) for index, source in pending if translated[index] is None
+    ]
+
+    if len(remaining_for_batch) > 1:
+        pending_texts = [text for _, text in remaining_for_batch]
         total_chars = sum(len(text) for text in pending_texts)
         if total_chars <= _MAX_SYNC_TRANSLATION_BATCH_CHARS:
             lang_name = _LANG_NAMES.get(lang_code, lang_code)
@@ -317,7 +399,7 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
                 else None
             )
             if parsed_batch is not None:
-                for (index, source), item in zip(pending, parsed_batch):
+                for (index, source), item in zip(remaining_for_batch, parsed_batch):
                     translated[index] = item
                     _cache_put(lang_code, source, item)
             else:
@@ -332,7 +414,6 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
         )
         for index, source in remaining:
             translated[index] = source
-            _cache_put(lang_code, source, source)
         remaining = []
 
     for index, source in remaining:
