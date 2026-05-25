@@ -44,6 +44,14 @@ _MAX_SYNC_TRANSLATION_BATCH_CHARS = int(
 _MAX_TRANSLATION_CACHE_ENTRIES = int(
     os.environ.get("MAX_TRANSLATION_CACHE_ENTRIES", "512")
 )
+_TRANSLATION_TIMEOUT_SECONDS = float(os.environ.get("TRANSLATION_TIMEOUT_SECONDS", "4.0"))
+_TRANSLATION_BATCH_TIMEOUT_SECONDS = float(
+    os.environ.get("TRANSLATION_BATCH_TIMEOUT_SECONDS", "5.0")
+)
+_MAX_INDIVIDUAL_TRANSLATION_FALLBACKS = int(
+    os.environ.get("MAX_INDIVIDUAL_TRANSLATION_FALLBACKS", "3")
+)
+_BATCH_DELIMITER = "<<<1PAX_TRANSLATION_SPLIT_DO_NOT_TRANSLATE>>>"
 _TRANSLATION_CACHE: OrderedDict[tuple[str, str], str] = OrderedDict()
 _TRANSLATION_CACHE_LOCK = threading.Lock()
 
@@ -228,6 +236,13 @@ def _extract_json_array(raw_text: str, expected_len: int) -> Optional[list[str]]
     return None
 
 
+def _extract_delimited_batch(raw_text: str, expected_len: int) -> Optional[list[str]]:
+    parts = [part.strip() for part in raw_text.strip().split(_BATCH_DELIMITER)]
+    if len(parts) != expected_len:
+        return None
+    return parts
+
+
 def _translate_one_uncached(text: str, lang: str) -> str:
     lang_name = _LANG_NAMES.get(lang, lang)
     translated = _gemini_call(
@@ -237,11 +252,11 @@ def _translate_one_uncached(text: str, lang: str) -> str:
             "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
             "No explanations, no quotes, no notes."
         ),
+        timeout=_TRANSLATION_TIMEOUT_SECONDS,
     )
-    if translated is None:
-        return text
-    _cache_put(lang, text, translated)
-    return translated
+    output = translated if translated is not None else text
+    _cache_put(lang, text, output)
+    return output
 
 
 def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
@@ -280,21 +295,24 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
         total_chars = sum(len(text) for text in pending_texts)
         if total_chars <= _MAX_SYNC_TRANSLATION_BATCH_CHARS:
             lang_name = _LANG_NAMES.get(lang_code, lang_code)
+            batch_text = f"\n\n{_BATCH_DELIMITER}\n\n".join(pending_texts)
             raw_batch = _gemini_call(
                 prompt=(
-                    f"Translate this JSON array of English strings to {lang_name}. "
-                    "Return ONLY a JSON array of strings in the same order:\n"
-                    f"{json.dumps(pending_texts, ensure_ascii=False)}"
+                    f"Translate each segment below to {lang_name}. Keep brand names, "
+                    "project names, URLs, Markdown markers, and technical acronyms intact "
+                    "when needed, but translate every explanatory phrase. Keep this delimiter "
+                    f"line exactly unchanged between segments: {_BATCH_DELIMITER}\n\n"
+                    f"{batch_text}"
                 ),
                 system_instruction=(
-                    "You are a translator. Output ONLY valid JSON. Preserve all "
-                    "Markdown formatting exactly inside each string. No code fences, "
-                    "no explanations, no notes."
+                    "You are a translator. Output ONLY the translated segments separated "
+                    "by the exact delimiter. Preserve Markdown formatting exactly. No "
+                    "code fences, no explanations, no notes."
                 ),
-                timeout=10.0,
+                timeout=_TRANSLATION_BATCH_TIMEOUT_SECONDS,
             )
             parsed_batch = (
-                _extract_json_array(raw_batch, len(pending_texts))
+                _extract_delimited_batch(raw_batch, len(pending_texts))
                 if raw_batch is not None
                 else None
             )
@@ -305,7 +323,19 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
             else:
                 logger.warning("Gemini batch translation failed; falling back to singles.")
 
-    for index, source in pending:
+    remaining = [(index, source) for index, source in pending if translated[index] is None]
+    if len(remaining) > _MAX_INDIVIDUAL_TRANSLATION_FALLBACKS:
+        logger.warning(
+            "Skipping %s individual translation fallbacks after batch miss; "
+            "returning source text to keep action latency bounded.",
+            len(remaining),
+        )
+        for index, source in remaining:
+            translated[index] = source
+            _cache_put(lang_code, source, source)
+        remaining = []
+
+    for index, source in remaining:
         if translated[index] is None:
             translated[index] = _translate_one_uncached(source, lang_code)
 
