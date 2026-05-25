@@ -136,7 +136,7 @@ class ActionAnswerCompanyQuery(Action):
 
         # Append a randomised follow-up prompt (not always — empty string weighted in)
         follow_up_pool = COMPANY_INFO.get("follow_up", [])
-        if follow_up_pool:
+        if follow_up_pool and not lang:
             suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
             if suffix:
                 dispatcher.utter_message(text=translate_response(suffix, lang))
