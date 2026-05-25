@@ -24,6 +24,7 @@ Env var:   GEMINI_API_KEY
 import json
 import logging
 import os
+import socket
 import urllib.error
 import urllib.request
 from typing import Optional
@@ -34,6 +35,7 @@ _GEMINI_MODEL = "gemini-3.5-flash"
 _GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
 )
+_MAX_SYNC_TRANSLATION_CHARS = int(os.environ.get("MAX_SYNC_TRANSLATION_CHARS", "2400"))
 
 try:
     from langdetect import detect, LangDetectException
@@ -112,7 +114,7 @@ def get_lang(tracker) -> Optional[str]:
     return None
 
 
-def _gemini_call(prompt: str, system_instruction: str, timeout: float = 10.0) -> Optional[str]:
+def _gemini_call(prompt: str, system_instruction: str, timeout: float = 6.0) -> Optional[str]:
     """POST to Gemini REST; return the text or None on any error."""
     api_key = (
         os.environ.get("GEMINI_API_KEY", "").strip()
@@ -136,8 +138,20 @@ def _gemini_call(prompt: str, system_instruction: str, timeout: float = 10.0) ->
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             result = json.loads(resp.read())
         return result["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, ValueError) as exc:
+    except (
+        TimeoutError,
+        socket.timeout,
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        OSError,
+        KeyError,
+        IndexError,
+        ValueError,
+    ) as exc:
         logger.warning(f"Gemini REST call failed: {exc}")
+        return None
+    except Exception as exc:
+        logger.warning(f"Unexpected Gemini REST failure: {exc}")
         return None
 
 
@@ -148,6 +162,14 @@ def translate_response(text: str, lang: Optional[str]) -> str:
     Gemini preserves Markdown (*bold*, _italic_, bullet lists).
     """
     if not lang or lang.upper().startswith("EN"):
+        return text
+
+    if len(text) > _MAX_SYNC_TRANSLATION_CHARS:
+        logger.warning(
+            "Skipping synchronous response translation for %s chars; "
+            "returning source text to avoid action timeout.",
+            len(text),
+        )
         return text
 
     lang_name = _LANG_NAMES.get(lang, lang)
