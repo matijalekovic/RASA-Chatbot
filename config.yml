@@ -5,7 +5,6 @@ assistant_id: onepax_chatbot_v1
 language: en
 
 pipeline:
-  - name: components.translation_component.TranslationComponent
   - name: WhitespaceTokenizer
   - name: RegexFeaturizer
   - name: LexicalSyntacticFeaturizer

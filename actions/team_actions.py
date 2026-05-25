@@ -21,6 +21,7 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .team_data import TEAM_INFO, PERSONS
+from .meeting_prompts import meeting_buttons, meeting_cta_text
 from .translation import get_lang, translate_response
 
 
@@ -205,12 +206,19 @@ class ActionAnswerTeamQuery(Action):
                     "specialists, and operations. Or ask about a specific person: "
                     "*\"Tell me about Mabel Miranda\"* or *\"Who is the BIM Manager?\"*",
                     lang,
-                )
+                ),
+                buttons=meeting_buttons(lang),
             )
             return lang_event
 
         for msg in TEAM_INFO[data_key]:
             dispatcher.utter_message(text=translate_response(msg, lang))
+
+        if data_key in {"overview", "leadership", "operations"}:
+            dispatcher.utter_message(
+                text=translate_response(meeting_cta_text("team"), lang),
+                buttons=meeting_buttons(lang),
+            )
 
         return lang_event
 

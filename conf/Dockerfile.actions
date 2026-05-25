@@ -1,10 +1,22 @@
 FROM python:3.10-slim
 
+ENV PYTHONUNBUFFERED=1 \
+    MALLOC_ARENA_MAX=2 \
+    OMP_NUM_THREADS=1
+ARG INSTALL_CALENDLY_BROWSER=true
+
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install rasa-sdk first (cached layer)
 COPY requirements-actions.txt .
-RUN pip install --no-cache-dir -r requirements-actions.txt
+RUN pip install --no-cache-dir -r requirements-actions.txt \
+    && if [ "${INSTALL_CALENDLY_BROWSER}" = "true" ]; then \
+       python -m playwright install --with-deps chromium; \
+       fi
 
 # Copy action files
 COPY actions/ ./actions/

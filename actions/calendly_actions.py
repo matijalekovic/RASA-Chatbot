@@ -95,6 +95,12 @@ class CalendlyConfig:
     access_token: str
     event_type_uri: str
     scheduling_link: str
+    allow_link_fallback: bool
+    browser_fallback: bool
+    browser_preferred: bool
+    browser_headless: bool
+    browser_timeout_seconds: int
+    browser_executable_path: str
     default_timezone: str
     max_slots: int
     location_kind: str
@@ -140,13 +146,43 @@ def _config_from_env() -> CalendlyConfig:
     except ValueError:
         max_slots = 5
 
+    try:
+        browser_timeout_seconds = int(
+            os.environ.get("CALENDLY_BROWSER_TIMEOUT_SECONDS", "30")
+        )
+    except ValueError:
+        browser_timeout_seconds = 30
+
+    scheduling_link = (
+        os.environ.get("CALENDLY_SCHEDULING_LINK", "").strip()
+        or os.environ.get("CALENDLY_SCHEDULING_URL", "").strip()
+    )
+    allow_link_fallback = _env_bool("CALENDLY_ALLOW_LINK_FALLBACK") or _env_bool(
+        "CALENDLY_ENABLE_LINK_FALLBACK"
+    )
+    browser_preferred = _env_bool("CALENDLY_BROWSER_PREFERRED")
+
+    browser_fallback = (
+        _env_bool(
+            "CALENDLY_BROWSER_FALLBACK",
+            default=browser_preferred or bool(allow_link_fallback and scheduling_link),
+        )
+        or _env_bool("CALENDLY_AUTOMATE_FALLBACK")
+    )
+
     return CalendlyConfig(
         access_token=os.environ.get("CALENDLY_ACCESS_TOKEN", "").strip(),
         event_type_uri=event_type_uri,
-        scheduling_link=(
-            os.environ.get("CALENDLY_SCHEDULING_LINK", "").strip()
-            or os.environ.get("CALENDLY_SCHEDULING_URL", "").strip()
-        ),
+        scheduling_link=scheduling_link,
+        allow_link_fallback=allow_link_fallback,
+        browser_fallback=browser_fallback,
+        browser_preferred=browser_preferred,
+        browser_headless=not _env_flag("CALENDLY_BROWSER_HEADFUL"),
+        browser_timeout_seconds=max(5, min(browser_timeout_seconds, 120)),
+        browser_executable_path=os.environ.get(
+            "CALENDLY_BROWSER_EXECUTABLE_PATH",
+            "",
+        ).strip(),
         default_timezone=os.environ.get(
             "CALENDLY_DEFAULT_TIMEZONE",
             _DEFAULT_TIMEZONE,
@@ -156,6 +192,17 @@ def _config_from_env() -> CalendlyConfig:
         location_value=os.environ.get("CALENDLY_LOCATION_VALUE", "").strip(),
         event_guests=guests,
     )
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _zone(name: str) -> ZoneInfo:
@@ -349,11 +396,30 @@ def _is_affirmation(text: str) -> bool:
 
 def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
     lowered = text.lower().strip(" .!?,")
-    if intent == "cancel_schedule_booking":
+    if not lowered:
+        return False
+
+    explicit_cancel_phrases = (
+        "cancel",
+        "no thanks",
+        "not now",
+        "never mind",
+        "nevermind",
+        "stop",
+        "forget it",
+        "leave it",
+        "do not schedule",
+        "don't schedule",
+        "do not book",
+        "don't book",
+        "do not want to book",
+        "don't want to book",
+        "changed my mind",
+    )
+    if any(phrase in lowered for phrase in explicit_cancel_phrases):
         return True
-    if any(phrase in lowered for phrase in ("cancel", "never mind", "nevermind", "stop")):
-        return True
-    return stage in {"select_slot", "confirm"} and lowered in {"no", "no thanks", "not now"}
+
+    return stage in {"select_slot", "confirm"} and lowered == "no"
 
 
 def _parse_date_value(raw: str, today: date) -> Optional[date]:
@@ -651,6 +717,17 @@ def _booking_body(
     start_time: str,
     location: Optional[Dict[str, str]],
 ) -> Dict[str, Any]:
+    tracking = {
+        "utm_source": "1pax_chatbot",
+        "utm_medium": "chatbot",
+        "utm_campaign": "website_consultation",
+        "utm_content": purpose[:255],
+        "utm_term": "meeting_request",
+    }
+    salesforce_uuid = os.environ.get("CALENDLY_SALESFORCE_UUID", "").strip()
+    if salesforce_uuid:
+        tracking["salesforce_uuid"] = salesforce_uuid
+
     body: Dict[str, Any] = {
         "event_type": cfg.event_type_uri,
         "start_time": start_time,
@@ -659,14 +736,8 @@ def _booking_body(
             "email": email,
             "timezone": timezone_name,
         },
-        "tracking": {
-            "utm_source": "1pax_chatbot",
-            "utm_medium": "chatbot",
-            "utm_campaign": "website_consultation",
-            "utm_content": purpose[:255],
-            "utm_term": "meeting_request",
-            "salesforce_uuid": "",
-        },
+        "booking_source": "ai_scheduling_assistant",
+        "tracking": tracking,
         "questions_and_answers": [
             {
                 "question": "Purpose of meeting",
@@ -748,16 +819,16 @@ def _book_invitee(
 
 
 def _config_unavailable_message(cfg: CalendlyConfig) -> str:
-    if cfg.scheduling_link:
+    if cfg.allow_link_fallback and cfg.scheduling_link:
         return (
             "I can help with meetings, but live Calendly booking is not connected "
             f"inside the chat yet. You can schedule directly here: "
             f"[Schedule a meeting]({cfg.scheduling_link})"
         )
     return (
-        "I can help schedule meetings, but Calendly is not connected inside the "
-        "chat yet. Once it is connected, I will be able to show live availability "
-        "and book the meeting here."
+        "I can help schedule meetings, but direct Calendly booking is not "
+        "connected inside the chat yet. Once it is connected, I will be able "
+        "to show live availability and book the meeting here."
     )
 
 
@@ -766,61 +837,173 @@ def _prefilled_scheduling_link(
     name: str,
     email: str,
     purpose: str,
+    start_time: Optional[str] = None,
+    timezone_name: str = _DEFAULT_TIMEZONE,
 ) -> str:
     if not cfg.scheduling_link:
         return ""
 
-    parsed = urllib.parse.urlsplit(cfg.scheduling_link)
-    params = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
-    params.update(
-        {
-            "name": name,
-            "email": email,
-            "a1": purpose,
-            "utm_source": "1pax_chatbot",
-            "utm_medium": "chatbot",
-            "utm_campaign": "website_consultation",
-            "utm_content": purpose[:255],
-            "utm_term": "meeting_request",
-        }
+    from .calendly_browser import build_calendly_scheduling_url
+
+    return build_calendly_scheduling_url(
+        cfg.scheduling_link,
+        name=name,
+        email=email,
+        purpose=purpose,
+        start_time=start_time,
+        timezone_name=timezone_name,
     )
-    return urllib.parse.urlunsplit(
-        (
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            urllib.parse.urlencode(params),
-            parsed.fragment,
+
+
+def _book_invitee_with_browser(
+    cfg: CalendlyConfig,
+    name: str,
+    email: str,
+    purpose: str,
+    timezone_name: str,
+    start_time: str,
+) -> Optional[Dict[str, str]]:
+    if not (cfg.browser_fallback and cfg.scheduling_link):
+        return None
+
+    try:
+        from .calendly_browser import book_calendly_event
+
+        result = book_calendly_event(
+            scheduling_link=cfg.scheduling_link,
+            name=name,
+            email=email,
+            purpose=purpose,
+            start_time=start_time,
+            timezone_name=timezone_name,
+            timeout_seconds=cfg.browser_timeout_seconds,
+            headless=cfg.browser_headless,
+            executable_path=cfg.browser_executable_path or None,
         )
-    )
+    except Exception as exc:
+        logger.warning("Calendly browser fallback failed: %s", exc)
+        return None
+
+    if not result.scheduled:
+        logger.warning("Calendly browser fallback did not submit: %s", result.message)
+        return None
+
+    return {
+        "final_url": result.final_url,
+        "message": result.message,
+        "confirmation_text": result.confirmation_text,
+    }
 
 
-def _booking_fallback_message(
+def _booking_summary_lines(
+    name: str,
+    email: str,
+    purpose: str,
+    selected_label: Optional[str],
+) -> List[str]:
+    return [
+        "**Booking summary**",
+        f"Time: **{selected_label or 'Selected Calendly slot'}**",
+        f"Name: **{name}**",
+        f"Email: **{email}**",
+        f"Purpose: **{purpose}**",
+    ]
+
+
+def _booking_confirmation_prompt(
+    name: str,
+    email: str,
+    purpose: str,
+    selected_label: Optional[str],
+) -> str:
+    lines = _booking_summary_lines(name, email, purpose, selected_label)
+    lines.append("")
+    lines.append("Reply **yes** and I will finalize this booking now.")
+    lines.append("Reply **no** to cancel.")
+    return "\n".join(lines)
+
+
+def _booking_success_message(
+    name: str,
+    email: str,
+    purpose: str,
+    selected_label: Optional[str],
+    confirmation_url: Optional[str] = None,
+    cancel_url: Optional[str] = None,
+    reschedule_url: Optional[str] = None,
+) -> str:
+    lines = [
+        f"You're booked: **{selected_label}**.",
+        f"Calendly will send the invitation to **{email}**.",
+        f"Purpose: **{purpose}**.",
+    ]
+    if confirmation_url:
+        lines.append(f"[Calendly confirmation]({confirmation_url})")
+    if reschedule_url:
+        lines.append(f"[Reschedule]({reschedule_url})")
+    if cancel_url:
+        lines.append(f"[Cancel]({cancel_url})")
+    return "\n\n".join(lines)
+
+
+def _manual_finalize_message(
     cfg: CalendlyConfig,
     name: str,
     email: str,
     purpose: str,
     selected_label: Optional[str],
+    selected_start_time: Optional[str],
+    timezone_name: str,
 ) -> Optional[str]:
-    link = _prefilled_scheduling_link(cfg, name, email, purpose)
+    if not cfg.allow_link_fallback:
+        return None
+
+    link = _prefilled_scheduling_link(
+        cfg,
+        name,
+        email,
+        purpose,
+        start_time=selected_start_time,
+        timezone_name=timezone_name,
+    )
     if not link:
         return None
 
-    lines = [
-        "Calendly needs the final confirmation on its booking page for this "
-        "meeting. I prepared a pre-filled link with your details:",
-        f"[Finish booking in Calendly]({link})",
-    ]
-    if selected_label:
-        lines.append(f"Choose **{selected_label}** if it is still available.")
-    lines.extend(
-        [
-            f"Name: **{name}**",
-            f"Email: **{email}**",
-            f"Purpose: **{purpose}**",
-        ]
+    lines = _booking_summary_lines(name, email, purpose, selected_label)
+    lines.append("")
+    lines.append(
+        "I prepared the exact pre-filled Calendly confirmation link for this "
+        "slot:"
     )
+    lines.append(f"[Finalize in Calendly]({link})")
     return "\n\n".join(lines)
+
+
+def _direct_booking_error_message(error: CalendlyAPIError) -> str:
+    if error.status == 403:
+        return (
+            "I could not complete the booking inside the chat because Calendly "
+            "rejected the Scheduling API request. The 1PAX Calendly account "
+            "may need a paid plan with Scheduling API access, or the token may "
+            "need the right account permissions."
+        )
+    if error.status == 400:
+        return (
+            "I could not complete the booking inside the chat because Calendly "
+            "rejected one of the booking details. Please try another available "
+            "time. If this keeps happening, the event type location or invitee "
+            "form settings need to be adjusted for API booking."
+        )
+    if error.status == 401:
+        return (
+            "I could not complete the booking inside the chat because Calendly "
+            "did not accept the API token. The scheduler needs a fresh "
+            "Calendly access token."
+        )
+    return (
+        "Calendly could not complete the booking inside the chat right now. "
+        "Please choose another time, or try again shortly."
+    )
 
 
 def run_calendly_scheduling(
@@ -945,9 +1128,12 @@ def run_calendly_scheduling(
             )
             _utter(
                 dispatcher,
-                f"Perfect. Should I book **{selected_label}** for **{name}** "
-                f"at **{email}**?\n\nPurpose: **{purpose}**\n\nReply yes to "
-                "confirm, or no to cancel.",
+                _booking_confirmation_prompt(
+                    name=name,
+                    email=email,
+                    purpose=purpose,
+                    selected_label=selected_label,
+                ),
                 lang,
             )
             return events + _set_stage("confirm")
@@ -981,6 +1167,31 @@ def run_calendly_scheduling(
                 )
                 offered_slots = []
             else:
+                browser_attempted = False
+                if cfg.browser_preferred:
+                    browser_attempted = True
+                    browser_booking = _book_invitee_with_browser(
+                        cfg,
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        timezone_name=timezone_name,
+                        start_time=selected_slot,
+                    )
+                    if browser_booking:
+                        _utter(
+                            dispatcher,
+                            _booking_success_message(
+                                name=name,
+                                email=email,
+                                purpose=purpose,
+                                selected_label=selected_label,
+                                confirmation_url=browser_booking.get("final_url"),
+                            ),
+                            lang,
+                        )
+                        return _clear_schedule_events() + events
+
                 try:
                     booking = _book_invitee(
                         cfg,
@@ -993,40 +1204,63 @@ def run_calendly_scheduling(
                 except CalendlyAPIError as exc:
                     logger.warning(
                         "Calendly direct booking failed with status %s; "
-                        "falling back to scheduling link when available.",
+                        "trying browser fallback when enabled.",
                         exc.status,
                     )
-                    fallback = _booking_fallback_message(
+                    browser_booking = None
+                    if not browser_attempted:
+                        browser_booking = _book_invitee_with_browser(
+                            cfg,
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            timezone_name=timezone_name,
+                            start_time=selected_slot,
+                        )
+                    if browser_booking:
+                        _utter(
+                            dispatcher,
+                            _booking_success_message(
+                                name=name,
+                                email=email,
+                                purpose=purpose,
+                                selected_label=selected_label,
+                                confirmation_url=browser_booking.get("final_url"),
+                            ),
+                            lang,
+                        )
+                        return _clear_schedule_events() + events
+
+                    fallback = _manual_finalize_message(
                         cfg,
                         name=name,
                         email=email,
                         purpose=purpose,
                         selected_label=selected_label,
+                        selected_start_time=selected_slot,
+                        timezone_name=timezone_name,
                     )
                     if fallback:
                         _utter(dispatcher, fallback, lang)
                         return _clear_schedule_events() + events
 
-                    _utter(
-                        dispatcher,
-                        "Calendly could not complete the booking right now. "
-                        "Please choose another time, or try again shortly.",
-                        lang,
-                    )
+                    _utter(dispatcher, _direct_booking_error_message(exc), lang)
                     return events + _set_stage("select_slot")
 
                 cancel_url = booking.get("cancel_url")
                 reschedule_url = booking.get("reschedule_url")
-                lines = [
-                    f"You're booked: **{selected_label}**.",
-                    f"Calendly will send the invitation to **{email}**.",
-                    f"Purpose: **{purpose}**.",
-                ]
-                if reschedule_url:
-                    lines.append(f"[Reschedule]({reschedule_url})")
-                if cancel_url:
-                    lines.append(f"[Cancel]({cancel_url})")
-                _utter(dispatcher, "\n\n".join(lines), lang)
+                _utter(
+                    dispatcher,
+                    _booking_success_message(
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        selected_label=selected_label,
+                        cancel_url=cancel_url,
+                        reschedule_url=reschedule_url,
+                    ),
+                    lang,
+                )
                 return _clear_schedule_events() + events
 
         _utter(
@@ -1047,7 +1281,7 @@ def run_calendly_scheduling(
             fallback = (
                 f"\n\nYou can also schedule directly here: "
                 f"[Schedule a meeting]({cfg.scheduling_link})"
-                if cfg.scheduling_link
+                if cfg.allow_link_fallback and cfg.scheduling_link
                 else ""
             )
             _utter(

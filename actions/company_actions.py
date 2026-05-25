@@ -13,6 +13,7 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .company_data import COMPANY_INFO
+from .meeting_prompts import meeting_buttons, meeting_cta_text
 from .translation import get_lang, translate_response
 
 
@@ -122,7 +123,8 @@ class ActionAnswerCompanyQuery(Action):
                     "offices, sustainability commitment, careers, and more. What would you "
                     "like to know?",
                     lang,
-                )
+                ),
+                buttons=meeting_buttons(lang),
             )
             return lang_event
 
@@ -138,5 +140,11 @@ class ActionAnswerCompanyQuery(Action):
             suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
             if suffix:
                 dispatcher.utter_message(text=translate_response(suffix, lang))
+
+        if data_key in {"overview", "offices", "approach", "clients", "careers"}:
+            dispatcher.utter_message(
+                text=translate_response(meeting_cta_text("company"), lang),
+                buttons=meeting_buttons(lang),
+            )
 
         return lang_event

@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-_GEMINI_MODEL = "gemini-2.5-flash-lite"
+_GEMINI_MODEL = "gemini-3.5-flash"
 _GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
 )

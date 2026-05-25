@@ -4324,6 +4324,241 @@ PROJECTS = {
     # },
 }
 
+# Official public project pages and cover images from 1pax.com.
+# Values are injected into every PROJECTS entry below as:
+#   project_url, cover_image_url
+PROJECT_MEDIA = {
+    "sofia_airport": (
+        "https://www.1pax.com/projects/sofia-airport-terminal-3-international-terminal-2-refurbishment",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b731a42dd546d2c4ab4c40_Sofia_2.webp",
+    ),
+    "belgrade_airport": (
+        "https://www.1pax.com/projects/nikola-tesla-international-airport-phase-1-phase-2",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72d78c81fa27714a14af9_Belgrade_1.webp",
+    ),
+    "velana_airport": (
+        "https://www.1pax.com/projects/velana-international-airport-new-terminal-building",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d620e795a4130c5cac9436_velana_night.webp",
+    ),
+    "bordeaux_airport": (
+        "https://www.1pax.com/projects/new-stainless-steel-and-glazed-facades-bordeaux-international-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d64a0bd611f475c8bec76c_Bordeaux%204.webp",
+    ),
+    "cayenne_terminal": (
+        "https://www.1pax.com/projects/felix-eboue-airport-new-terminal",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72cb5619866dcc244016a_Cayenne-Exterior-02.webp",
+    ),
+    "nice_airport": (
+        "https://www.1pax.com/projects/nice-cote-dazur-airport-terminal-boarding-gates-expansion",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b731f435af8d0cca357cb3_Nice_2.webp",
+    ),
+    "pointe_a_pitre_t1": (
+        "https://www.1pax.com/projects/pointe-a-pitre-international-airport-new-extension",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72f97ec7dba6c9452347e_Vue%203D%201%20-%20Hall%20D%C3%A9parts.webp",
+    ),
+    "pointe_a_pitre_t2": (
+        "https://www.1pax.com/projects/pointe-a-pitre-international-airport-t2-extension",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d610336cab42ba47db2676_guadeloupe_aerial_render.webp",
+    ),
+    "annecy_airport": (
+        "https://www.1pax.com/projects/annecy-general-aviation-terminal",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72e5180d08e6d6e510972_Annecy_2.webp",
+    ),
+    "conakry_airport": (
+        "https://www.1pax.com/projects/conakry-international-airport-expansion",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72dbae6d9b9532301b1e7_Conakrys_2.webp",
+    ),
+    "papeete_airport": (
+        "https://www.1pax.com/projects/papeete-faa-a-international-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7316fdb6fe97935439f29_Papeete_4.webp",
+    ),
+    "amilcar_cabral_airport": (
+        "https://www.1pax.com/projects/cabo-verde-assistance-for-the-concession-of-7-airports",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b727a49925d9a7b373b7e0_Amilcar_1%20(1).webp",
+    ),
+    "nelson_mandela_airport": (
+        "https://www.1pax.com/projects/cabo-verde-assistance-for-the-concession-of-7-airports",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b727a49925d9a7b373b7e0_Amilcar_1%20(1).webp",
+    ),
+    "aristides_pereira_airport": (
+        "https://www.1pax.com/projects/cabo-verde-assistance-for-the-concession-of-7-airports",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b727a49925d9a7b373b7e0_Amilcar_1%20(1).webp",
+    ),
+    "lille_airport": (
+        "https://www.1pax.com/projects/lille-international-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72f688d878d06e00234dc_Lille_2.webp",
+    ),
+    "fuzhou_airport": (
+        "https://www.1pax.com/projects/fuzhou-airport-international-airport-terminal-rail-integration-",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72a8988365294c2f38404_Fuzhou_1.webp",
+    ),
+    "euroairport_modernization": (
+        "https://www.1pax.com/projects/euroairport-terminal-modernization",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72a5a8f681919e0a217b6_Mulhouse_6.webp",
+    ),
+    "lanzhou_airport": (
+        "https://www.1pax.com/projects/lanzhou",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7301579e21070d9c173a3_lanzhou1.webp",
+    ),
+    "mashhad_airport": (
+        "https://www.1pax.com/projects/new-mashad-international-airport-extension-terminal",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b731c5e1292ea5e551606c_Mashad-01.webp",
+    ),
+    "almaty_airport": (
+        "https://www.1pax.com/projects/almaty-international-airport-masterplanning-new-terminal-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72e724700d7158543d179_Almaty.webp",
+    ),
+    "euroairport_south_gates": (
+        "https://www.1pax.com/projects/euroairport-extension-terminal-south-gates",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72a6f069714d69034a913_Euroair_2.webp",
+    ),
+    "kigali_airport": (
+        "https://www.1pax.com/projects/kigali-new-passenger-terminal-building-consultancy-for-redesign-construction",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b2be542976bbd777155517_Kigali_1.jpg",
+    ),
+    "tocumen_airport": (
+        "https://www.1pax.com/projects/tocumen-international-airport-consultancy-fire-safety-strategy-review",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b3fafbf3969991400e90d7_Tocumen_2.jpg",
+    ),
+    "cusco_airport": (
+        "https://www.1pax.com/projects/alejandro-velasco-astete-airport-rehabilitation-extension-diagnostic-",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d7b4449f60716e22551587_google_earth_cusco.webp",
+    ),
+    "jaipur_airport": (
+        "https://www.1pax.com/projects/jaipur-international-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d6ac4e0dd895bc1d0da1a5_google_earth_jaipur.webp",
+    ),
+    "ahmedabad_airport": (
+        "https://www.1pax.com/projects/ahmedabad-airport-consultancy",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d6acb773d69e3bc4a7f594_google_earth_ahmedabad.webp",
+    ),
+    "pachacamac_metro_station": (
+        "https://www.1pax.com/projects/intermodal-metro-station-pachacamac-line-1-extension",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d8b2a87755f2a8d574c03b_Metro_Per_1%20(1).webp",
+    ),
+    "belgrade_metro_line1": (
+        "https://www.1pax.com/projects/belgrade-metro-network-line-1-phase-1",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7343bb732de7af410ceb5_bgmetro.webp",
+    ),
+    "cergy_vertiport": (
+        "https://www.1pax.com/projects/first-european-taxidrone-vertiport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d4dfccb94d9642209085d5_vertiport_4.webp",
+    ),
+    "singapore_vertiport": (
+        "https://www.1pax.com/projects/vertiport-in-singapore",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b44d9cd3afdad6dce9a72e_singapore1.png",
+    ),
+    "paris_heliport": (
+        "https://www.1pax.com/projects/heliport-de-paris-issy-les-molineaux",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d76245f8aabbfab1b6b5df_issy-heliport.webp",
+    ),
+    "cabo_verde_airports": (
+        "https://www.1pax.com/projects/cabo-verde-assistance-for-the-concession-of-7-airports",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b727a49925d9a7b373b7e0_Amilcar_1%20(1).webp",
+    ),
+    "belgrade_nikola_tesla_landside": (
+        "https://www.1pax.com/projects/nikola-tesla-airport-landside-design-vehicles-simulation",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d615b56c1e2de287a3369f_Belgrade_Landside_2.webp",
+    ),
+    "lima_metro_line1_stations": (
+        "https://www.1pax.com/projects/lima-metro-line-1-multimodal-station-sizing-urban-insertion--1w2pu",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d8b295f2040f9d17241d8f_google_earth_pachacamac.webp",
+    ),
+    "cayenne_airport_masterplan": (
+        "https://www.1pax.com/projects/feliz-eboue-airport-masterplan",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69dcf4f2db67f97b2d5459be_google_earth_cayenne.webp",
+    ),
+    "doha_metro_depot": (
+        "https://www.1pax.com/projects/qatar-railways-alwakrah-metro-depot-masterplan",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69de74420ca661665cea20ad_al-whakra.webp",
+    ),
+    "chateauroux_atct_mro": (
+        "https://www.1pax.com/projects/chateauroux-atct-mro",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b2afe492addfb0541456e2_chateroux-02.png",
+    ),
+    "riga_control_tower": (
+        "https://www.1pax.com/projects/riga-international-airport-new-control-tower-offices",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69c552917361e01b677045ae_Riga_1.webp",
+    ),
+    "belgrade_fire_station": (
+        "https://www.1pax.com/projects/belgrade-airport-main-fire-station-architectural-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b2ba7de00d9e5080393719_Belgrade_1.jpg",
+    ),
+    "cdg_baggage_building": (
+        "https://www.1pax.com/projects/design-building-for-baggage-handling-charles-de-gaulle-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b2afa3621256fe7061c72d_Baggage_1.jpg",
+    ),
+    "le_bourget_fire_station": (
+        "https://www.1pax.com/projects/new-fire-station-paris-le-bourget-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b2b9ddc150ff948a740ce0_Paris_3.jpg",
+    ),
+    "air_guyane_hangar": (
+        "https://www.1pax.com/projects/hangar-for-air-guyanne-cayenne-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72bf63ca1a998b25176fe_Cayenne-Hangar-01.webp",
+    ),
+    "belgrade_admin_building": (
+        "https://www.1pax.com/projects/belgrade-airport-administration-building",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b733d28c80a0d49cb846ed_Belgrade_Adm_4.webp",
+    ),
+    "tokyo_eu_delegation": (
+        "https://www.1pax.com/projects/european-commission-building-new-delegation-building-architectural-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b733a7646bd86ef340abda_Europe_Comm_3.webp",
+    ),
+    "french_embassy_bangkok": (
+        "https://www.1pax.com/projects/french-embassy-in-bangkok-architectural-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b733809925d9a7b374c1cb_Ambassy_1.webp",
+    ),
+    "qatar_railways_hq": (
+        "https://www.1pax.com/projects/qatar-railways-headquarters",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7334adf2e8e3a6210d367_hqqatar.webp",
+    ),
+    "montijo_airport_commercial": (
+        "https://www.1pax.com/projects/montijo-airport-passenger-experience-design-commercial-areas",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7366186bba992b516bd74_Montijo%203.webp",
+    ),
+    "jorge_chavez_food_hall": (
+        "https://www.1pax.com/projects/food-hall-design-jorge-chavez-international-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69d7832fed48e1679fac071b_perufood.webp",
+    ),
+    "lima_peru_plaza_food_court": (
+        "https://www.1pax.com/projects/peru-airport-food-court-look-and-feel",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b737d507c7d17ce8c931e6_Plaza%2010.webp",
+    ),
+    "marseille_commercial_assistance": (
+        "https://www.1pax.com/projects/aeroport-de-marseille-provence-architectural-assistance-for-the-commercial-facilities-implementation",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7368dd93944d5c17044c5_Marseille%203.webp",
+    ),
+    "belgrade_wayfinding": (
+        "https://www.1pax.com/projects/nikola-tesla-international-airport-wayfinding-signage-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7376c20d86875e8bbc19d_Nikola%201.webp",
+    ),
+    "nantes_commercial_zone": (
+        "https://www.1pax.com/projects/nantes-atlantique-airport-development-of-the-commercial-zone",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b7363e2dd546d2c4abb90f_Nantes%205.webp",
+    ),
+    "lyon_retail_shell": (
+        "https://www.1pax.com/projects/retail-shell-lyon-airport-commercial-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b735152e926afdfcea29ee_Retail%201.webp",
+    ),
+    "aik_bank_design": (
+        "https://www.1pax.com/projects/aik-bank-branches-atm-network-design",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b735673d3153253073c288_Bank%203.webp",
+    ),
+    "cayenne_interior_design": (
+        "https://www.1pax.com/projects/felix-eboue-cayenne-airport",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b72aae415b59c2d80a939c_Int%C3%A9rieures%205.webp",
+    ),
+    "santiago_wayfinding": (
+        "https://www.1pax.com/projects/santiago-international-airport-wayfinding-design-signage",
+        "https://cdn.prod.website-files.com/698a41cf3248593467beb7ef/69b737fb18420a09e87493df_Santiago%201.webp",
+    ),
+}
+
+for _key, _project in PROJECTS.items():
+    _url, _cover_image = PROJECT_MEDIA.get(_key, ("", ""))
+    _project["project_url"] = _url
+    _project["cover_image_url"] = _cover_image
+
 # Category index — automatically built from PROJECTS, no manual maintenance needed.
 # Maps category name → list of project keys.
 CATEGORIES: dict = {}

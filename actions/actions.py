@@ -17,6 +17,7 @@ from rasa_sdk.events import SlotSet
 
 from .projects_data import PROJECTS, CATEGORIES
 from .translation import get_lang, translate_response
+from .meeting_prompts import meeting_buttons, meeting_cta_text
 
 
 def _continue_schedule_if_active(dispatcher, tracker, domain):
@@ -50,6 +51,28 @@ _DETAIL_SUFFIXES = [
     "",
     "",
 ]
+
+_PHOTO_WORDS = {"photo", "photos", "image", "images", "picture", "pictures", "pic", "pics"}
+
+_PROJECT_LINK_LABELS = {
+    "FR": "Voir la page du projet",
+    "ES": "Ver la página del proyecto",
+    "PT-PT": "Ver a página do projeto",
+    "PT-BR": "Ver a página do projeto",
+    "ZH-HANS": "查看项目页面",
+    "ZH-HANT": "查看專案頁面",
+    "SR": "Pogledaj stranicu projekta",
+}
+
+_PROJECT_MEETING_INFO_TYPES = {
+    "about_project",
+    "overview",
+    "approach",
+    "challenge",
+    "scope",
+    "program",
+    "sustainability",
+}
 
 _OUT_OF_SCOPE_WITH_CONTEXT = [
     (
@@ -99,12 +122,15 @@ class ActionGreet(Action):
             return schedule_events
 
         lang = get_lang(tracker)
-        dispatcher.utter_message(text=translate_response(random.choice([
-            "Hi! I can tell you about 1PAX — our studio, mission, design approach, team, or careers — or help you explore our 58 architectural projects. What would you like to know?",
-            "Hello! Ask about the studio, our founder, design philosophy, sustainability commitment, or explore our project portfolio. Where would you like to start?",
-            "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — or dive into any of our 58 projects across airports, mobility infrastructure, and more. What's on your mind?",
-            "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' to browse the full portfolio.",
-        ]), lang))
+        dispatcher.utter_message(
+            text=translate_response(random.choice([
+                "Hi! I can tell you about 1PAX — our studio, mission, design approach, team, or careers — help you explore our 58 architectural projects, or help schedule a meeting. What would you like to know?",
+                "Hello! Ask about the studio, our founder, design philosophy, sustainability commitment, explore our project portfolio, or schedule a meeting with 1PAX. Where would you like to start?",
+                "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — dive into any of our 58 projects, or help you schedule a meeting. What's on your mind?",
+                "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' or schedule a meeting with the studio.",
+            ]), lang),
+            buttons=meeting_buttons(lang),
+        )
         return [SlotSet("language", lang)] if lang else []
 
 
@@ -193,6 +219,8 @@ _NAME_INDEX.update({
     "belgrade metro line1":        "belgrade_metro_line1",
     "belgrade underground":        "belgrade_metro_line1",
     "belgrade airport":            "belgrade_airport",
+    "airport in belgrade":         "belgrade_airport",
+    "the airport in belgrade":     "belgrade_airport",
     "belgrade fire station":       "belgrade_fire_station",
     "belgrade admin building":     "belgrade_admin_building",
     "belgrade wayfinding":         "belgrade_wayfinding",
@@ -553,6 +581,68 @@ def _fmt_detail(label: str, value: str, emoji: str = "", project_name: str = "")
     return f"{header}{prefix}**{label}:** {value}{suffix}"
 
 
+def _project_link_label(lang: Optional[str]) -> str:
+    if not lang:
+        return "View project page on 1pax.com"
+    return _PROJECT_LINK_LABELS.get(lang.upper(), "View project page on 1pax.com")
+
+
+def _format_project_response(
+    text: str,
+    project: Dict,
+    lang: Optional[str],
+    offer_meeting: bool = False,
+) -> str:
+    if offer_meeting:
+        text = f"{text}\n\n{meeting_cta_text('project')}"
+    response = translate_response(text, lang)
+    project_url = project.get("project_url")
+    if project_url:
+        response = f"{response}\n\n[{_project_link_label(lang)}]({project_url})"
+    return response
+
+
+def _has_photo_word(raw_msg: str) -> bool:
+    words = {word.strip(".,?!;:()[]{}\"'").lower() for word in raw_msg.split()}
+    return bool(words & _PHOTO_WORDS)
+
+
+def _should_attach_cover_image(info_type: str, raw_msg: str) -> bool:
+    return True
+
+
+def _user_turn_count(tracker: Tracker) -> int:
+    return sum(1 for event in tracker.events if event.get("event") == "user")
+
+
+def _should_offer_project_meeting(tracker: Tracker, info_type: str) -> bool:
+    if tracker.get_slot("schedule_stage"):
+        return False
+    if info_type not in _PROJECT_MEETING_INFO_TYPES:
+        return False
+    return _user_turn_count(tracker) % 2 == 0
+
+
+def _utter_project_response(
+    dispatcher: CollectingDispatcher,
+    text: str,
+    project: Dict,
+    lang: Optional[str],
+    info_type: str,
+    raw_msg: str,
+    offer_meeting: bool = False,
+) -> None:
+    cover_image_url = project.get("cover_image_url")
+    message = {
+        "text": _format_project_response(text, project, lang, offer_meeting),
+    }
+    if cover_image_url and _should_attach_cover_image(info_type, raw_msg):
+        message["image"] = cover_image_url
+    if offer_meeting:
+        message["buttons"] = meeting_buttons(lang)
+    dispatcher.utter_message(**message)
+
+
 # ── Intent → info-type dispatch map ─────────────────────────────────────────
 
 INFO_DISPATCH: Dict[str, Any] = {
@@ -654,15 +744,16 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
         if fuzzy_key:
             return fuzzy_key, PROJECTS.get(fuzzy_key)
 
-    # 3. Meaningful entity was present but didn't match — signal not found.
-    # Do NOT fall through to slot (it would return the wrong project).
-    if meaningful:
-        return None, None
-
-    # 4. No meaningful entity — try fuzzy on the full message text
+    # 3. Try fuzzy on the full message text. This catches translated forms like
+    # "airport in Belgrade" where DIET extracts only the city name.
     fuzzy_key = _fuzzy_match_project(raw_text)
     if fuzzy_key:
         return fuzzy_key, PROJECTS.get(fuzzy_key)
+
+    # 4. Meaningful entity was present but didn't match — signal not found.
+    # Do NOT fall through to slot (it would return the wrong project).
+    if meaningful:
+        return None, None
 
     # 5. Fall back to slot (conversation context).
     # Rasa auto-fills project_name from the entity BEFORE the action runs, so
@@ -762,20 +853,39 @@ class ActionAnswerProjectQuery(Action):
 
         # Special case: photo query routed to video intent → acknowledge mismatch
         if info_type == "video":
-            _photo_words = {"photo", "photos", "image", "images", "picture", "pictures", "pic", "pics"}
-            if any(w in raw_msg.split() for w in _photo_words):
-                if project.get("video_url"):
-                    dispatcher.utter_message(text=translate_response(
-                        f"I don't have individual project photos, but there's a video of "
-                        f"**{project['display_name']}** you can check out:\n\n{project['video_url']}",
+            if _has_photo_word(raw_msg):
+                if project.get("cover_image_url"):
+                    text = (
+                        f"Here's the cover image for **{project['display_name']}** "
+                        "from the 1PAX project page."
+                    )
+                    if project.get("video_url"):
+                        text += f"\n\nThere is also a project video you can watch:\n\n{project['video_url']}"
+                    _utter_project_response(dispatcher, text, project, lang, "photo", raw_msg)
+                elif project.get("video_url"):
+                    _utter_project_response(
+                        dispatcher,
+                        (
+                            f"I don't have a public cover image for **{project['display_name']}**, "
+                            f"but there's a video you can check out:\n\n{project['video_url']}"
+                        ),
+                        project,
                         lang,
-                    ))
+                        info_type,
+                        raw_msg,
+                    )
                 else:
-                    dispatcher.utter_message(text=translate_response(
-                        f"We don't have photos or media for **{project['display_name']}** yet — "
-                        f"check [1pax.com](https://1pax.com) for the latest.",
+                    _utter_project_response(
+                        dispatcher,
+                        (
+                            f"We don't have public media for **{project['display_name']}** yet — "
+                            "check [1pax.com](https://1pax.com) for the latest."
+                        ),
+                        project,
                         lang,
-                    ))
+                        info_type,
+                        raw_msg,
+                    )
                 return [SlotSet("project_name", project_key)] + lang_event
 
         # Special case: "ask_about_project" with no new entity = "what else can you tell me"
@@ -786,7 +896,15 @@ class ActionAnswerProjectQuery(Action):
                 info_type = "facts"
 
         formatter = INFO_DISPATCH.get(info_type, _fmt_teaser)
-        dispatcher.utter_message(text=translate_response(formatter(project), lang))
+        _utter_project_response(
+            dispatcher,
+            formatter(project),
+            project,
+            lang,
+            info_type,
+            raw_msg,
+            offer_meeting=_should_offer_project_meeting(tracker, info_type),
+        )
         return [SlotSet("project_name", project_key)] + lang_event
 
 
@@ -836,8 +954,13 @@ class ActionListProjects(Action):
             "Just name a project and I'll tell you all about it — budget, approach, sustainability, and more.",
             "Pick any project and ask away — I can cover cost, location, design approach, and much more.",
         ]))
+        lines.append("")
+        lines.append(meeting_cta_text("project"))
 
-        dispatcher.utter_message(text=translate_response("\n".join(lines), lang))
+        dispatcher.utter_message(
+            text=translate_response("\n".join(lines), lang),
+            buttons=meeting_buttons(lang),
+        )
         return lang_event
 
 
@@ -870,6 +993,19 @@ class ActionHandleOutOfScope(Action):
         if schedule_events is not None:
             return schedule_events
 
+        # ── Greeting safety net: production can occasionally route greetings
+        # through nlu_fallback while the model is warming or degraded.
+        _GREETING_SIGNALS = {
+            "hello", "hi", "hey", "good morning", "good afternoon",
+            "good evening", "zdravo", "cao", "ćao", "dobar dan",
+        }
+        greeting_text = lower_text.strip().strip("!.?,;:")
+        if (
+            greeting_text in _GREETING_SIGNALS
+            or any(greeting_text.startswith(f"{sig} ") for sig in _GREETING_SIGNALS)
+        ):
+            return ActionGreet().run(dispatcher, tracker, domain)
+
         # ── Capability question: "what can you do", "what else can you do", etc. ─
         _CAP_SIGNALS = {"what can you do", "what else can you do", "what do you offer",
                         "what are you capable of", "what do you know", "what can you help",
@@ -877,26 +1013,29 @@ class ActionHandleOutOfScope(Action):
                         "what can you tell me about", "what topics do you cover",
                         "what can you answer", "how can you help"}
         if any(sig in lower_text for sig in _CAP_SIGNALS):
-            dispatcher.utter_message(text=translate_response(
-                "Here's what I can help you with:\n\n"
-                "**About 1PAX as a studio:**\n"
-                "• Who we are, our mission and history\n"
-                "• Our founder (Mabel Miranda) and team\n"
-                "• Office locations and how we work\n"
-                "• Design approach and principles\n"
-                "• Sustainability, innovation, and urbanism\n"
-                "• Careers, culture, and open roles\n\n"
-                "**Our project portfolio (58 projects):**\n"
-                "• Ask *'show me all projects'* to browse by category\n"
-                "• Ask about any project by name, city, or airport code\n"
-                "• For any project: location, year, client, budget, design concept, "
-                "key challenge, sustainability, team, highlights, and more\n\n"
-                "**Scheduling:**\n"
-                "• Ask me to *schedule a meeting* and I can help find a Calendly time.\n\n"
-                "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, _'tell me about Sofia Airport'_, "
-                "or _'schedule a meeting'_.",
-                lang,
-            ))
+            dispatcher.utter_message(
+                text=translate_response(
+                    "Here's what I can help you with:\n\n"
+                    "**About 1PAX as a studio:**\n"
+                    "• Who we are, our mission and history\n"
+                    "• Our founder (Mabel Miranda) and team\n"
+                    "• Office locations and how we work\n"
+                    "• Design approach and principles\n"
+                    "• Sustainability, innovation, and urbanism\n"
+                    "• Careers, culture, and open roles\n\n"
+                    "**Our project portfolio (58 projects):**\n"
+                    "• Ask *'show me all projects'* to browse by category\n"
+                    "• Ask about any project by name, city, or airport code\n"
+                    "• For any project: location, year, client, budget, design concept, "
+                    "key challenge, sustainability, team, highlights, and more\n\n"
+                    "**Scheduling:**\n"
+                    "• Ask me to *schedule a meeting* and I can help find a Calendly time.\n\n"
+                    "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, _'tell me about Sofia Airport'_, "
+                    "or _'schedule a meeting'_.",
+                    lang,
+                ),
+                buttons=meeting_buttons(lang),
+            )
             return [SlotSet("project_name", None)] + lang_event
 
         # ── Production safety net: route core flows from raw text ─────────────
@@ -1006,8 +1145,13 @@ class ActionHandleOutOfScope(Action):
             msg = random.choice(_OUT_OF_SCOPE_WITH_CONTEXT).format(
                 name=p['display_name']
             )
+            buttons = None
         else:
             msg = random.choice(_OUT_OF_SCOPE_NO_CONTEXT)
+            buttons = meeting_buttons(lang)
 
-        dispatcher.utter_message(text=translate_response(msg, lang))
+        message = {"text": translate_response(msg, lang)}
+        if buttons:
+            message["buttons"] = buttons
+        dispatcher.utter_message(**message)
         return lang_event

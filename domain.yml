@@ -163,10 +163,22 @@ slots:
 
 responses:
   utter_greet:
-    - text: "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — or you can explore our 58 architectural projects. What would you like to know?"
-    - text: "Hi there! I'm here to help you learn about 1PAX. Ask about the studio, our founder, design philosophy, sustainability commitment, or explore our project portfolio. Where would you like to start?"
-    - text: "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — or dive into any of our 58 projects across airports, mobility infrastructure, and more. What's on your mind?"
-    - text: "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' to browse the full portfolio."
+    - text: "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — help you explore our 58 architectural projects, or help schedule a meeting. What would you like to know?"
+      buttons:
+        - title: "Schedule a meeting"
+          payload: "I would like to schedule a meeting."
+    - text: "Hi there! I'm here to help you learn about 1PAX. Ask about the studio, our founder, design philosophy, sustainability commitment, explore our project portfolio, or schedule a meeting with 1PAX. Where would you like to start?"
+      buttons:
+        - title: "Schedule a meeting"
+          payload: "I would like to schedule a meeting."
+    - text: "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — dive into any of our 58 projects, or help you schedule a meeting. What's on your mind?"
+      buttons:
+        - title: "Schedule a meeting"
+          payload: "I would like to schedule a meeting."
+    - text: "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' or schedule a meeting with the studio."
+      buttons:
+        - title: "Schedule a meeting"
+          payload: "I would like to schedule a meeting."
 
   utter_goodbye:
     - text: "Thank you for your interest in 1PAX. Feel free to come back anytime!"

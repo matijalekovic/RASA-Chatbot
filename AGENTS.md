@@ -49,7 +49,7 @@ Primary resolution is via `EntitySynonymMapper` (mapping `T3` → `sofia_airport
 
 User-facing multilingual support, even though all training data and intent logic are English-only:
 
-1. **`translation_server.py`** — HTTP proxy on port 5056. The UI POSTs user input here before sending to Rasa; nginx proxies `/api/translate` to it. Uses Gemini 2.5 Flash Lite.
+1. **`translation_server.py`** — HTTP proxy on port 5056. The UI POSTs user input here before sending to Rasa; nginx proxies `/api/translate` to it. Uses Gemini 3.5 Flash.
 2. **`components/translation_component.py`** — custom Rasa NLU GraphComponent, registered first in `config.yml`'s pipeline. Fallback path for direct API hits: detects language with `langdetect`, translates non-English input to English via Gemini, stashes the detected language as a `__lang__` entity on the message.
 3. **`actions/translation.py`** — `get_lang(tracker)` reads the detected language, `translate_response(text, lang)` translates outgoing bot text. Every action must call these and persist `SlotSet("language", lang)`.
 

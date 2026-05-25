@@ -119,6 +119,18 @@
     .message.user .bubble em { color: rgba(255,255,255,0.6); }
     .bubble a { color: inherit; text-decoration: underline; text-underline-offset: 2px; opacity: 0.85; }
     .bubble a:hover { opacity: 1; }
+    .bubble-image {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      margin-top: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .bubble-image:first-child { margin-top: 0; }
 
     /* Section headers — standalone **Category** lines */
     .bubble .md-h4 {
@@ -202,6 +214,28 @@
       font-weight: 300;
     }
     .proj-chip:hover .proj-arrow { color: var(--muted); }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+      max-width: 100%;
+    }
+    .quick-action {
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.25;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .quick-action:hover { background: var(--border); border-color: #c8c5bf; }
+    .quick-action:active { background: #ddd9d3; }
 
     /* ── Timestamp ── */
     .ts {
@@ -375,14 +409,22 @@
     sendGreeting(currentLang);
   }
 
-  if (!localStorage.getItem("pax_lang")) {
-    fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(3000) })
+  function detectLanguageAndGreet() {
+    if (localStorage.getItem("pax_lang") || typeof fetch !== "function") {
+      maybeGreet();
+      return;
+    }
+
+    const timeoutOptions =
+      typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+        ? { signal: AbortSignal.timeout(3000) }
+        : {};
+
+    fetch("https://ipapi.co/json/", timeoutOptions)
       .then(r => r.json())
       .then(d => { const l = COUNTRY_LANG[d.country_code]; if (l) setLang(l); })
       .catch(() => {})
       .finally(() => maybeGreet());
-  } else {
-    maybeGreet();
   }
 
   // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -390,8 +432,29 @@
   function esc(s) {
     return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
+  function escAttr(s) {
+    return esc(s).replace(/"/g, "&quot;");
+  }
   function decodeEnt(s) {
     return s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
+  }
+
+  const PROJECT_QUERY_TEMPLATES = {
+    EN: name => `Tell me about ${name}`,
+    FR: name => `Parlez-moi de ${name}`,
+    ES: name => `Háblame de ${name}`,
+    PT: name => `Fale-me sobre ${name}`,
+    "PT-PT": name => `Fale-me sobre ${name}`,
+    ZH: name => `请介绍一下${name}`,
+    "ZH-HANS": name => `请介绍一下${name}`,
+    SR: name => `Recite mi nešto o ${name}`,
+  };
+
+  function projectQueryText(projectName) {
+    const lang = (currentLang || "EN").toUpperCase();
+    const baseLang = lang.split("-")[0];
+    const template = PROJECT_QUERY_TEMPLATES[lang] || PROJECT_QUERY_TEMPLATES[baseLang] || PROJECT_QUERY_TEMPLATES.EN;
+    return template(projectName);
   }
 
   function inlineMd(s) {
@@ -425,8 +488,8 @@
         // All items render as interactive chip cards
         const inner = listBuf.map(item => {
           if (item.chip) {
-            const query = esc("Tell me about " + decodeEnt(item.chip.name));
-            return `<button class="proj-chip" data-q="${query}">
+            const projectName = escAttr(decodeEnt(item.chip.name));
+            return `<button class="proj-chip" data-project="${projectName}">
               <div class="proj-info">
                 <div class="proj-name">${item.chip.name}</div>
                 <div class="proj-meta">${item.chip.meta}</div>
@@ -493,8 +556,25 @@
 
   // ── Chip click (event delegation) ───────────────────────────────────────────
   messagesEl.addEventListener("click", e => {
+    const action = e.target.closest(".quick-action");
+    if (action) {
+      const label = action.dataset.label || action.textContent.trim();
+      const payload = action.dataset.payload || "";
+      if (payload) {
+        send(label, 0, payload);
+      } else {
+        send(label);
+      }
+      return;
+    }
+
     const chip = e.target.closest(".proj-chip");
-    if (chip && chip.dataset.q) send(decodeEnt(chip.dataset.q));
+    if (!chip) return;
+    if (chip.dataset.project) {
+      send(projectQueryText(decodeEnt(chip.dataset.project)));
+    } else if (chip.dataset.q) {
+      send(decodeEnt(chip.dataset.q));
+    }
   });
 
   // ── UI helpers ───────────────────────────────────────────────────────────────
@@ -502,17 +582,64 @@
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  function appendMessage(role, text) {
+  function safeHttpUrl(url) {
+    if (!url || typeof url !== "string") return "";
+    try {
+      const parsed = new URL(url, window.location.href);
+      return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function appendMedia(bubble, media = {}) {
+    const imageUrl = safeHttpUrl(media.image);
+    if (!imageUrl) return;
+
+    const img = document.createElement("img");
+    img.className = "bubble-image";
+    img.src = imageUrl;
+    img.alt = "Project cover";
+    img.loading = "lazy";
+    img.decoding = "async";
+    bubble.appendChild(img);
+  }
+
+  function appendQuickActions(wrapper, actions = []) {
+    if (!Array.isArray(actions) || !actions.length) return;
+
+    const row = document.createElement("div");
+    row.className = "quick-actions";
+
+    for (const action of actions) {
+      const title = (action?.title || action?.text || "").trim();
+      if (!title) continue;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quick-action";
+      button.textContent = title;
+      button.dataset.label = title;
+      if (action.payload) button.dataset.payload = action.payload;
+      row.appendChild(button);
+    }
+
+    if (row.children.length) wrapper.appendChild(row);
+  }
+
+  function appendMessage(role, text = "", media = {}, actions = []) {
     document.getElementById("welcome")?.remove();
     const wrap   = document.createElement("div");
     wrap.className = `message ${role}`;
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.innerHTML = renderMarkdown(text);
+    bubble.innerHTML = text ? renderMarkdown(text) : "";
+    appendMedia(bubble, media);
     const ts = document.createElement("div");
     ts.className = "ts";
     ts.textContent = now();
     wrap.appendChild(bubble);
+    if (role === "bot") appendQuickActions(wrap, actions);
     wrap.appendChild(ts);
     messagesEl.appendChild(wrap);
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -568,7 +695,11 @@
       typingEl.classList.add("hidden");
       if (res.ok) {
         const replies = await res.json();
-        for (const r of replies) if (r.text) appendMessage("bot", r.text);
+        for (const r of replies) {
+          if (r.text || r.image || r.buttons?.length) {
+            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
+          }
+        }
       }
     } catch {
       typingEl.classList.add("hidden");
@@ -619,7 +750,11 @@
       if (!replies?.length) {
         appendMessage("bot", "I didn't get a response — please try again.");
       } else {
-        for (const r of replies) if (r.text) appendMessage("bot", r.text);
+        for (const r of replies) {
+          if (r.text || r.image || r.buttons?.length) {
+            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
+          }
+        }
       }
       inputEl.focus();
     } catch (err) {
@@ -634,6 +769,7 @@
   inputEl.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
+  detectLanguageAndGreet();
   inputEl.focus();
 </script>
 </body>

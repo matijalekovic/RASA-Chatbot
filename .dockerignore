@@ -20,6 +20,5 @@ __pycache__/
 tests/
 docs/
 
-# Models are trained locally; upload only the production artifact.
+# Models are built inside the Linux image (Dockerfile), not copied from host.
 models/*.tar.gz
-!models/20260422-161500-chestnut-burger.tar.gz

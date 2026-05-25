@@ -14,6 +14,7 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .services_data import SERVICES_INFO
+from .meeting_prompts import meeting_buttons, meeting_cta_text
 from .translation import get_lang, translate_response
 
 
@@ -96,7 +97,8 @@ class ActionAnswerServicesQuery(Action):
                     "I can tell you about **1PAX's services** — airports, urbanism, BIM, "
                     "future mobility, interior design, and more. What would you like to know?",
                     lang,
-                )
+                ),
+                buttons=meeting_buttons(lang),
             )
             return lang_event
 
@@ -113,5 +115,18 @@ class ActionAnswerServicesQuery(Action):
                 suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
                 if suffix:
                     dispatcher.utter_message(text=translate_response(suffix, lang))
+
+        if data_key in {
+            "services_list",
+            "airports",
+            "urbanism",
+            "future_mobility",
+            "control_towers",
+            "bim",
+        }:
+            dispatcher.utter_message(
+                text=translate_response(meeting_cta_text("services"), lang),
+                buttons=meeting_buttons(lang),
+            )
 
         return lang_event

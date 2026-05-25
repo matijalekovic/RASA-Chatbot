@@ -8,7 +8,19 @@ RASA_PORT=${RASA_PORT:-5005}
 ACTION_PORT=${ACTION_PORT:-5055}
 TRANSLATE_PORT=${TRANSLATE_PORT:-5056}
 BOOT_TIMEOUT_SECONDS=${BOOT_TIMEOUT_SECONDS:-300}
+RUN_LOCAL_ACTIONS=${RUN_LOCAL_ACTIONS:-true}
+WAIT_FOR_ACTIONS=${WAIT_FOR_ACTIONS:-true}
+ACTION_ENDPOINT_URL=${ACTION_ENDPOINT_URL:-http://127.0.0.1:${ACTION_PORT}/webhook}
+ACTION_HEALTH_URL=${ACTION_HEALTH_URL:-${ACTION_ENDPOINT_URL%/webhook}/health}
 MODEL_DIR=/app/models
+RUNTIME_ENDPOINTS=/tmp/endpoints.runtime.yml
+
+is_true() {
+  case "$(echo "${1}" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|y|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 pick_model() {
   if [[ -n "${RASA_MODEL:-}" ]]; then
@@ -87,6 +99,26 @@ print("[start] Warm-up parse completed.")
 PY
 }
 
+write_runtime_endpoints() {
+  "${PYTHON}" - "${ACTION_ENDPOINT_URL}" "${RUNTIME_ENDPOINTS}" <<'PY'
+import sys
+from pathlib import Path
+
+import yaml
+
+action_endpoint_url = sys.argv[1]
+output_path = Path(sys.argv[2])
+source_path = Path("/app/endpoints.yml")
+
+data = yaml.safe_load(source_path.read_text()) or {}
+data.setdefault("action_endpoint", {})["url"] = action_endpoint_url
+output_path.write_text(yaml.safe_dump(data, sort_keys=False))
+
+print(f"[start] Action endpoint: {action_endpoint_url}")
+print(f"[start] Runtime endpoints file: {output_path}")
+PY
+}
+
 MODEL_PATH="$(pick_model)"
 MODEL_FILE="$(basename "${MODEL_PATH}")"
 
@@ -108,8 +140,14 @@ trap cleanup EXIT INT TERM
 echo "[start] Starting translation proxy server on port ${TRANSLATE_PORT}..."
 PYTHONUNBUFFERED=1 "${PYTHON}" -u /app/translation_server.py 2>&1 | sed 's/^/[translate] /' &
 
-echo "[start] Starting action server on port ${ACTION_PORT}..."
-PYTHONUNBUFFERED=1 "${RASA}" run actions --port "${ACTION_PORT}" 2>&1 | sed 's/^/[actions] /' &
+if is_true "${RUN_LOCAL_ACTIONS}"; then
+  echo "[start] Starting local action server on port ${ACTION_PORT}..."
+  PYTHONUNBUFFERED=1 "${RASA}" run actions --port "${ACTION_PORT}" 2>&1 | sed 's/^/[actions] /' &
+else
+  echo "[start] RUN_LOCAL_ACTIONS=false; using external action server."
+fi
+
+write_runtime_endpoints
 
 echo "[start] Starting Rasa API server on port ${RASA_PORT}..."
 PYTHONUNBUFFERED=1 "${RASA}" run \
@@ -117,10 +155,12 @@ PYTHONUNBUFFERED=1 "${RASA}" run \
   --cors "*" \
   --port "${RASA_PORT}" \
   --model "${MODEL_PATH}" \
-  --endpoints /app/endpoints.yml 2>&1 | sed 's/^/[rasa] /' &
+  --endpoints "${RUNTIME_ENDPOINTS}" 2>&1 | sed 's/^/[rasa] /' &
 
 wait_for_http "translation proxy" "http://127.0.0.1:${TRANSLATE_PORT}/health" "${BOOT_TIMEOUT_SECONDS}"
-wait_for_http "action server" "http://127.0.0.1:${ACTION_PORT}/health" "${BOOT_TIMEOUT_SECONDS}"
+if is_true "${WAIT_FOR_ACTIONS}"; then
+  wait_for_http "action server" "${ACTION_HEALTH_URL}" "${BOOT_TIMEOUT_SECONDS}"
+fi
 wait_for_http "rasa API" "http://127.0.0.1:${RASA_PORT}/status" "${BOOT_TIMEOUT_SECONDS}"
 
 if ! warm_up_rasa; then

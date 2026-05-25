@@ -127,6 +127,18 @@
     .bubble p:first-child { margin-top: 0; }
     .bubble p:last-child  { margin-bottom: 0; }
     .bubble a { color: inherit; text-decoration: underline; }
+    .bubble-image {
+      display: block;
+      width: 100%;
+      max-height: 280px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      margin-top: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .bubble-image:first-child { margin-top: 0; }
 
     /* Timestamp */
     .ts {
@@ -238,6 +250,27 @@
     }
     .suggestion:hover { background: var(--border); }
 
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 8px;
+      max-width: 100%;
+    }
+    .quick-action {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text);
+      background: var(--surface);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.25;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .quick-action:hover { background: var(--border); }
+
     /* Scrollbar */
     #messages::-webkit-scrollbar { width: 5px; }
     #messages::-webkit-scrollbar-track { background: transparent; }
@@ -255,13 +288,14 @@
   <div id="messages">
     <div class="welcome" id="welcome">
       <h2>Hello 👋</h2>
-      <p>Ask me about 1PAX projects, the team, services, or our products.</p>
+      <p>Ask me about 1PAX projects, the team, services, products, or schedule a meeting with the studio.</p>
       <div class="suggestions">
         <span class="suggestion" onclick="send('What projects has 1PAX designed?')">What projects has 1PAX designed?</span>
         <span class="suggestion" onclick="send('Tell me about Sofia Airport')">Tell me about Sofia Airport</span>
         <span class="suggestion" onclick="send('What is Ecoport?')">What is Ecoport?</span>
         <span class="suggestion" onclick="send('Who is the CEO?')">Who is the CEO?</span>
         <span class="suggestion" onclick="send('What services does 1PAX offer?')">What services does 1PAX offer?</span>
+        <span class="suggestion" onclick="send('I would like to schedule a meeting.')">Schedule a meeting</span>
         <span class="suggestion" onclick="send('Tell me about the PAX cart')">Tell me about the PAX cart</span>
       </div>
     </div>
@@ -331,7 +365,51 @@
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  function appendMessage(role, text) {
+  function safeHttpUrl(url) {
+    if (!url || typeof url !== "string") return "";
+    try {
+      const parsed = new URL(url, window.location.href);
+      return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function appendMedia(bubble, media = {}) {
+    const imageUrl = safeHttpUrl(media.image);
+    if (!imageUrl) return;
+
+    const img = document.createElement("img");
+    img.className = "bubble-image";
+    img.src = imageUrl;
+    img.alt = "Project cover";
+    img.loading = "lazy";
+    img.decoding = "async";
+    bubble.appendChild(img);
+  }
+
+  function appendQuickActions(wrapper, actions = []) {
+    if (!Array.isArray(actions) || !actions.length) return;
+
+    const row = document.createElement("div");
+    row.className = "quick-actions";
+
+    for (const action of actions) {
+      const title = (action?.title || action?.text || "").trim();
+      if (!title) continue;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quick-action";
+      button.textContent = title;
+      button.dataset.payload = action.payload || title;
+      row.appendChild(button);
+    }
+
+    if (row.children.length) wrapper.appendChild(row);
+  }
+
+  function appendMessage(role, text = "", media = {}, actions = []) {
     const welcome = document.getElementById("welcome");
     if (welcome) welcome.remove();
 
@@ -340,17 +418,25 @@
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.innerHTML = renderMarkdown(text);
+    bubble.innerHTML = text ? renderMarkdown(text) : "";
+    appendMedia(bubble, media);
 
     const ts = document.createElement("div");
     ts.className = "ts";
     ts.textContent = now();
 
     wrapper.appendChild(bubble);
+    if (role === "bot") appendQuickActions(wrapper, actions);
     wrapper.appendChild(ts);
     messagesEl.appendChild(wrapper);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
+
+  messagesEl.addEventListener("click", e => {
+    const action = e.target.closest(".quick-action");
+    if (!action) return;
+    send(action.dataset.payload || action.textContent.trim());
+  });
 
   function setLoading(on) {
     sendBtn.disabled = on;
@@ -380,7 +466,9 @@
         appendMessage("bot", "I didn't get a response — please try again.");
       } else {
         for (const reply of replies) {
-          if (reply.text) appendMessage("bot", reply.text);
+          if (reply.text || reply.image || reply.buttons?.length) {
+            appendMessage("bot", reply.text || "", { image: reply.image }, reply.buttons || []);
+          }
         }
       }
     } catch (err) {
