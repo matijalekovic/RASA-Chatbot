@@ -53,6 +53,18 @@ def _normalize(text: str) -> str:
     return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
 
 
+def _should_skip_translation(text: str) -> bool:
+    """Keep structured scheduling/contact inputs exact."""
+    stripped = text.strip()
+    if not stripped:
+        return True
+    if re.fullmatch(r"\d{1,2}[.)]?", stripped):
+        return True
+    if re.fullmatch(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", stripped, re.I):
+        return True
+    return False
+
+
 def _translate_to_english(text: str) -> str:
     body = {
         "contents": [{"parts": [{"text": f"Translate to English: {text}"}]}],
@@ -112,6 +124,10 @@ class Handler(BaseHTTPRequestHandler):
         text = _normalize((data.get("text") or "").strip())
 
         if not text:
+            self._send({"text": text, "translation_enabled": _READY})
+            return
+
+        if _should_skip_translation(text):
             self._send({"text": text, "translation_enabled": _READY})
             return
 

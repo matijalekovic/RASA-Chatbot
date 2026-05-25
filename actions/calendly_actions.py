@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -87,6 +88,98 @@ _MONTHS = {
     "nov": 11,
     "december": 12,
     "dec": 12,
+}
+
+_SR_WEEKDAYS = [
+    "Ponedeljak",
+    "Utorak",
+    "Sreda",
+    "Četvrtak",
+    "Petak",
+    "Subota",
+    "Nedelja",
+]
+
+_SR_MONTHS = [
+    "",
+    "januar",
+    "februar",
+    "mart",
+    "april",
+    "maj",
+    "jun",
+    "jul",
+    "avgust",
+    "septembar",
+    "oktobar",
+    "novembar",
+    "decembar",
+]
+
+_SLOT_WORD_TO_NUMBER = {
+    "one": 1,
+    "first": 1,
+    "two": 2,
+    "second": 2,
+    "three": 3,
+    "third": 3,
+    "four": 4,
+    "fourth": 4,
+    "five": 5,
+    "fifth": 5,
+    "six": 6,
+    "sixth": 6,
+    "seven": 7,
+    "seventh": 7,
+    "eight": 8,
+    "eighth": 8,
+    "nine": 9,
+    "ninth": 9,
+    "ten": 10,
+    "tenth": 10,
+    "jedan": 1,
+    "jedna": 1,
+    "jedno": 1,
+    "prvi": 1,
+    "prva": 1,
+    "prvo": 1,
+    "dva": 2,
+    "dve": 2,
+    "drugi": 2,
+    "druga": 2,
+    "drugo": 2,
+    "tri": 3,
+    "treci": 3,
+    "treca": 3,
+    "trece": 3,
+    "cetiri": 4,
+    "cetvrti": 4,
+    "cetvrta": 4,
+    "cetvrto": 4,
+    "pet": 5,
+    "peti": 5,
+    "peta": 5,
+    "peto": 5,
+    "sest": 6,
+    "sesti": 6,
+    "sesta": 6,
+    "sesto": 6,
+    "sedam": 7,
+    "sedmi": 7,
+    "sedma": 7,
+    "sedmo": 7,
+    "osam": 8,
+    "osmi": 8,
+    "osma": 8,
+    "osmo": 8,
+    "devet": 9,
+    "deveti": 9,
+    "deveta": 9,
+    "deveto": 9,
+    "deset": 10,
+    "deseti": 10,
+    "deseta": 10,
+    "deseto": 10,
 }
 
 
@@ -238,12 +331,31 @@ def _set_stage(stage: str) -> List[SlotSet]:
     return [SlotSet("schedule_stage", stage)]
 
 
+def _lang_code(lang: Optional[str]) -> str:
+    return (lang or "").upper()
+
+
+def _is_sr(lang: Optional[str]) -> bool:
+    return _lang_code(lang) == "SR"
+
+
+def _ascii_norm(value: str) -> str:
+    return "".join(
+        char
+        for char in unicodedata.normalize("NFKD", value)
+        if not unicodedata.combining(char)
+    ).lower()
+
+
 def _utter(
     dispatcher: CollectingDispatcher,
     text: str,
     lang: Optional[str],
+    already_localized: bool = False,
 ) -> None:
-    dispatcher.utter_message(text=translate_response(text, lang))
+    dispatcher.utter_message(
+        text=text if already_localized else translate_response(text, lang)
+    )
 
 
 def _extract_email(text: str) -> Optional[str]:
@@ -379,7 +491,7 @@ def _extract_time_preference(text: str, stage: Optional[str]) -> Optional[str]:
 
 def _is_affirmation(text: str) -> bool:
     lowered = text.lower().strip(" .!?,")
-    if lowered in {"yes", "y", "yeah", "yep", "sure", "ok", "okay", "confirm"}:
+    if lowered in {"yes", "y", "yeah", "yep", "sure", "ok", "okay", "confirm", "da"}:
         return True
     return any(
         phrase in lowered
@@ -415,11 +527,13 @@ def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
         "do not want to book",
         "don't want to book",
         "changed my mind",
+        "otkazi",
+        "otkaži",
     )
     if any(phrase in lowered for phrase in explicit_cancel_phrases):
         return True
 
-    return stage in {"select_slot", "confirm"} and lowered == "no"
+    return stage in {"select_slot", "confirm"} and lowered in {"no", "ne"}
 
 
 def _parse_date_value(raw: str, today: date) -> Optional[date]:
@@ -554,9 +668,13 @@ def _parse_calendly_dt(value: str) -> datetime:
     return datetime.fromisoformat(normalized).astimezone(timezone.utc)
 
 
-def _slot_label(start_time: str, timezone_name: str) -> str:
+def _slot_label(start_time: str, timezone_name: str, lang: Optional[str] = None) -> str:
     tz = _zone(timezone_name)
     dt = _parse_calendly_dt(start_time).astimezone(tz)
+    if _is_sr(lang):
+        weekday = _SR_WEEKDAYS[dt.weekday()]
+        month = _SR_MONTHS[dt.month]
+        return f"{weekday}, {dt.day}. {month} u {dt:%H:%M}"
     return dt.strftime("%a, %b %-d at %-I:%M %p")
 
 
@@ -571,7 +689,21 @@ def _json_slot(value: Any, default: Any) -> Any:
         return default
 
 
-def _format_slots(slots: List[Dict[str, str]], timezone_name: str) -> str:
+def _format_slots(
+    slots: List[Dict[str, str]],
+    timezone_name: str,
+    lang: Optional[str] = None,
+) -> str:
+    if _is_sr(lang):
+        lines = [f"Pronašao sam ove dostupne termine ({timezone_name}):"]
+        for idx, slot in enumerate(slots, start=1):
+            lines.append(
+                f"{idx}. **{_slot_label(slot['start_time'], timezone_name, lang)}**"
+            )
+        lines.append("")
+        lines.append("Odgovorite brojem, ili recite drugi dan/vreme.")
+        return "\n".join(lines)
+
     lines = [f"I found these available times ({timezone_name}):"]
     for idx, slot in enumerate(slots, start=1):
         lines.append(f"{idx}. **{slot['label']}**")
@@ -580,7 +712,32 @@ def _format_slots(slots: List[Dict[str, str]], timezone_name: str) -> str:
     return "\n".join(lines)
 
 
-def _parse_slot_choice(text: str, slots: List[Dict[str, str]]) -> Optional[Dict[str, str]]:
+def _word_slot_choice(text: str) -> Optional[int]:
+    normalized = _ascii_norm(text)
+    for token in re.findall(r"[a-z0-9]+", normalized):
+        number = _SLOT_WORD_TO_NUMBER.get(token)
+        if number:
+            return number
+    return None
+
+
+def _looks_like_slot_choice_only(text: str) -> bool:
+    stripped = text.strip().lower()
+    if re.fullmatch(r"\d{1,2}[.)]?", stripped):
+        return True
+    normalized = _ascii_norm(stripped)
+    tokens = re.findall(r"[a-z0-9]+", normalized)
+    return bool(tokens) and all(
+        token in _SLOT_WORD_TO_NUMBER or token in {"option", "slot", "broj", "termin"}
+        for token in tokens
+    )
+
+
+def _parse_slot_choice(
+    text: str,
+    slots: List[Dict[str, str]],
+    timezone_name: str = _DEFAULT_TIMEZONE,
+) -> Optional[Dict[str, str]]:
     lowered = text.lower()
     ordinal_map = {
         "first": 1,
@@ -599,9 +756,21 @@ def _parse_slot_choice(text: str, slots: List[Dict[str, str]]) -> Optional[Dict[
         if 0 <= index < len(slots):
             return slots[index]
 
+    word_choice = _word_slot_choice(text)
+    if word_choice:
+        index = word_choice - 1
+        if 0 <= index < len(slots):
+            return slots[index]
+
     for slot in slots:
-        label = slot["label"].lower()
-        if label in lowered or slot["start_time"].lower() in lowered:
+        labels = {
+            slot.get("label", "").lower(),
+            _slot_label(slot["start_time"], timezone_name).lower(),
+            _slot_label(slot["start_time"], timezone_name, "SR").lower(),
+        }
+        if any(label and label in lowered for label in labels):
+            return slot
+        if slot["start_time"].lower() in lowered:
             return slot
 
     return None
@@ -900,7 +1069,16 @@ def _booking_summary_lines(
     email: str,
     purpose: str,
     selected_label: Optional[str],
+    lang: Optional[str] = None,
 ) -> List[str]:
+    if _is_sr(lang):
+        return [
+            "**Rezime rezervacije**",
+            f"Vreme: **{selected_label or 'Izabrani Calendly termin'}**",
+            f"Ime: **{name}**",
+            f"Email: **{email}**",
+            f"Povod: **{purpose}**",
+        ]
     return [
         "**Booking summary**",
         f"Time: **{selected_label or 'Selected Calendly slot'}**",
@@ -915,9 +1093,14 @@ def _booking_confirmation_prompt(
     email: str,
     purpose: str,
     selected_label: Optional[str],
+    lang: Optional[str] = None,
 ) -> str:
-    lines = _booking_summary_lines(name, email, purpose, selected_label)
+    lines = _booking_summary_lines(name, email, purpose, selected_label, lang)
     lines.append("")
+    if _is_sr(lang):
+        lines.append("Odgovorite **da** i odmah ću završiti rezervaciju.")
+        lines.append("Odgovorite **ne** za otkazivanje.")
+        return "\n".join(lines)
     lines.append("Reply **yes** and I will finalize this booking now.")
     lines.append("Reply **no** to cancel.")
     return "\n".join(lines)
@@ -931,18 +1114,32 @@ def _booking_success_message(
     confirmation_url: Optional[str] = None,
     cancel_url: Optional[str] = None,
     reschedule_url: Optional[str] = None,
+    lang: Optional[str] = None,
 ) -> str:
-    lines = [
-        f"You're booked: **{selected_label}**.",
-        f"Calendly will send the invitation to **{email}**.",
-        f"Purpose: **{purpose}**.",
-    ]
+    if _is_sr(lang):
+        lines = [
+            f"Rezervisano je: **{selected_label}**.",
+            f"Calendly će poslati pozivnicu na **{email}**.",
+            f"Povod: **{purpose}**.",
+        ]
+        confirmation_label = "Calendly potvrda"
+        reschedule_label = "Promeni termin"
+        cancel_label = "Otkaži"
+    else:
+        lines = [
+            f"You're booked: **{selected_label}**.",
+            f"Calendly will send the invitation to **{email}**.",
+            f"Purpose: **{purpose}**.",
+        ]
+        confirmation_label = "Calendly confirmation"
+        reschedule_label = "Reschedule"
+        cancel_label = "Cancel"
     if confirmation_url:
-        lines.append(f"[Calendly confirmation]({confirmation_url})")
+        lines.append(f"[{confirmation_label}]({confirmation_url})")
     if reschedule_url:
-        lines.append(f"[Reschedule]({reschedule_url})")
+        lines.append(f"[{reschedule_label}]({reschedule_url})")
     if cancel_url:
-        lines.append(f"[Cancel]({cancel_url})")
+        lines.append(f"[{cancel_label}]({cancel_url})")
     return "\n\n".join(lines)
 
 
@@ -954,6 +1151,7 @@ def _manual_finalize_message(
     selected_label: Optional[str],
     selected_start_time: Optional[str],
     timezone_name: str,
+    lang: Optional[str] = None,
 ) -> Optional[str]:
     if not cfg.allow_link_fallback:
         return None
@@ -969,8 +1167,16 @@ def _manual_finalize_message(
     if not link:
         return None
 
-    lines = _booking_summary_lines(name, email, purpose, selected_label)
+    lines = _booking_summary_lines(name, email, purpose, selected_label, lang)
     lines.append("")
+    if _is_sr(lang):
+        lines.append(
+            "Pripremio sam tačan, unapred popunjen Calendly link za potvrdu "
+            "ovog termina:"
+        )
+        lines.append(f"[Završi u Calendlyju]({link})")
+        return "\n\n".join(lines)
+
     lines.append(
         "I prepared the exact pre-filled Calendly confirmation link for this "
         "slot:"
@@ -1116,10 +1322,10 @@ def run_calendly_scheduling(
         ]
 
     if stage == "select_slot" and offered_slots:
-        choice = _parse_slot_choice(text, offered_slots)
+        choice = _parse_slot_choice(text, offered_slots, timezone_name)
         if choice:
             selected_slot = choice["start_time"]
-            selected_label = choice["label"]
+            selected_label = _slot_label(selected_slot, timezone_name, lang)
             events.extend(
                 [
                     SlotSet("schedule_selected_slot", selected_slot),
@@ -1133,12 +1339,14 @@ def run_calendly_scheduling(
                     email=email,
                     purpose=purpose,
                     selected_label=selected_label,
+                    lang=lang,
                 ),
                 lang,
+                already_localized=_is_sr(lang),
             )
             return events + _set_stage("confirm")
 
-        if _has_time_words(text):
+        if _has_time_words(text) and not _looks_like_slot_choice_only(text):
             time_preference = text.strip()
             events.extend(
                 [
@@ -1187,8 +1395,10 @@ def run_calendly_scheduling(
                                 purpose=purpose,
                                 selected_label=selected_label,
                                 confirmation_url=browser_booking.get("final_url"),
+                                lang=lang,
                             ),
                             lang,
+                            already_localized=_is_sr(lang),
                         )
                         return _clear_schedule_events() + events
 
@@ -1226,8 +1436,10 @@ def run_calendly_scheduling(
                                 purpose=purpose,
                                 selected_label=selected_label,
                                 confirmation_url=browser_booking.get("final_url"),
+                                lang=lang,
                             ),
                             lang,
+                            already_localized=_is_sr(lang),
                         )
                         return _clear_schedule_events() + events
 
@@ -1239,9 +1451,10 @@ def run_calendly_scheduling(
                         selected_label=selected_label,
                         selected_start_time=selected_slot,
                         timezone_name=timezone_name,
+                        lang=lang,
                     )
                     if fallback:
-                        _utter(dispatcher, fallback, lang)
+                        _utter(dispatcher, fallback, lang, already_localized=_is_sr(lang))
                         return _clear_schedule_events() + events
 
                     _utter(dispatcher, _direct_booking_error_message(exc), lang)
@@ -1258,8 +1471,10 @@ def run_calendly_scheduling(
                         selected_label=selected_label,
                         cancel_url=cancel_url,
                         reschedule_url=reschedule_url,
+                        lang=lang,
                     ),
                     lang,
+                    already_localized=_is_sr(lang),
                 )
                 return _clear_schedule_events() + events
 
@@ -1314,10 +1529,20 @@ def run_calendly_scheduling(
                 "these nearby options are open.",
                 lang,
             )
-        _utter(dispatcher, _format_slots(offered_slots, timezone_name), lang)
+        _utter(
+            dispatcher,
+            _format_slots(offered_slots, timezone_name, lang),
+            lang,
+            already_localized=_is_sr(lang),
+        )
         return events + _set_stage("select_slot")
 
-    _utter(dispatcher, _format_slots(offered_slots, timezone_name), lang)
+    _utter(
+        dispatcher,
+        _format_slots(offered_slots, timezone_name, lang),
+        lang,
+        already_localized=_is_sr(lang),
+    )
     return events + _set_stage("select_slot")
 
 
