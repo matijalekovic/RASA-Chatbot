@@ -22,7 +22,7 @@ from rasa_sdk.executor import CollectingDispatcher
 
 from .team_data import TEAM_INFO, PERSONS
 from .meeting_prompts import meeting_buttons, meeting_cta_text
-from .translation import get_lang, translate_response
+from .translation import get_lang, translate_response, translate_responses
 
 
 # ── Intent suffix → TEAM_INFO key ─────────────────────────────────────────────
@@ -211,14 +211,18 @@ class ActionAnswerTeamQuery(Action):
             )
             return lang_event
 
-        for msg in TEAM_INFO[data_key]:
-            dispatcher.utter_message(text=translate_response(msg, lang))
+        output_parts = list(TEAM_INFO[data_key])
 
+        meeting_cta_index = None
         if data_key in {"overview", "leadership", "operations"}:
-            dispatcher.utter_message(
-                text=translate_response(meeting_cta_text("team"), lang),
-                buttons=meeting_buttons(lang),
-            )
+            meeting_cta_index = len(output_parts)
+            output_parts.append(meeting_cta_text("team"))
+
+        for index, msg in enumerate(translate_responses(output_parts, lang)):
+            if index == meeting_cta_index:
+                dispatcher.utter_message(text=msg, buttons=meeting_buttons(lang))
+            else:
+                dispatcher.utter_message(text=msg)
 
         return lang_event
 
@@ -262,8 +266,7 @@ class ActionAnswerTeamQuery(Action):
             return lang_event
 
         person = PERSONS[person_key]
-        for msg in person["bio"]:
-            dispatcher.utter_message(text=translate_response(msg, lang))
+        output_parts = list(person["bio"])
 
         # Light follow-up
         suffix = random.choice([
@@ -273,6 +276,9 @@ class ActionAnswerTeamQuery(Action):
             "",
         ])
         if suffix:
-            dispatcher.utter_message(text=translate_response(suffix, lang))
+            output_parts.append(suffix)
+
+        for msg in translate_responses(output_parts, lang):
+            dispatcher.utter_message(text=msg)
 
         return lang_event

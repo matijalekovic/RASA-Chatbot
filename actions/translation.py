@@ -25,8 +25,10 @@ import json
 import logging
 import os
 import socket
+import threading
 import urllib.error
 import urllib.request
+from collections import OrderedDict
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,14 @@ _GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
 )
 _MAX_SYNC_TRANSLATION_CHARS = int(os.environ.get("MAX_SYNC_TRANSLATION_CHARS", "2400"))
+_MAX_SYNC_TRANSLATION_BATCH_CHARS = int(
+    os.environ.get("MAX_SYNC_TRANSLATION_BATCH_CHARS", "6000")
+)
+_MAX_TRANSLATION_CACHE_ENTRIES = int(
+    os.environ.get("MAX_TRANSLATION_CACHE_ENTRIES", "512")
+)
+_TRANSLATION_CACHE: OrderedDict[tuple[str, str], str] = OrderedDict()
+_TRANSLATION_CACHE_LOCK = threading.Lock()
 
 try:
     from langdetect import detect, LangDetectException
@@ -155,23 +165,70 @@ def _gemini_call(prompt: str, system_instruction: str, timeout: float = 6.0) -> 
         return None
 
 
-def translate_response(text: str, lang: Optional[str]) -> str:
-    """
-    Translate an English response string to the target language.
-    Returns the original text unchanged on any error or when lang is None/English.
-    Gemini preserves Markdown (*bold*, _italic_, bullet lists).
-    """
-    if not lang or lang.upper().startswith("EN"):
-        return text
+def _normalize_lang(lang: Optional[str]) -> Optional[str]:
+    if not lang:
+        return None
+    normalized = lang.upper()
+    if normalized.startswith("EN"):
+        return None
+    return normalized
 
-    if len(text) > _MAX_SYNC_TRANSLATION_CHARS:
-        logger.warning(
-            "Skipping synchronous response translation for %s chars; "
-            "returning source text to avoid action timeout.",
-            len(text),
-        )
-        return text
 
+def _cache_get(lang: str, text: str) -> Optional[str]:
+    if _MAX_TRANSLATION_CACHE_ENTRIES <= 0:
+        return None
+
+    key = (lang, text)
+    with _TRANSLATION_CACHE_LOCK:
+        if key not in _TRANSLATION_CACHE:
+            return None
+        value = _TRANSLATION_CACHE[key]
+        _TRANSLATION_CACHE.move_to_end(key)
+        return value
+
+
+def _cache_put(lang: str, text: str, translated: str) -> None:
+    if _MAX_TRANSLATION_CACHE_ENTRIES <= 0:
+        return
+
+    key = (lang, text)
+    with _TRANSLATION_CACHE_LOCK:
+        _TRANSLATION_CACHE[key] = translated
+        _TRANSLATION_CACHE.move_to_end(key)
+        while len(_TRANSLATION_CACHE) > _MAX_TRANSLATION_CACHE_ENTRIES:
+            _TRANSLATION_CACHE.popitem(last=False)
+
+
+def _extract_json_array(raw_text: str, expected_len: int) -> Optional[list[str]]:
+    payload = raw_text.strip()
+    if payload.startswith("```"):
+        payload = payload.split("\n", 1)[1] if "\n" in payload else payload
+        if payload.endswith("```"):
+            payload = payload.rsplit("```", 1)[0]
+        payload = payload.strip()
+
+    try:
+        parsed = json.loads(payload)
+    except ValueError:
+        start = payload.find("[")
+        end = payload.rfind("]")
+        if start == -1 or end <= start:
+            return None
+        try:
+            parsed = json.loads(payload[start : end + 1])
+        except ValueError:
+            return None
+
+    if (
+        isinstance(parsed, list)
+        and len(parsed) == expected_len
+        and all(isinstance(item, str) for item in parsed)
+    ):
+        return parsed
+    return None
+
+
+def _translate_one_uncached(text: str, lang: str) -> str:
     lang_name = _LANG_NAMES.get(lang, lang)
     translated = _gemini_call(
         prompt=f"Translate to {lang_name}: {text}",
@@ -181,4 +238,87 @@ def translate_response(text: str, lang: Optional[str]) -> str:
             "No explanations, no quotes, no notes."
         ),
     )
-    return translated if translated is not None else text
+    if translated is None:
+        return text
+    _cache_put(lang, text, translated)
+    return translated
+
+
+def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
+    """
+    Translate a group of English response strings to the target language.
+    Batches uncached strings into one Gemini call when possible, preserving the
+    original fallback behavior for oversized strings or failed translations.
+    """
+    lang_code = _normalize_lang(lang)
+    if not texts or not lang_code:
+        return list(texts)
+
+    translated: list[Optional[str]] = []
+    pending: list[tuple[int, str]] = []
+
+    for text in texts:
+        if len(text) > _MAX_SYNC_TRANSLATION_CHARS:
+            logger.warning(
+                "Skipping synchronous response translation for %s chars; "
+                "returning source text to avoid action timeout.",
+                len(text),
+            )
+            translated.append(text)
+            continue
+
+        cached = _cache_get(lang_code, text)
+        if cached is not None:
+            translated.append(cached)
+            continue
+
+        translated.append(None)
+        pending.append((len(translated) - 1, text))
+
+    if len(pending) > 1:
+        pending_texts = [text for _, text in pending]
+        total_chars = sum(len(text) for text in pending_texts)
+        if total_chars <= _MAX_SYNC_TRANSLATION_BATCH_CHARS:
+            lang_name = _LANG_NAMES.get(lang_code, lang_code)
+            raw_batch = _gemini_call(
+                prompt=(
+                    f"Translate this JSON array of English strings to {lang_name}. "
+                    "Return ONLY a JSON array of strings in the same order:\n"
+                    f"{json.dumps(pending_texts, ensure_ascii=False)}"
+                ),
+                system_instruction=(
+                    "You are a translator. Output ONLY valid JSON. Preserve all "
+                    "Markdown formatting exactly inside each string. No code fences, "
+                    "no explanations, no notes."
+                ),
+                timeout=10.0,
+            )
+            parsed_batch = (
+                _extract_json_array(raw_batch, len(pending_texts))
+                if raw_batch is not None
+                else None
+            )
+            if parsed_batch is not None:
+                for (index, source), item in zip(pending, parsed_batch):
+                    translated[index] = item
+                    _cache_put(lang_code, source, item)
+            else:
+                logger.warning("Gemini batch translation failed; falling back to singles.")
+
+    for index, source in pending:
+        if translated[index] is None:
+            translated[index] = _translate_one_uncached(source, lang_code)
+
+    return [
+        item if item is not None else source
+        for item, source in zip(translated, texts)
+    ]
+
+
+def translate_response(text: str, lang: Optional[str]) -> str:
+    """
+    Translate an English response string to the target language.
+    Returns the original text unchanged on any error or when lang is None/English.
+    Gemini preserves Markdown (*bold*, _italic_, bullet lists).
+    """
+    return translate_responses([text], lang)[0]

@@ -32,11 +32,12 @@ RUN rm -f /app/models/*.tar.gz \
          --out /app/models
 
 # Runtime memory controls. Keep these after training so image builds can still
-# use normal TensorFlow parallelism while the live service keeps a smaller RSS.
+# use normal TensorFlow parallelism while the live service keeps bounded RSS
+# without forcing every live inference path onto a single worker thread.
 ENV MALLOC_ARENA_MAX=2 \
-    OMP_NUM_THREADS=1 \
-    TF_NUM_INTRAOP_THREADS=1 \
-    TF_NUM_INTEROP_THREADS=1
+    OMP_NUM_THREADS=2 \
+    TF_NUM_INTRAOP_THREADS=2 \
+    TF_NUM_INTEROP_THREADS=2
 
 # nginx config — run workers as root, remove default site, fix permissions
 COPY conf/nginx.conf /etc/nginx/conf.d/chatbot.conf

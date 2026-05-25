@@ -15,7 +15,7 @@ from rasa_sdk.executor import CollectingDispatcher
 
 from .services_data import SERVICES_INFO
 from .meeting_prompts import meeting_buttons, meeting_cta_text
-from .translation import get_lang, translate_response
+from .translation import get_lang, translate_response, translate_responses
 
 
 # ── Intent suffix → SERVICES_INFO key ────────────────────────────────────────
@@ -102,11 +102,7 @@ class ActionAnswerServicesQuery(Action):
             )
             return lang_event
 
-        messages = SERVICES_INFO[data_key]
-
-        # Send each message part separately (multi-part responses)
-        for msg in messages:
-            dispatcher.utter_message(text=translate_response(msg, lang))
+        output_parts = list(SERVICES_INFO[data_key])
 
         # Append a randomised follow-up prompt for detail pages (not list)
         if info_type != "list":
@@ -114,8 +110,9 @@ class ActionAnswerServicesQuery(Action):
             if follow_up_pool:
                 suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
                 if suffix:
-                    dispatcher.utter_message(text=translate_response(suffix, lang))
+                    output_parts.append(suffix)
 
+        meeting_cta_index = None
         if data_key in {
             "services_list",
             "airports",
@@ -124,9 +121,14 @@ class ActionAnswerServicesQuery(Action):
             "control_towers",
             "bim",
         }:
-            dispatcher.utter_message(
-                text=translate_response(meeting_cta_text("services"), lang),
-                buttons=meeting_buttons(lang),
-            )
+            meeting_cta_index = len(output_parts)
+            output_parts.append(meeting_cta_text("services"))
+
+        # Send each message part separately, but translate them in one batch.
+        for index, msg in enumerate(translate_responses(output_parts, lang)):
+            if index == meeting_cta_index:
+                dispatcher.utter_message(text=msg, buttons=meeting_buttons(lang))
+            else:
+                dispatcher.utter_message(text=msg)
 
         return lang_event

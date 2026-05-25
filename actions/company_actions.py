@@ -14,7 +14,7 @@ from rasa_sdk.executor import CollectingDispatcher
 
 from .company_data import COMPANY_INFO
 from .meeting_prompts import meeting_buttons, meeting_cta_text
-from .translation import get_lang, translate_response
+from .translation import get_lang, translate_response, translate_responses
 
 
 # ── Intent suffix → COMPANY_INFO key ─────────────────────────────────────────
@@ -128,23 +128,25 @@ class ActionAnswerCompanyQuery(Action):
             )
             return lang_event
 
-        messages = COMPANY_INFO[data_key]
-
-        # Send each message part separately (multi-part responses)
-        for msg in messages:
-            dispatcher.utter_message(text=translate_response(msg, lang))
+        output_parts = list(COMPANY_INFO[data_key])
 
         # Append a randomised follow-up prompt (not always — empty string weighted in)
         follow_up_pool = COMPANY_INFO.get("follow_up", [])
         if follow_up_pool and not lang:
             suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
             if suffix:
-                dispatcher.utter_message(text=translate_response(suffix, lang))
+                output_parts.append(suffix)
 
+        meeting_cta_index = None
         if data_key in {"overview", "offices", "approach", "clients", "careers"}:
-            dispatcher.utter_message(
-                text=translate_response(meeting_cta_text("company"), lang),
-                buttons=meeting_buttons(lang),
-            )
+            meeting_cta_index = len(output_parts)
+            output_parts.append(meeting_cta_text("company"))
+
+        # Send each message part separately, but translate them in one batch.
+        for index, msg in enumerate(translate_responses(output_parts, lang)):
+            if index == meeting_cta_index:
+                dispatcher.utter_message(text=msg, buttons=meeting_buttons(lang))
+            else:
+                dispatcher.utter_message(text=msg)
 
         return lang_event
