@@ -791,7 +791,7 @@ def _has_photo_word(raw_msg: str) -> bool:
 
 
 def _should_attach_cover_image(info_type: str, raw_msg: str) -> bool:
-    return True
+    return info_type in {"about_project", "overview", "photo"} or _has_photo_word(raw_msg)
 
 
 def _user_turn_count(tracker: Tracker) -> int:
@@ -973,6 +973,20 @@ def _infer_project_info_type(text: str) -> str:
         "what was your work",
     )):
         return "scope"
+    if any(token in raw for token in (
+        "sustainability",
+        "sustainable",
+        "environmental",
+        "eco-friendly",
+        "eco friendly",
+        "green",
+        "low carbon",
+        "carbon footprint",
+        "energy efficiency",
+        "climate-conscious",
+        "climate conscious",
+    )):
+        return "sustainability"
     if any(token in raw for token in ("approach", "strategy", "method", "process")):
         return "approach"
     if any(token in raw for token in ("concept", "vision", "elevator pitch", "nutshell")):
@@ -1006,11 +1020,17 @@ def _infer_project_info_type(text: str) -> str:
 
 def _looks_like_project_detail_followup(text: str, has_project_context: bool = False) -> bool:
     """Detect project-field questions even when NLU falls back."""
+    raw = _ascii_norm(text or "")
+    if not has_project_context and any(
+        marker in raw
+        for marker in ("1pax", "company", "studio", "firm", "practice")
+    ):
+        return False
+
     info_type = _infer_project_info_type(text)
     if info_type != "about_project":
         return True
 
-    raw = _ascii_norm(text or "")
     words = {
         word.strip("?!.,;:\"'()[]{}")
         for word in raw.split()
@@ -1033,6 +1053,11 @@ def _looks_like_project_detail_followup(text: str, has_project_context: bool = F
         "approach",
         "concept",
         "status",
+        "sustainability",
+        "sustainable",
+        "environmental",
+        "eco-friendly",
+        "green",
         "scope",
         "program",
         "programme",
@@ -1421,6 +1446,20 @@ class ActionHandleOutOfScope(Action):
             "leadership",
             "architects",
             "specialists",
+            "who works",
+            "who all works",
+            "who is working",
+            "who do you employ",
+            "who is employed",
+            "who works for you",
+            "who works with you",
+            "who works in your company",
+            "who works at your company",
+            "who works for your company",
+            "people working",
+            "people at your company",
+            "employees at your company",
+            "staff at your company",
         }
         if any(sig in lower_text for sig in _TEAM_SIGNALS):
             from .team_actions import ActionAnswerTeamQuery

@@ -174,6 +174,37 @@ def _translate_many_from_english(texts: list[str], target_lang: str) -> list[str
     return translated
 
 
+def _translate_project_labels_from_english(texts: list[str], target_lang: str) -> list[str]:
+    """Translate visible project-list labels while preserving lookup-safe names."""
+    if not texts:
+        return []
+
+    lang_name = _LANG_NAMES.get(target_lang, target_lang)
+    batch_text = f"\n\n{_BATCH_DELIMITER}\n\n".join(texts)
+    raw = _gemini_call(
+        prompt=(
+            f"Translate each project list label below to {lang_name}. Preserve proper nouns, "
+            "city names, country names, brand names, airport codes, acronyms, numbers, years, "
+            "currency values, and URLs. Translate generic architecture and infrastructure terms "
+            "inside titles, such as airport, international airport, terminal, station, control tower, "
+            "food hall, commercial areas, passenger experience, refurbishment, expansion, new building, "
+            "wayfinding, signage, masterplan, offices, headquarters, branches, and network. "
+            "Keep this delimiter line exactly unchanged between segments: "
+            f"{_BATCH_DELIMITER}\n\n{batch_text}"
+        ),
+        system_instruction=(
+            "You are a concise UI localization translator for an architecture portfolio. "
+            "Output ONLY the translated labels separated by the exact delimiter. Preserve Markdown "
+            "or punctuation already present. Use Serbian Latin script for Serbian, never Cyrillic. "
+            "No explanations, no quotes, no notes."
+        ),
+    )
+    translated = [part.strip() for part in raw.split(_BATCH_DELIMITER)]
+    if len(translated) != len(texts):
+        raise ValueError("Gemini returned an unexpected number of translated project labels")
+    return translated
+
+
 class Handler(BaseHTTPRequestHandler):
 
     def _send(self, data: dict, status: int = 200) -> None:
@@ -214,6 +245,7 @@ class Handler(BaseHTTPRequestHandler):
             data.get("target_lang") or data.get("target") or ""
         )
         raw_texts = data.get("texts")
+        mode = (data.get("mode") or "").strip()
 
         if target_lang:
             if raw_texts is not None:
@@ -228,7 +260,13 @@ class Handler(BaseHTTPRequestHandler):
                     self._send({"texts": texts, "translation_enabled": False})
                     return
                 try:
-                    translated_texts = _translate_many_from_english(texts, target_lang)
+                    if mode == "project_labels":
+                        translated_texts = _translate_project_labels_from_english(
+                            texts,
+                            target_lang,
+                        )
+                    else:
+                        translated_texts = _translate_many_from_english(texts, target_lang)
                     self._send({"texts": translated_texts, "translation_enabled": True})
                 except Exception as exc:
                     print(f"[translate] Gemini output error: {exc}")

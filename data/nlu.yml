@@ -1291,6 +1291,17 @@ nlu:
     - what's the sustainability approach for [Belgrade Airport](project)?
     - sustainability strategy for [Bordeaux Airport](project)
     - sustainability strategy for this project
+    - what's the sustainability story on this one?
+    - what's the sustainability story here?
+    - what is the sustainability story on this project?
+    - what is the sustainability angle on this project?
+    - tell me the sustainability story
+    - tell me about sustainability on this one
+    - how did this project handle sustainability?
+    - how did you handle sustainability here?
+    - what was the environmental angle here?
+    - what is the green design story here?
+    - is there a sustainability story for this project?
     - eco-friendly aspects of the project
     - what are the sustainability goals?
     - sustainability features
@@ -4736,6 +4747,26 @@ nlu:
     - who are the people in the company?
     - who works there?
     - who are the people in 1PAX?
+    - who works in your company?
+    - who works at your company?
+    - who works for your company?
+    - who all works at your company?
+    - who all works for you?
+    - who works with you?
+    - who do you employ?
+    - who is employed by your company?
+    - who are the people working for you?
+    - who are the people working in your company?
+    - who are the staff in your company?
+    - who are the employees in your company?
+    - who is on your staff?
+    - who is part of your company?
+    - who are your coworkers?
+    - show me who works for you
+    - can you show me who works at the company?
+    - I want to know who works there
+    - who are all the people working there?
+    - who makes up your company?
 
 # ── Team: leadership group ────────────────────────────────────────────────────
 

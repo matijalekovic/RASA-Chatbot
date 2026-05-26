@@ -540,14 +540,26 @@
 
   // ── Language selection ───────────────────────────────────────────────────────
 
-  // Country → DeepL target code (pre-selects based on IP; user can override)
+  // Country → response language code (pre-selects based on IP; user can override)
   const COUNTRY_LANG = {
-    FR:"FR", BE:"FR", CH:"FR", MC:"FR", LU:"FR", CI:"FR", SN:"FR", CM:"FR",
-    ES:"ES", MX:"ES", AR:"ES", CO:"ES", PE:"ES", CL:"ES", VE:"ES", EC:"ES",
-    BO:"ES", PY:"ES", UY:"ES", CR:"ES", PA:"ES", DO:"ES", CU:"ES", GT:"ES",
-    PT:"PT-PT", BR:"PT-PT", AO:"PT-PT", MZ:"PT-PT", CV:"PT-PT",
-    CN:"ZH-HANS", TW:"ZH-HANS", HK:"ZH-HANS", SG:"ZH-HANS",
-    RS:"SR", BA:"SR", ME:"SR",
+    // French-speaking countries and territories
+    FR:"FR", BE:"FR", CH:"FR", MC:"FR", LU:"FR", CA:"FR", HT:"FR",
+    BJ:"FR", BF:"FR", BI:"FR", CD:"FR", CF:"FR", CG:"FR", CI:"FR",
+    CM:"FR", DJ:"FR", GA:"FR", GF:"FR", GN:"FR", GP:"FR", GQ:"FR",
+    KM:"FR", MG:"FR", ML:"FR", MQ:"FR", NC:"FR", NE:"FR", PF:"FR",
+    RE:"FR", RW:"FR", SC:"FR", SN:"FR", TD:"FR", TG:"FR", VU:"FR",
+    WF:"FR", YT:"FR",
+    // Spanish-speaking countries and territories
+    ES:"ES", MX:"ES", AR:"ES", BO:"ES", CL:"ES", CO:"ES", CR:"ES",
+    CU:"ES", DO:"ES", EC:"ES", GT:"ES", HN:"ES", NI:"ES", PA:"ES",
+    PE:"ES", PR:"ES", PY:"ES", SV:"ES", UY:"ES", VE:"ES",
+    // Portuguese-speaking countries and territories
+    PT:"PT-PT", BR:"PT-PT", AO:"PT-PT", CV:"PT-PT", GW:"PT-PT",
+    MZ:"PT-PT", ST:"PT-PT", TL:"PT-PT",
+    // Chinese-speaking countries and territories
+    CN:"ZH-HANS", HK:"ZH-HANS", MO:"ZH-HANS", SG:"ZH-HANS", TW:"ZH-HANS",
+    // Serbian / closely related local-language markets supported through SR
+    RS:"SR", BA:"SR", ME:"SR", XK:"SR",
   };
 
   const storedLang = localStorage.getItem("pax_lang");
@@ -605,7 +617,10 @@
 
     fetch("https://ipapi.co/json/", timeoutOptions)
       .then(r => r.json())
-      .then(d => { const l = COUNTRY_LANG[d.country_code]; if (l) setLang(l); })
+      .then(d => {
+        const country = String(d.country_code || "").toUpperCase();
+        setLang(COUNTRY_LANG[country] || "");
+      })
       .catch(() => {})
       .finally(() => maybeGreet());
   }
@@ -826,6 +841,7 @@
     wrap.appendChild(ts);
     messagesEl.appendChild(wrap);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+    translateProjectCards(wrap).catch(() => {});
   }
 
   function setLoading(on) {
@@ -859,6 +875,57 @@
     } catch {
       return text;  // translation server unavailable — send as-is
     }
+  }
+
+  async function translateTextsFromEnglish(texts, lang, mode = "") {
+    const targetLang = lang || "EN";
+    if (!texts.length || targetLang.toUpperCase().startsWith("EN")) return texts;
+
+    const r = await fetch(TRANSLATE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texts, target_lang: targetLang, mode }),
+    });
+    const d = await r.json();
+    return Array.isArray(d.texts) && d.texts.length === texts.length
+      ? d.texts
+      : texts;
+  }
+
+  async function translateProjectCards(root) {
+    const targetLang = responseLang();
+    if (targetLang.toUpperCase().startsWith("EN")) return;
+
+    const cards = Array.from(root.querySelectorAll(".proj-chip"))
+      .filter(card => card.dataset.project && card.dataset.labelLang !== targetLang);
+    if (!cards.length) return;
+
+    const jobs = [];
+    for (const card of cards) {
+      const nameEl = card.querySelector(".proj-name");
+      const metaEl = card.querySelector(".proj-meta");
+      if (nameEl?.textContent?.trim()) {
+        jobs.push({ element: nameEl, text: nameEl.textContent.trim() });
+      }
+      if (metaEl?.textContent?.trim()) {
+        jobs.push({ element: metaEl, text: metaEl.textContent.trim() });
+      }
+    }
+    if (!jobs.length) return;
+
+    const chunkSize = 40;
+    for (let start = 0; start < jobs.length; start += chunkSize) {
+      const chunk = jobs.slice(start, start + chunkSize);
+      const translated = await translateTextsFromEnglish(
+        chunk.map(job => job.text),
+        targetLang,
+        "project_labels"
+      );
+      translated.forEach((text, index) => {
+        if (text && text.trim()) chunk[index].element.textContent = text.trim();
+      });
+    }
+    cards.forEach(card => { card.dataset.labelLang = targetLang; });
   }
 
   // ── Bot-initiated greeting ────────────────────────────────────────────────────

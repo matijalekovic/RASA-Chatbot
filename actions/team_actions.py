@@ -37,6 +37,23 @@ TEAM_DISPATCH: Dict[str, str] = {
     "collaborators": "collaborators",
 }
 
+_TEAM_PAGE_URL = "https://www.1pax.com/the-team"
+_TEAM_PAGE_LABELS = {
+    "FR": "Voir la page de l'équipe sur 1pax.com",
+    "ES": "Ver la página del equipo en 1pax.com",
+    "PT-PT": "Ver a página da equipa em 1pax.com",
+    "PT-BR": "Ver a página da equipe em 1pax.com",
+    "ZH-HANS": "查看 1pax.com 团队页面",
+    "ZH-HANT": "查看 1pax.com 團隊頁面",
+    "SR": "Pogledaj stranicu tima na 1pax.com",
+}
+
+
+def _team_page_link(lang: Optional[str]) -> str:
+    code = (lang or "").upper()
+    label = _TEAM_PAGE_LABELS.get(code, "View the team page on 1pax.com")
+    return f"[{label}]({_TEAM_PAGE_URL})"
+
 
 def _infer_team_info_type(text: str) -> str:
     """Best-effort router for fallback paths when NLU confidence collapses."""
@@ -51,7 +68,31 @@ def _infer_team_info_type(text: str) -> str:
         return "operations"
     if any(token in normalized for token in ("collaborator", "consultant", "partner")):
         return "collaborators"
-    if any(token in normalized for token in ("team", "staff", "people", "members", "roster", "employees")):
+    if any(
+        token in normalized
+        for token in (
+            "team",
+            "staff",
+            "people",
+            "members",
+            "roster",
+            "employees",
+            "who works",
+            "who all works",
+            "who is working",
+            "who do you employ",
+            "who is employed",
+            "who works for you",
+            "who works with you",
+            "who works in your company",
+            "who works at your company",
+            "who works for your company",
+            "people working",
+            "people at your company",
+            "employees at your company",
+            "staff at your company",
+        )
+    ):
         return "overview"
     return ""
 
@@ -264,14 +305,15 @@ class ActionAnswerTeamQuery(Action):
             )
             return schedule_reset_events + lang_event
 
-        output_parts = list(TEAM_INFO[data_key])
+        translated_parts = translate_responses(list(TEAM_INFO[data_key]), lang)
+        translated_parts.append(_team_page_link(lang))
 
         meeting_cta_index = None
         if data_key in {"overview", "leadership", "operations"}:
-            meeting_cta_index = len(output_parts)
-            output_parts.append(meeting_cta_text("team"))
+            meeting_cta_index = len(translated_parts)
+            translated_parts.append(translate_response(meeting_cta_text("team"), lang))
 
-        for index, msg in enumerate(translate_responses(output_parts, lang)):
+        for index, msg in enumerate(translated_parts):
             if index == meeting_cta_index:
                 dispatcher.utter_message(text=msg, buttons=meeting_buttons(lang))
             else:
@@ -334,7 +376,10 @@ class ActionAnswerTeamQuery(Action):
         if suffix:
             output_parts.append(suffix)
 
-        for msg in translate_responses(output_parts, lang):
+        translated_parts = translate_responses(output_parts, lang)
+        translated_parts.append(_team_page_link(lang))
+
+        for msg in translated_parts:
             dispatcher.utter_message(text=msg)
 
         return lang_event

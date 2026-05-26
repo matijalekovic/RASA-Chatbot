@@ -224,6 +224,19 @@ TESTS = [
      "expect_intent": "ask_projects_list",
      "any_contain": ["Airports and Transportation", "Sofia Airport"]},
 
+    {"session_id": "s_snap_04", "category": "Snap Out",
+     "note": "SNAP-04a: establish aik bank context",
+     "message": "tell me about aik bank",
+     "expect_project": "aik_bank_design",
+     "any_contain": ["AIK Bank"]},
+
+    {"session_id": "s_snap_04", "category": "Snap Out",
+     "note": "SNAP-04b: 'who works in your company' should leave project context",
+     "message": "who works in your company?",
+     "expect_intent": "ask_team_overview",
+     "must_not": ["AIK Bank", "branches", "ATM"],
+     "any_contain": ["Mabel", "architects", "team", "1pax.com/the-team"]},
+
     # ═══════════════════════════════════════════════════════════════════════════
     # CATEGORY 3 — CONVERSATIONAL TONE & CASUAL PHRASING
     # Tests that casual/informal queries map to the right intent
