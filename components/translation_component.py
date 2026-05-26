@@ -22,6 +22,7 @@ Env var:   GEMINI_API_KEY
 import json
 import logging
 import os
+import re
 import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Text
@@ -63,6 +64,70 @@ _LANG_MAP: Dict[str, str] = {
 }
 
 LANG_ENTITY = "__lang__"
+
+_ENGLISH_HINT_WORDS = {
+    "a",
+    "about",
+    "airport",
+    "airports",
+    "am",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "based",
+    "bim",
+    "build",
+    "buildings",
+    "can",
+    "company",
+    "contact",
+    "cost",
+    "design",
+    "designer",
+    "designers",
+    "do",
+    "does",
+    "doing",
+    "exactly",
+    "firm",
+    "for",
+    "founded",
+    "from",
+    "have",
+    "help",
+    "hello",
+    "hi",
+    "how",
+    "in",
+    "is",
+    "kind",
+    "list",
+    "me",
+    "mission",
+    "of",
+    "offer",
+    "offers",
+    "overview",
+    "pax",
+    "projects",
+    "schedule",
+    "services",
+    "show",
+    "sofia",
+    "studio",
+    "team",
+    "tell",
+    "the",
+    "there",
+    "what",
+    "where",
+    "who",
+    "work",
+    "you",
+    "your",
+}
 
 
 @DefaultV1Recipe.register(
@@ -108,6 +173,18 @@ class TranslationComponent(GraphComponent):
     def _handle(self, message: Message) -> None:
         text = message.get("text", "")
         if not text or not _DEPS_OK:
+            return
+
+        metadata = message.get("metadata") or {}
+        metadata_lang = metadata.get("lang")
+        if metadata_lang:
+            # The web UI translates user input to English before sending it to
+            # Rasa, and carries the target response language in metadata.
+            # Re-translating that English text is fragile for short phrases
+            # because langdetect often misclassifies them.
+            return
+
+        if _looks_like_english(text):
             return
 
         try:
@@ -165,3 +242,13 @@ class TranslationComponent(GraphComponent):
             "extractor": "TranslationComponent",
         })
         message.set("entities", entities)
+
+
+def _looks_like_english(text: str) -> bool:
+    """Protect short English/domain phrases from langdetect false positives."""
+    tokens = re.findall(r"[a-zA-Z]+", text.lower())
+    if not tokens:
+        return False
+    if len(tokens) > 8:
+        return False
+    return all(token in _ENGLISH_HINT_WORDS for token in tokens)
