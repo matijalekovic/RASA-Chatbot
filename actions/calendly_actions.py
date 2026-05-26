@@ -12,6 +12,9 @@ import logging
 import os
 import re
 import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, Text, Tuple
@@ -183,6 +186,9 @@ _SLOT_WORD_TO_NUMBER = {
 @dataclass(frozen=True)
 class CalendlyConfig:
     scheduling_link: str
+    access_token: str
+    event_type_uri: str
+    location_kind: str
     allow_link_fallback: bool
     browser_fallback: bool
     browser_headless: bool
@@ -193,7 +199,11 @@ class CalendlyConfig:
 
     @property
     def is_connected(self) -> bool:
-        return bool(self.scheduling_link)
+        return bool(self.scheduling_link or (self.access_token and self.event_type_uri))
+
+    @property
+    def api_connected(self) -> bool:
+        return bool(self.access_token and self.event_type_uri)
 
 
 class CalendlyAutomationError(RuntimeError):
@@ -227,6 +237,9 @@ def _config_from_env() -> CalendlyConfig:
         os.environ.get("CALENDLY_SCHEDULING_LINK", "").strip()
         or os.environ.get("CALENDLY_SCHEDULING_URL", "").strip()
     )
+    access_token = os.environ.get("CALENDLY_ACCESS_TOKEN", "").strip()
+    event_type_uri = os.environ.get("CALENDLY_EVENT_TYPE_URI", "").strip()
+    location_kind = os.environ.get("CALENDLY_LOCATION_KIND", "").strip()
     allow_link_fallback = _env_bool(
         "CALENDLY_ALLOW_LINK_FALLBACK",
         default=bool(scheduling_link),
@@ -242,6 +255,9 @@ def _config_from_env() -> CalendlyConfig:
 
     return CalendlyConfig(
         scheduling_link=scheduling_link,
+        access_token=access_token,
+        event_type_uri=event_type_uri,
+        location_kind=location_kind,
         allow_link_fallback=allow_link_fallback,
         browser_fallback=browser_fallback,
         browser_headless=not _env_flag("CALENDLY_BROWSER_HEADFUL"),
@@ -715,6 +731,96 @@ def _parse_calendly_dt(value: str) -> datetime:
     return datetime.fromisoformat(normalized).astimezone(timezone.utc)
 
 
+def _calendly_api_request(
+    cfg: CalendlyConfig,
+    method: str,
+    path: str,
+    query: Optional[Dict[str, str]] = None,
+    payload: Optional[Dict[str, Any]] = None,
+    timeout: float = 15.0,
+) -> Dict[str, Any]:
+    if not cfg.access_token:
+        raise CalendlyAutomationError("Calendly API token is not configured.")
+
+    query_string = urllib.parse.urlencode(query or {})
+    url = f"https://api.calendly.com/{path.lstrip('/')}"
+    if query_string:
+        url = f"{url}?{query_string}"
+
+    body = None
+    if payload is not None:
+        body = json.dumps(payload).encode("utf-8")
+
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method=method.upper(),
+        headers={
+            "Authorization": f"Bearer {cfg.access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "1PAX-Chatbot/1.0",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        body_text = exc.read().decode("utf-8", errors="replace")[:500]
+        raise CalendlyAutomationError(
+            "Calendly API request failed.",
+            status=exc.code,
+            detail=body_text,
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise CalendlyAutomationError("Calendly API request failed.") from exc
+
+
+def _iso_utc(dt: datetime) -> str:
+    return (
+        dt.astimezone(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def _api_available_slot_times(
+    cfg: CalendlyConfig,
+    start: datetime,
+    end: datetime,
+) -> List[str]:
+    if not cfg.api_connected:
+        return []
+
+    data = _calendly_api_request(
+        cfg,
+        "GET",
+        "/event_type_available_times",
+        query={
+            "event_type": cfg.event_type_uri,
+            "start_time": _iso_utc(start),
+            "end_time": _iso_utc(end),
+        },
+    )
+
+    slots: List[str] = []
+    for item in data.get("collection", []):
+        if item.get("status") and item.get("status") != "available":
+            continue
+        if (
+            item.get("invitees_remaining") is not None
+            and item.get("invitees_remaining") <= 0
+        ):
+            continue
+        start_time = item.get("start_time")
+        if isinstance(start_time, str) and start_time:
+            slots.append(_iso_utc(_parse_calendly_dt(start_time)))
+    return slots
+
+
 def _slot_label(start_time: str, timezone_name: str, lang: Optional[str] = None) -> str:
     tz = _zone(timezone_name)
     dt = _parse_calendly_dt(start_time).astimezone(tz)
@@ -833,24 +939,47 @@ def _available_slots(
     if end - start > timedelta(days=_MAX_RANGE_DAYS):
         end = start + timedelta(days=_MAX_RANGE_DAYS)
 
-    try:
-        from .calendly_browser import find_calendly_available_slots
+    raw_slots: List[str] = []
+    api_error: Optional[Exception] = None
 
-        raw_slots = find_calendly_available_slots(
-            scheduling_link=cfg.scheduling_link,
-            range_start=start,
-            range_end=end,
-            timezone_name=timezone_name,
-            max_slots=max(cfg.max_slots * 4, cfg.max_slots),
-            timeout_seconds=cfg.browser_timeout_seconds,
-            headless=cfg.browser_headless,
-            executable_path=cfg.browser_executable_path or None,
-        )
-    except Exception as exc:
-        logger.warning("Calendly hosted-page availability failed: %s", exc)
-        raise CalendlyAutomationError(
-            "Calendly hosted page could not be reached."
-        ) from exc
+    if cfg.api_connected:
+        try:
+            raw_slots = _api_available_slot_times(cfg, start, end)
+        except Exception as exc:
+            api_error = exc
+            detail = getattr(exc, "detail", None)
+            status = getattr(exc, "status", None)
+            logger.warning(
+                "Calendly API availability failed: status=%s detail=%s",
+                status,
+                detail,
+            )
+
+    if not raw_slots and cfg.scheduling_link:
+        try:
+            from .calendly_browser import find_calendly_available_slots
+
+            raw_slots = find_calendly_available_slots(
+                scheduling_link=cfg.scheduling_link,
+                range_start=start,
+                range_end=end,
+                timezone_name=timezone_name,
+                max_slots=max(cfg.max_slots * 4, cfg.max_slots),
+                timeout_seconds=cfg.browser_timeout_seconds,
+                headless=cfg.browser_headless,
+                executable_path=cfg.browser_executable_path or None,
+            )
+        except Exception as exc:
+            logger.warning("Calendly hosted-page availability failed: %s", exc)
+            if api_error:
+                raise CalendlyAutomationError(
+                    "Calendly API and hosted page could not be reached."
+                ) from exc
+            raise CalendlyAutomationError(
+                "Calendly hosted page could not be reached."
+            ) from exc
+    elif not raw_slots and api_error:
+        raise CalendlyAutomationError("Calendly API could not be reached.") from api_error
 
     window = _time_window(preference)
     filtered = raw_slots
@@ -943,6 +1072,65 @@ def _book_invitee_with_browser(
         "final_url": result.final_url,
         "message": result.message,
         "confirmation_text": result.confirmation_text,
+    }
+
+
+def _book_invitee_with_api(
+    cfg: CalendlyConfig,
+    name: str,
+    email: str,
+    purpose: str,
+    timezone_name: str,
+    start_time: str,
+) -> Optional[Dict[str, str]]:
+    if not cfg.api_connected:
+        return None
+
+    payload: Dict[str, Any] = {
+        "event_type": cfg.event_type_uri,
+        "start_time": _iso_utc(_parse_calendly_dt(start_time)),
+        "invitee": {
+            "name": name,
+            "email": email,
+            "timezone": timezone_name,
+        },
+        "questions_and_answers": [
+            {
+                "question": "Meeting purpose",
+                "answer": purpose,
+                "position": 1,
+            }
+        ],
+        "tracking": {
+            "utm_source": "1pax_chatbot",
+            "utm_medium": "chatbot",
+            "utm_campaign": "website_consultation",
+            "utm_content": purpose[:255],
+            "utm_term": "meeting_request",
+        },
+    }
+    if cfg.location_kind:
+        payload["location"] = {"kind": cfg.location_kind}
+
+    try:
+        data = _calendly_api_request(cfg, "POST", "/invitees", payload=payload)
+    except Exception as exc:
+        detail = getattr(exc, "detail", None)
+        status = getattr(exc, "status", None)
+        logger.warning(
+            "Calendly API booking failed: status=%s detail=%s",
+            status,
+            detail,
+        )
+        return None
+
+    resource = data.get("resource") if isinstance(data.get("resource"), dict) else data
+    return {
+        "final_url": resource.get("uri", ""),
+        "message": "Calendly booking completed through the API.",
+        "confirmation_text": "",
+        "cancel_url": resource.get("cancel_url", ""),
+        "reschedule_url": resource.get("reschedule_url", ""),
     }
 
 
@@ -1230,7 +1418,7 @@ def run_calendly_scheduling(
                 )
                 offered_slots = []
             else:
-                browser_booking = _book_invitee_with_browser(
+                booking = _book_invitee_with_api(
                     cfg,
                     name=name,
                     email=email,
@@ -1238,7 +1426,21 @@ def run_calendly_scheduling(
                     timezone_name=timezone_name,
                     start_time=selected_slot,
                 )
-                if browser_booking:
+                if not booking:
+                    booking = _book_invitee_with_browser(
+                        cfg,
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        timezone_name=timezone_name,
+                        start_time=selected_slot,
+                    )
+                if booking:
+                    confirmation_url = booking.get("final_url") or None
+                    if confirmation_url and confirmation_url.startswith(
+                        "https://api.calendly.com/"
+                    ):
+                        confirmation_url = None
                     _utter(
                         dispatcher,
                         _booking_success_message(
@@ -1246,7 +1448,9 @@ def run_calendly_scheduling(
                             email=email,
                             purpose=purpose,
                             selected_label=selected_label,
-                            confirmation_url=browser_booking.get("final_url"),
+                            confirmation_url=confirmation_url,
+                            cancel_url=booking.get("cancel_url") or None,
+                            reschedule_url=booking.get("reschedule_url") or None,
                             lang=lang,
                         ),
                         lang,

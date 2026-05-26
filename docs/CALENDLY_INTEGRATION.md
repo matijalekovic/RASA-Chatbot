@@ -1,17 +1,19 @@
 # Calendly integration
 
-The chatbot books meetings through the public Calendly hosted page only.
+The chatbot books meetings through Calendly's API when API credentials are
+available, and keeps the public hosted page as a fallback.
 
 The conversation flow is:
 
 1. Collect invitee name and email.
 2. Collect a short meeting purpose.
 3. Ask for a meeting window, such as "tomorrow afternoon" or "next week".
-4. Open the hosted Calendly page in headless Chromium and read available slots.
+4. Read available slots with Calendly's `/event_type_available_times` API.
 5. Offer numbered time slots in chat.
 6. Ask for explicit confirmation.
-7. Reopen the exact prefilled Calendly URL for the selected slot, click through
-   the hosted page, submit **Schedule Event**, and return the confirmation link.
+7. Create the invitee with Calendly's `/invitees` API and return the
+   confirmation details. If the API is unavailable, fall back to the hosted
+   page automation or a prefilled hosted Calendly link.
 
 ## Required environment variables
 
@@ -19,10 +21,12 @@ Set this before running the action server:
 
 ```bash
 CALENDLY_SCHEDULING_LINK="https://calendly.com/communications-1pax/30min"
+CALENDLY_ACCESS_TOKEN="..."
+CALENDLY_EVENT_TYPE_URI="https://api.calendly.com/event_types/..."
 ```
 
-No Calendly access token or event type URI is required for the current hosted
-page automation flow.
+The scheduling link powers the hosted-page fallback. The access token and event
+type URI power the primary API scheduling flow.
 
 ## Optional environment variables
 
@@ -34,9 +38,12 @@ CALENDLY_BROWSER_TIMEOUT_SECONDS="30"
 CALENDLY_BROWSER_HEADFUL="false"
 CALENDLY_BROWSER_EXECUTABLE_PATH=""
 CALENDLY_ALLOW_LINK_FALLBACK="true"
+CALENDLY_LOCATION_KIND="google_conference"
 ```
 
-With `CALENDLY_SCHEDULING_LINK` configured, browser automation and the manual
+With `CALENDLY_ACCESS_TOKEN` and `CALENDLY_EVENT_TYPE_URI` configured, the bot
+uses the Calendly API for availability and booking. With
+`CALENDLY_SCHEDULING_LINK` configured, browser automation and the manual
 prefilled-link fallback are enabled by default. Set `CALENDLY_BROWSER_FALLBACK`
 to `false` only when you intentionally want to stop automated hosted-page
 submission.
