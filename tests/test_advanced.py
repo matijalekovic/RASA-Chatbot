@@ -24,7 +24,7 @@ import re
 import os
 from typing import Optional, List
 
-RASA_URL  = "http://localhost:5005"
+RASA_URL  = os.environ.get("RASA_URL", "http://localhost:5005")
 NLU_PARSE = f"{RASA_URL}/model/parse"
 CHAT_URL  = f"{RASA_URL}/webhooks/rest/webhook"
 TIMEOUT   = 15
@@ -98,6 +98,20 @@ TESTS = [
      "expect_intent": "ask_project_challenge",
      "expect_project": "sofia_airport",
      "any_contain": ["Sofia"]},
+
+    {"session_id": "s_ctx_01", "category": "Context Flow",
+     "note": "CTX-01f: follow-up scope — what did 1PAX do on it?",
+     "message": "what did 1PAX do on it?",
+     "expect_intent": "ask_project_scope",
+     "expect_project": "sofia_airport",
+     "any_contain": ["Sofia", "Role", "Scope"]},
+
+    {"session_id": "s_ctx_01", "category": "Context Flow",
+     "note": "CTX-01g: broad team question should leave project context",
+     "message": "tell me about the team",
+     "expect_intent": "ask_team_overview",
+     "must_not": ["Sofia Airport", "Terminal 3"],
+     "any_contain": ["1PAX team", "team members", "Mabel"]},
 
     # ── Context switch: switch projects mid-conversation ───────────────────────
 
@@ -429,6 +443,13 @@ TESTS = [
      "must_not": ["Passenger capacity:", "million"],
      "any_contain": ["which project", "Which project", "which one", "what project", "name a", "Name a"]},
 
+    {"session_id": "s_edge_02c", "category": "Edge Cases",
+     "note": "EDGE-02c: broad airport projects browse should not resolve to Marija",
+     "message": "tell me about your airport projects",
+     "expect_intent": "ask_project_category",
+     "must_not": ["Marija Stevanovic", "Airport Project Director"],
+     "any_contain": ["Airports", "Belgrade Airport", "Sofia Airport", "portfolio"]},
+
     {"session_id": "s_edge_03", "category": "Edge Cases",
      "note": "EDGE-03a: establish context then use 'and the cost?' phrasing",
      "message": "velana airport",
@@ -714,7 +735,7 @@ def run_tests():
 
 if __name__ == "__main__":
     # Check server availability
-    print("Checking Rasa server at http://localhost:5005 ...")
+    print(f"Checking Rasa server at {RASA_URL} ...")
     try:
         r = requests.get(f"{RASA_URL}/status", timeout=8)
         print(f"{GREEN}Server OK{RESET}\n")

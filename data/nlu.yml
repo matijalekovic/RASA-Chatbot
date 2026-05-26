@@ -201,6 +201,9 @@ nlu:
     - what aviation projects have you completed?
     - do you specialize in airports?
     - airport projects
+    - tell me about your airport projects
+    - tell me about airport projects
+    - what airport projects has 1PAX done?
     - transport sector work
     - what categories of projects do you cover?
     - airport stuff
@@ -1606,6 +1609,11 @@ nlu:
     - what was 1PAX responsible for
     - was 1PAX the primary designer
     - what did 1PAX actually build or design
+    - what did 1PAX do on it?
+    - what did you do on it?
+    - what was 1PAX's work on it?
+    - what was your work on it?
+    - what did 1PAX design on it?
     - full service or consultancy
     - was 1PAX doing masterplan or detailed design
     - was 1PAX in charge of the interiors too
@@ -4208,6 +4216,9 @@ nlu:
     - what projects or services can 1PAX take on?
     - what types of engagements does 1PAX accept?
     - do you offer project management as well?
+    - do you design hospitals?
+    - do you work on healthcare projects?
+    - can 1PAX help with a hospital project?
     - do you offer BIM as a standalone service?
     - is interior design one of your services?
     - can 1PAX handle urban masterplanning?

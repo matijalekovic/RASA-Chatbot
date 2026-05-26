@@ -78,6 +78,8 @@ def _infer_service_info_type(text: str) -> str:
         return "urbanism"
     if any(token in normalized for token in ("airport", "terminal", "rail", "station")):
         return "airports"
+    if any(token in normalized for token in ("hospital", "hospitals", "healthcare")):
+        return "list"
     if any(token in normalized for token in ("service", "services", "offer", "provide", "capabilities")):
         return "list"
     return ""
@@ -104,11 +106,15 @@ class ActionAnswerServicesQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
-        from .calendly_actions import continue_active_calendly_scheduling
+        from .calendly_actions import (
+            continue_active_calendly_scheduling,
+            schedule_topic_shift_events,
+        )
 
         schedule_events = continue_active_calendly_scheduling(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
@@ -140,7 +146,7 @@ class ActionAnswerServicesQuery(Action):
                 ),
                 buttons=meeting_buttons(lang),
             )
-            return lang_event
+            return schedule_reset_events + lang_event
 
         output_parts = list(SERVICES_INFO[data_key])
 
@@ -171,4 +177,4 @@ class ActionAnswerServicesQuery(Action):
             else:
                 dispatcher.utter_message(text=msg)
 
-        return lang_event
+        return schedule_reset_events + lang_event

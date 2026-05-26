@@ -110,11 +110,15 @@ class ActionAnswerCompanyQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
-        from .calendly_actions import continue_active_calendly_scheduling
+        from .calendly_actions import (
+            continue_active_calendly_scheduling,
+            schedule_topic_shift_events,
+        )
 
         schedule_events = continue_active_calendly_scheduling(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
@@ -139,7 +143,7 @@ class ActionAnswerCompanyQuery(Action):
                 ),
                 buttons=meeting_buttons(lang),
             )
-            return lang_event
+            return schedule_reset_events + lang_event
 
         output_parts = list(COMPANY_INFO[data_key])
 
@@ -162,4 +166,4 @@ class ActionAnswerCompanyQuery(Action):
             else:
                 dispatcher.utter_message(text=msg)
 
-        return lang_event
+        return schedule_reset_events + lang_event

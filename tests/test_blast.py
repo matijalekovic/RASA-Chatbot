@@ -22,7 +22,7 @@ import uuid
 import sys
 from typing import Optional
 
-RASA_URL   = "http://localhost:5005"
+RASA_URL   = os.environ.get("RASA_URL", "http://localhost:5005")
 NLU_PARSE  = f"{RASA_URL}/model/parse"
 CHAT_URL   = f"{RASA_URL}/webhooks/rest/webhook"
 

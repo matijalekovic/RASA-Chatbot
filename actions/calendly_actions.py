@@ -608,6 +608,83 @@ def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
     return stage in {"select_slot", "confirm"} and lowered in {"no", "ne"}
 
 
+def _looks_like_content_shift_while_scheduling(text: str, stage: Optional[str]) -> bool:
+    """Detect when a user abandons early scheduling prompts to ask about 1PAX."""
+    if stage not in {"collect_name", "collect_email"}:
+        return False
+
+    lowered = (text or "").lower().strip()
+    if not lowered:
+        return False
+
+    if _extract_email(lowered) or _has_time_words(lowered):
+        return False
+
+    starters = (
+        "what ",
+        "who ",
+        "where ",
+        "when ",
+        "which ",
+        "how ",
+        "tell me",
+        "show me",
+        "list ",
+        "do you",
+        "does 1pax",
+        "can you",
+        "i want to know",
+    )
+    content_terms = (
+        "1pax",
+        "company",
+        "studio",
+        "firm",
+        "project",
+        "projects",
+        "portfolio",
+        "airport",
+        "terminal",
+        "metro",
+        "station",
+        "team",
+        "people",
+        "member",
+        "service",
+        "services",
+        "design",
+        "hospital",
+        "hospitals",
+        "healthcare",
+        "budget",
+        "capacity",
+        "client",
+        "location",
+        "located",
+        "founder",
+        "mabel",
+        "office",
+        "offices",
+        "mission",
+        "sustainability",
+        "urbanism",
+        "bim",
+        "vertiport",
+    )
+    return any(lowered.startswith(starter) for starter in starters) and any(
+        term in lowered for term in content_terms
+    )
+
+
+def schedule_topic_shift_events(tracker: Tracker) -> List[SlotSet]:
+    """Clear a partial booking flow when the latest message changes topic."""
+    stage = tracker.get_slot("schedule_stage")
+    text = tracker.latest_message.get("text") or ""
+    if _looks_like_content_shift_while_scheduling(text, stage):
+        return _clear_schedule_events()
+    return []
+
+
 def _parse_date_value(raw: str, today: date) -> Optional[date]:
     text = raw.lower()
 
@@ -1556,6 +1633,8 @@ def continue_active_calendly_scheduling(
     """Let the scheduler handle follow-ups while a booking flow is active."""
 
     if not tracker.get_slot("schedule_stage"):
+        return None
+    if schedule_topic_shift_events(tracker):
         return None
     return run_calendly_scheduling(dispatcher, tracker, domain)
 

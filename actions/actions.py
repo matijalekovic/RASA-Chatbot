@@ -26,6 +26,12 @@ def _continue_schedule_if_active(dispatcher, tracker, domain):
     return continue_active_calendly_scheduling(dispatcher, tracker, domain)
 
 
+def _schedule_topic_shift_events(tracker):
+    from .calendly_actions import schedule_topic_shift_events
+
+    return schedule_topic_shift_events(tracker)
+
+
 # ── Variation pools ──────────────────────────────────────────────────────────
 
 _OVERVIEW_INTROS = [
@@ -216,6 +222,7 @@ class ActionGreet(Action):
         schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = _schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
         dispatcher.utter_message(
@@ -227,7 +234,7 @@ class ActionGreet(Action):
             ]), lang),
             buttons=meeting_buttons(lang),
         )
-        return [SlotSet("language", lang)] if lang else []
+        return schedule_reset_events + ([SlotSet("language", lang)] if lang else [])
 
 
 class ActionGoodbye(Action):
@@ -701,14 +708,15 @@ _PROJECT_QUERY_CUES = {
 def _looks_like_specific_project_query(text: str) -> bool:
     """Catch one-project queries when NLU falls back or routes to project list."""
     lower = text.lower()
-    if any(signal in lower for signal in _SPECIFIC_PROJECT_SIGNALS):
-        return True
 
     # Plural browse/category prompts should stay with the project-list action.
     ascii_text = _ascii_norm(lower).strip()
     words = set(ascii_text.split())
     if "projects" in words:
         return False
+
+    if any(signal in lower for signal in _SPECIFIC_PROJECT_SIGNALS):
+        return True
 
     if _fuzzy_match_project(lower) is None:
         return False
@@ -952,7 +960,18 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
 
 def _infer_project_info_type(text: str) -> str:
     raw = (text or "").lower()
-    if any(token in raw for token in ("scope", "role", "commission", "responsible for")):
+    if any(token in raw for token in (
+        "scope",
+        "role",
+        "commission",
+        "responsible for",
+        "what did 1pax do",
+        "what did you do",
+        "what did 1pax design",
+        "what did you design",
+        "what was 1pax's work",
+        "what was your work",
+    )):
         return "scope"
     if any(token in raw for token in ("approach", "strategy", "method", "process")):
         return "approach"
@@ -1025,7 +1044,7 @@ def _looks_like_project_detail_followup(text: str, has_project_context: bool = F
     if words & common_followups:
         return True
 
-    return has_project_context and bool(words & {"team"})
+    return False
 
 
 def _intent_to_info_type(intent_name: str, text: str = "") -> str:
@@ -1062,6 +1081,7 @@ class ActionAnswerProjectQuery(Action):
         schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = _schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
@@ -1085,7 +1105,7 @@ class ActionAnswerProjectQuery(Action):
                         "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects.",
                     ]), lang
                 ))
-            return lang_event
+            return schedule_reset_events + lang_event
 
         if not project:
             dispatcher.utter_message(text=translate_response(random.choice([
@@ -1099,7 +1119,7 @@ class ActionAnswerProjectQuery(Action):
                     "to see the full list — there are 58 to explore!"
                 ),
             ]), lang))
-            return lang_event
+            return schedule_reset_events + lang_event
 
         intent_name = tracker.latest_message.get("intent", {}).get("name", "")
         raw_msg = tracker.latest_message.get("text", "").lower()
@@ -1140,7 +1160,7 @@ class ActionAnswerProjectQuery(Action):
                         info_type,
                         raw_msg,
                     )
-                return [SlotSet("project_name", project_key)] + lang_event
+                return schedule_reset_events + [SlotSet("project_name", project_key)] + lang_event
 
         # Special case: "ask_about_project" with no new entity = "what else can you tell me"
         # Show highlights instead of repeating the intro teaser
@@ -1159,7 +1179,7 @@ class ActionAnswerProjectQuery(Action):
             raw_msg,
             offer_meeting=_should_offer_project_meeting(tracker, info_type),
         )
-        return [SlotSet("project_name", project_key)] + lang_event
+        return schedule_reset_events + [SlotSet("project_name", project_key)] + lang_event
 
 
 class ActionListProjects(Action):
@@ -1178,6 +1198,7 @@ class ActionListProjects(Action):
         schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = _schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
@@ -1190,7 +1211,7 @@ class ActionListProjects(Action):
             dispatcher.utter_message(
                 text=translate_response("No projects in the database yet — check back soon!", lang)
             )
-            return lang_event
+            return schedule_reset_events + lang_event
 
         intro = random.choice([
             "Here are 1PAX's architectural projects:\n",
@@ -1224,7 +1245,7 @@ class ActionListProjects(Action):
             text=list_text,
             buttons=meeting_buttons(lang),
         )
-        return lang_event
+        return schedule_reset_events + lang_event
 
 
 class ActionHandleOutOfScope(Action):
@@ -1255,6 +1276,7 @@ class ActionHandleOutOfScope(Action):
         schedule_events = _continue_schedule_if_active(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = _schedule_topic_shift_events(tracker)
 
         # ── Greeting safety net: production can occasionally route greetings
         # through nlu_fallback while the model is warming or degraded.
@@ -1267,7 +1289,7 @@ class ActionHandleOutOfScope(Action):
             greeting_text in _GREETING_SIGNALS
             or any(greeting_text.startswith(f"{sig} ") for sig in _GREETING_SIGNALS)
         ):
-            return ActionGreet().run(dispatcher, tracker, domain)
+            return schedule_reset_events + ActionGreet().run(dispatcher, tracker, domain)
 
         # ── Company overview safety net: short translated prompts like
         # "cime se bavite" often arrive as "What do you do?", and production
@@ -1316,7 +1338,30 @@ class ActionHandleOutOfScope(Action):
                 ),
                 buttons=meeting_buttons(lang),
             )
-            return [SlotSet("project_name", None)] + lang_event
+            return schedule_reset_events + [SlotSet("project_name", None)] + lang_event
+
+        # ── Production safety net: route core project browse/detail flows from raw text.
+        # Do this before person aliases so "airport projects" means portfolio browsing,
+        # while "who leads airport projects" can still resolve to the team member.
+        _PROJECT_LIST_SIGNALS = {
+            "project",
+            "projects",
+            "portfolio",
+            "show me all",
+            "list all",
+            "what have you designed",
+        }
+        person_question = (
+            lower_text.strip().startswith("who ")
+            or "who leads" in lower_text
+            or "who runs" in lower_text
+            or "director" in lower_text
+        )
+        if _looks_like_specific_project_query(lower_text):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
+
+        if any(sig in lower_text for sig in _PROJECT_LIST_SIGNALS) and not person_question:
+            return ActionListProjects().run(dispatcher, tracker, domain)
 
         _PERSON_SIGNALS = {"mabel", "miranda", "ceo", "chief executive"}
         _FOUNDER_PERSON_SIGNALS = {"who is founder", "who is the founder", "tell me about founder", "tell me about the founder"}
@@ -1328,25 +1373,6 @@ class ActionHandleOutOfScope(Action):
             or any(sig in lower_text for sig in _FOUNDER_PERSON_SIGNALS)
         ):
             return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
-
-        # ── Production safety net: route core flows from raw text ─────────────
-        _PROJECT_LIST_SIGNALS = {
-            "project",
-            "projects",
-            "portfolio",
-            "show me all",
-            "list all",
-            "what have you designed",
-        }
-        _PROJECT_DETAIL_WORDS = {"sofia", "airport", "metro", "tower", "terminal", "belgrade"}
-        if _looks_like_specific_project_query(lower_text):
-            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
-
-        if (
-            any(sig in lower_text for sig in _PROJECT_LIST_SIGNALS)
-            and not any(word in lower_text for word in _PROJECT_DETAIL_WORDS)
-        ):
-            return ActionListProjects().run(dispatcher, tracker, domain)
 
         _SCHEDULE_SIGNALS = {
             "schedule",
@@ -1361,18 +1387,6 @@ class ActionHandleOutOfScope(Action):
 
             return run_calendly_scheduling(dispatcher, tracker, domain)
 
-        # ── Project detail safety net ────────────────────────────────────────
-        # Short translated follow-ups such as "what is the passenger capacity"
-        # or "what was the budget" can land in nlu_fallback on older models.
-        # Route them through the normal project action so active slot context is
-        # still respected, or so the user is asked which project if none exists.
-        active_project_key, _ = _resolve_project(tracker)
-        if _looks_like_project_detail_followup(
-            user_text,
-            has_project_context=bool(active_project_key),
-        ):
-            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
-
         _SERVICE_SIGNALS = {
             "service",
             "services",
@@ -1386,6 +1400,9 @@ class ActionHandleOutOfScope(Action):
             "vertiport",
             "interior",
             "control tower",
+            "hospital",
+            "hospitals",
+            "healthcare",
         }
         if any(sig in lower_text for sig in _SERVICE_SIGNALS):
             from .services_actions import ActionAnswerServicesQuery
@@ -1409,6 +1426,18 @@ class ActionHandleOutOfScope(Action):
             from .team_actions import ActionAnswerTeamQuery
 
             return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
+
+        # ── Project detail safety net ────────────────────────────────────────
+        # Short translated follow-ups such as "what is the passenger capacity"
+        # or "what was the budget" can land in nlu_fallback on older models.
+        # Route them through the normal project action so active slot context is
+        # still respected, or so the user is asked which project if none exists.
+        active_project_key, _ = _resolve_project(tracker)
+        if _looks_like_project_detail_followup(
+            user_text,
+            has_project_context=bool(active_project_key),
+        ):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         _COMPANY_SIGNALS = {
             "1pax",
@@ -1441,7 +1470,7 @@ class ActionHandleOutOfScope(Action):
             for text in _fmt_teaser(p).split("\n\n"):
                 if text.strip():
                     dispatcher.utter_message(text=translate_response(text.strip(), lang))
-            return [SlotSet("project_name", fuzzy_key)] + lang_event
+            return schedule_reset_events + [SlotSet("project_name", fuzzy_key)] + lang_event
 
         # ── Normal out-of-scope / fallback handling ───────────────────────────────
         project_key = tracker.get_slot("project_name")
@@ -1460,4 +1489,4 @@ class ActionHandleOutOfScope(Action):
         if buttons:
             message["buttons"] = buttons
         dispatcher.utter_message(**message)
-        return lang_event
+        return schedule_reset_events + lang_event

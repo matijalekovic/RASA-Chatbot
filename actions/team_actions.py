@@ -141,7 +141,8 @@ _ROLE_ALIASES = {
     "the jv contact": "fabiola_espinoza",
     "the project director for airport work": "marija_stevanovic",
     "project director for airport work": "marija_stevanovic",
-    "airport projects": "marija_stevanovic",
+    "who leads airport projects": "marija_stevanovic",
+    "leads airport projects": "marija_stevanovic",
 }
 _PERSON_INDEX.update(_ROLE_ALIASES)
 
@@ -224,11 +225,15 @@ class ActionAnswerTeamQuery(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
 
-        from .calendly_actions import continue_active_calendly_scheduling
+        from .calendly_actions import (
+            continue_active_calendly_scheduling,
+            schedule_topic_shift_events,
+        )
 
         schedule_events = continue_active_calendly_scheduling(dispatcher, tracker, domain)
         if schedule_events is not None:
             return schedule_events
+        schedule_reset_events = schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
@@ -238,7 +243,7 @@ class ActionAnswerTeamQuery(Action):
 
         # ── Individual person lookup ─────────────────────────────────────────
         if intent == "ask_about_team_member" or _lookup_person_from_text(raw_text):
-            return self._handle_person_query(dispatcher, tracker, lang)
+            return schedule_reset_events + self._handle_person_query(dispatcher, tracker, lang)
 
         # ── Group dispatch ───────────────────────────────────────────────────
         if intent.startswith("ask_team_"):
@@ -257,7 +262,7 @@ class ActionAnswerTeamQuery(Action):
                 ),
                 buttons=meeting_buttons(lang),
             )
-            return lang_event
+            return schedule_reset_events + lang_event
 
         output_parts = list(TEAM_INFO[data_key])
 
@@ -272,7 +277,7 @@ class ActionAnswerTeamQuery(Action):
             else:
                 dispatcher.utter_message(text=msg)
 
-        return lang_event
+        return schedule_reset_events + lang_event
 
     # ────────────────────────────────────────────────────────────────────────────
 

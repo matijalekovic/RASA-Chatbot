@@ -14,7 +14,7 @@ Usage:
 
 import json, time, datetime, requests, uuid, sys, re, os
 
-RASA_URL = "http://localhost:5005"
+RASA_URL = os.environ.get("RASA_URL", "http://localhost:5005")
 CHAT_URL = f"{RASA_URL}/webhooks/rest/webhook"
 TIMEOUT  = 15
 PAUSE    = 0.25
