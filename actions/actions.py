@@ -1191,7 +1191,8 @@ class ActionAnswerProjectQuery(Action):
         # Show highlights instead of repeating the intro teaser
         if info_type == "about_project":
             entity_value = next(tracker.get_latest_entity_values("project"), None)
-            if not entity_value:
+            raw_project_key = _fuzzy_match_project(raw_msg)
+            if not entity_value and raw_project_key != project_key:
                 info_type = "facts"
 
         formatter = INFO_DISPATCH.get(info_type, _fmt_teaser)
