@@ -7,6 +7,7 @@ ActionHandleOutOfScope     — context-aware handler for unrecognised inputs.
 """
 
 import random
+import re
 import unicodedata
 from difflib import SequenceMatcher, get_close_matches
 from typing import Any, Dict, List, Optional, Text, Tuple
@@ -591,6 +592,8 @@ _NAME_INDEX.update({
     # Santiago Wayfinding (Chile)
     "santiago wayfinding":         "santiago_wayfinding",
     "santiago chile wayfinding":   "santiago_wayfinding",
+    "santiago international airport wayfinding design": "santiago_wayfinding",
+    "santiago international airport wayfinding design signage": "santiago_wayfinding",
     "arturo merino benitez":       "santiago_wayfinding",
     "scl airport":                 "santiago_wayfinding",
     "santiago signage":            "santiago_wayfinding",
@@ -598,14 +601,76 @@ _NAME_INDEX.update({
     "lille":                       "lille_airport",
     "lille lesquin":               "lille_airport",
     "lil airport":                 "lille_airport",
+    # Current public website titles that differ from internal display names
+    "al wakrah metro depot masterplan": "doha_metro_depot",
+    "qatar railways al wakrah metro depot masterplan": "doha_metro_depot",
+    "bordeaux international airport hall b terminal new facades": "bordeaux_airport",
+    "design of five airports in cape verde": "cabo_verde_airports",
+    "industrial building for baggage handling system architectural design": "cdg_baggage_building",
+    "hangar for air guyane cayenne airport": "air_guyane_hangar",
+    "hangar for air guyanne cayenne airport": "air_guyane_hangar",
+    "belgrade airport administration building": "belgrade_admin_building",
+    "belgrade airport main fire station": "belgrade_fire_station",
+    "landside design nikola tesla airport": "belgrade_nikola_tesla_landside",
+    "nikola tesla airport landside design vehicle simulation": "belgrade_nikola_tesla_landside",
+    "nikola tesla international airport wayfinding signage design": "belgrade_wayfinding",
+    "pointe a pitre international airport new extension": "pointe_a_pitre_t1",
+    "pointe a pitre international airport new terminal extension": "pointe_a_pitre_t1",
+    "pointe a pitre international airport t2 extension": "pointe_a_pitre_t2",
+    "velana international airport interior design": "velana_airport",
 })
 
 
 def _ascii_norm(text: str) -> str:
-    """Strip accents, lowercase, collapse hyphens → spaces for fuzzy comparison."""
+    """Strip accents and collapse punctuation to spaces for fuzzy comparison."""
     nfd = unicodedata.normalize("NFD", text)
     ascii_only = nfd.encode("ascii", "ignore").decode("ascii")
-    return ascii_only.replace("-", " ").lower()
+    ascii_only = re.sub(r"[^a-zA-Z0-9]+", " ", ascii_only.lower())
+    return " ".join(ascii_only.split())
+
+
+def _contains_normalized_phrase(text: str, phrase: str) -> bool:
+    return f" {phrase} " in f" {text} "
+
+
+def _register_project_alias(
+    alias: str,
+    project_key: str,
+    index: Dict[str, str],
+    aliases_by_project: Dict[str, List[str]],
+) -> None:
+    normalized = _ascii_norm(alias)
+    if not normalized:
+        return
+    index[normalized] = project_key
+    aliases_by_project.setdefault(project_key, [])
+    if normalized not in aliases_by_project[project_key]:
+        aliases_by_project[project_key].append(normalized)
+
+
+_NORMALIZED_NAME_INDEX: Dict[str, str] = {}
+_ALIASES_BY_PROJECT: Dict[str, List[str]] = {}
+for _alias, _key in _NAME_INDEX.items():
+    _register_project_alias(_alias, _key, _NORMALIZED_NAME_INDEX, _ALIASES_BY_PROJECT)
+for _key, _p in PROJECTS.items():
+    _register_project_alias(
+        _p["display_name"],
+        _key,
+        _NORMALIZED_NAME_INDEX,
+        _ALIASES_BY_PROJECT,
+    )
+
+_SORTED_NORMALIZED_ALIASES = sorted(
+    _NORMALIZED_NAME_INDEX.items(),
+    key=lambda item: (len(item[0].split()), len(item[0])),
+    reverse=True,
+)
+for _key in list(_ALIASES_BY_PROJECT):
+    _ALIASES_BY_PROJECT[_key] = sorted(
+        _ALIASES_BY_PROJECT[_key],
+        key=lambda alias: (len(alias.split()), len(alias)),
+        reverse=True,
+    )
 
 
 def _has_meaningful_token_overlap(candidate: str, input_words: List[str]) -> bool:
@@ -636,10 +701,21 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
       1.  Word-level fuzzy city match (skip generic transport/function words)
       2.  Fuzzy full-text match against all known names/aliases
     """
-    import re as _re
-    lower = _re.sub(r"[?!.,;:\"']", " ", text.lower())  # strip punctuation before split
+    lower = re.sub(r"[?!.,;:\"']", " ", text.lower())  # strip punctuation before split
     normed = _ascii_norm(lower)
     normed_words = normed.split()
+
+    # 0. Exact normalized phrase lookup across full project titles and aliases.
+    # Do this before city matching, otherwise ambiguous places like Belgrade,
+    # Cayenne, or Paris can steal queries that contain a precise project name.
+    direct_key = _NORMALIZED_NAME_INDEX.get(normed)
+    if direct_key:
+        return direct_key
+    for phrase, project_key in _SORTED_NORMALIZED_ALIASES:
+        if len(phrase) < 3:
+            continue
+        if _contains_normalized_phrase(normed, phrase):
+            return project_key
 
     # 0a. Exact phrase lookup — original text (catches standard aliases + single words)
     all_words = lower.split()
@@ -667,9 +743,9 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
 
     # 2. Fuzzy full-text match against all known display names / aliases
     # Cutoff 0.80 prevents false matches like "jfk airport" → "sof airport"
-    matches = get_close_matches(normed, _NAME_INDEX.keys(), n=1, cutoff=0.80)
+    matches = get_close_matches(normed, _NORMALIZED_NAME_INDEX.keys(), n=1, cutoff=0.80)
     if matches and _has_meaningful_token_overlap(matches[0], normed_words):
-        return _NAME_INDEX[matches[0]]
+        return _NORMALIZED_NAME_INDEX[matches[0]]
 
     return None
 
@@ -722,7 +798,7 @@ def _looks_like_specific_project_query(text: str) -> bool:
         return False
 
     # Exact aliases like "T3" or "Belgrade Metro" are project references by themselves.
-    if ascii_text in _NAME_INDEX:
+    if ascii_text in _NORMALIZED_NAME_INDEX:
         return True
 
     return any(cue in words for cue in _PROJECT_QUERY_CUES)
@@ -902,8 +978,8 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
     Returns (project_key, project_dict).
     Priority:
       1. Any extracted entity that is a canonical PROJECTS key
-      2. Fuzzy match on any extracted entity value
-      3. Fuzzy match on full message text
+      2. Fuzzy/exact match on full message text
+      3. Fuzzy match on any extracted entity value
       4. Slot context (carry-over from previous turn)
 
     Only blocks slot fallback when a *meaningful* entity (not a generic
@@ -922,17 +998,19 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
         if ev in PROJECTS:
             return ev, PROJECTS[ev]
 
-    # 2. Fuzzy match on each meaningful entity value
+    # 2. Try fuzzy/exact lookup on the full message before broad entity values.
+    # DIET can extract "Nikola Tesla Airport" from a longer title like
+    # "Nikola Tesla Airport – Wayfinding Signage Design"; the full title must
+    # take precedence over that broad airport reference.
+    fuzzy_key = _fuzzy_match_project(raw_text)
+    if fuzzy_key:
+        return fuzzy_key, PROJECTS.get(fuzzy_key)
+
+    # 3. Fuzzy match on each meaningful entity value
     for ev in meaningful:
         fuzzy_key = _fuzzy_match_project(ev)
         if fuzzy_key:
             return fuzzy_key, PROJECTS.get(fuzzy_key)
-
-    # 3. Try fuzzy on the full message text. This catches translated forms like
-    # "airport in Belgrade" where DIET extracts only the city name.
-    fuzzy_key = _fuzzy_match_project(raw_text)
-    if fuzzy_key:
-        return fuzzy_key, PROJECTS.get(fuzzy_key)
 
     # 4. Meaningful entity was present but didn't match — signal not found.
     # Do NOT fall through to slot (it would return the wrong project).
@@ -1018,6 +1096,73 @@ def _infer_project_info_type(text: str) -> str:
     return "about_project"
 
 
+def _strip_project_reference(text: str, project_key: Optional[str]) -> str:
+    """Remove the resolved project title/aliases before looking for detail cues."""
+    normalized = _ascii_norm(text or "")
+    if not normalized or not project_key:
+        return normalized
+
+    for alias in _ALIASES_BY_PROJECT.get(project_key, []):
+        if not alias:
+            continue
+        normalized = re.sub(
+            rf"\b{re.escape(alias)}\b",
+            " ",
+            normalized,
+        )
+    return " ".join(normalized.split())
+
+
+def _is_general_project_intro(text: str) -> bool:
+    """True when only generic intro words remain after removing a project title."""
+    if not text:
+        return True
+
+    generic_words = {
+        "a",
+        "about",
+        "can",
+        "could",
+        "describe",
+        "details",
+        "explain",
+        "for",
+        "give",
+        "hello",
+        "hey",
+        "hi",
+        "i",
+        "info",
+        "information",
+        "know",
+        "like",
+        "me",
+        "mi",
+        "more",
+        "nesto",
+        "o",
+        "on",
+        "please",
+        "project",
+        "recite",
+        "reci",
+        "regarding",
+        "say",
+        "some",
+        "something",
+        "tell",
+        "the",
+        "to",
+        "us",
+        "want",
+        "what",
+        "would",
+        "you",
+    }
+    remaining = [word for word in text.split() if word not in generic_words]
+    return not remaining
+
+
 def _looks_like_project_detail_followup(text: str, has_project_context: bool = False) -> bool:
     """Detect project-field questions even when NLU falls back."""
     raw = _ascii_norm(text or "")
@@ -1072,13 +1217,27 @@ def _looks_like_project_detail_followup(text: str, has_project_context: bool = F
     return False
 
 
-def _intent_to_info_type(intent_name: str, text: str = "") -> str:
+def _intent_to_info_type(
+    intent_name: str,
+    text: str = "",
+    project_key: Optional[str] = None,
+) -> str:
+    text_without_project = _strip_project_reference(text, project_key)
+    inferred = _infer_project_info_type(text_without_project)
+    if inferred != "about_project":
+        return inferred
+
     if intent_name == "ask_about_project":
         return "about_project"
     prefix = "ask_project_"
     if intent_name.startswith(prefix):
+        # DIET often over-weights words inside project titles, e.g.
+        # "Architectural Assistance" → ask_project_architect. If the remaining
+        # user phrase is just "tell me about", treat it as a general overview.
+        if project_key and _is_general_project_intro(text_without_project):
+            return "about_project"
         return intent_name[len(prefix):]
-    return _infer_project_info_type(text)
+    return inferred
 
 
 # ── Actions ──────────────────────────────────────────────────────────────────
@@ -1148,7 +1307,7 @@ class ActionAnswerProjectQuery(Action):
 
         intent_name = tracker.latest_message.get("intent", {}).get("name", "")
         raw_msg = tracker.latest_message.get("text", "").lower()
-        info_type = _intent_to_info_type(intent_name, raw_msg)
+        info_type = _intent_to_info_type(intent_name, raw_msg, project_key)
 
         # Special case: photo query routed to video intent → acknowledge mismatch
         if info_type == "video":

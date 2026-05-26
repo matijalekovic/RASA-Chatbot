@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Pure-function checks for project-name resolution and detail routing."""
+
+from pathlib import Path
+import sys
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from actions.actions import _fuzzy_match_project, _intent_to_info_type, _resolve_project
+from actions.projects_data import PROJECTS
+
+
+def test_every_display_name_maps_to_itself():
+    failures = []
+    for key, project in PROJECTS.items():
+        text = f"Tell me about {project['display_name']}"
+        resolved = _fuzzy_match_project(text)
+        if resolved != key:
+            failures.append((key, resolved, project["display_name"]))
+
+    assert not failures, failures
+
+
+def test_title_words_do_not_hijack_general_project_questions():
+    examples = [
+        "Aéroport de Marseille Provence – Architectural Assistance for Commercial Facilities",
+        "Félix Eboué Cayenne Airport – Interior Design",
+        "French Embassy – Architectural Design",
+        "Belgrade Metro Network – Line 1 Phase 1 Architectural Design",
+        "Tocumen International Airport – Fire Safety Strategy Review",
+    ]
+
+    for title in examples:
+        project_key = _fuzzy_match_project(f"Please tell me about {title}")
+        assert project_key
+        assert (
+            _intent_to_info_type(
+                "ask_project_architect",
+                f"Please tell me about {title}",
+                project_key,
+            )
+            == "about_project"
+        )
+
+
+def test_explicit_detail_question_still_wins_after_title_stripping():
+    text = (
+        "Who was the architect for "
+        "Aéroport de Marseille Provence – Architectural Assistance for Commercial Facilities?"
+    )
+    project_key = _fuzzy_match_project(text)
+
+    assert project_key == "marseille_commercial_assistance"
+    assert _intent_to_info_type("ask_about_project", text, project_key) == "architect"
+
+
+def test_current_website_titles_resolve_to_expected_projects():
+    expected = {
+        "Al Wakrah Metro Depot Masterplan": "doha_metro_depot",
+        "Belgrade Airport Administration Building": "belgrade_admin_building",
+        "Belgrade Airport Main Fire Station": "belgrade_fire_station",
+        "Bordeaux International Airport - Hall B Terminal New Facades": "bordeaux_airport",
+        "Hangar for Air Guyanne, Cayenne Airport": "air_guyane_hangar",
+        "Industrial Building for Baggage Handling System – Architectural Design": "cdg_baggage_building",
+        "Landside Design - Nikola Tesla Airport": "belgrade_nikola_tesla_landside",
+        "Nikola Tesla International Airport Wayfinding signage design": "belgrade_wayfinding",
+        "Pointe-à-Pitre International Airport - New extension": "pointe_a_pitre_t1",
+        "Pointe-à-Pitre International Airport - T2 Extension": "pointe_a_pitre_t2",
+        "Santiago International Airport - Wayfinding Design": "santiago_wayfinding",
+    }
+
+    failures = []
+    for title, project_key in expected.items():
+        resolved = _fuzzy_match_project(title)
+        if resolved != project_key:
+            failures.append((title, project_key, resolved))
+
+    assert not failures, failures
+
+
+class _Tracker:
+    def __init__(self, text, entities=None, slot=None):
+        self.latest_message = {
+            "text": text,
+            "entities": [{"entity": "project", "value": value} for value in entities or []],
+        }
+        self.events = []
+        self._slot = slot
+
+    def get_latest_entity_values(self, entity_type):
+        if entity_type != "project":
+            return iter(())
+        return (
+            entity["value"]
+            for entity in self.latest_message["entities"]
+            if entity["entity"] == "project"
+        )
+
+    def get_slot(self, name):
+        if name == "project_name":
+            return self._slot
+        return None
+
+
+def test_full_title_beats_broad_extracted_entity():
+    tracker = _Tracker(
+        "Tell me about Nikola Tesla International Airport – Wayfinding Signage Design",
+        entities=["Nikola Tesla International Airport"],
+    )
+
+    project_key, _ = _resolve_project(tracker)
+
+    assert project_key == "belgrade_wayfinding"
+
+
+if __name__ == "__main__":
+    test_every_display_name_maps_to_itself()
+    test_title_words_do_not_hijack_general_project_questions()
+    test_explicit_detail_question_still_wins_after_title_stripping()
+    test_current_website_titles_resolve_to_expected_projects()
+    test_full_title_beats_broad_extracted_entity()
+    print("Project resolution unit checks passed.")
