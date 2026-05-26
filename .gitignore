@@ -16,7 +16,7 @@ env/
 # Rasa
 .rasa/
 models/*.tar.gz
-!models/20260422-161500-chestnut-burger.tar.gz
+!models/production.tar.gz
 
 # Test artifacts
 tests/results/

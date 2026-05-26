@@ -20,5 +20,7 @@ __pycache__/
 tests/
 docs/
 
-# Models are built inside the Linux image (Dockerfile), not copied from host.
+# Deploy only the locally prepared production model; keep older local models out
+# of the Railway build context.
 models/*.tar.gz
+!models/production.tar.gz

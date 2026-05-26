@@ -22,14 +22,9 @@ WORKDIR /app
 # Copy project files
 COPY . /app
 
-# Re-train inside the Linux build environment so runtime model weights match
-# Railway's TensorFlow stack (fixes cross-platform checkpoint mismatch).
-RUN rm -f /app/models/*.tar.gz \
-    && /opt/venv/bin/rasa train \
-         --config /app/config.yml \
-         --domain /app/domain.yml \
-         --data /app/data \
-         --out /app/models
+# Use the locally prepared Rasa model artifact. Training is intentionally done
+# before deployment so Railway only packages and runs the application.
+RUN test -f /app/models/production.tar.gz
 
 # Runtime memory controls. Keep these after training so image builds can still
 # use normal TensorFlow parallelism while the live service keeps bounded RSS
