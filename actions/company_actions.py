@@ -61,6 +61,19 @@ COMPANY_DISPATCH: Dict[str, str] = {
 def _infer_company_info_type(text: str) -> str:
     """Best-effort router for fallback paths when NLU confidence collapses."""
     normalized = text.lower()
+    if any(
+        token in normalized
+        for token in (
+            "what do you do",
+            "what are you doing",
+            "what work do you do",
+            "what kind of work do you do",
+            "what does your company do",
+            "what does the studio do",
+            "what is your thing",
+        )
+    ):
+        return "overview"
     if any(token in normalized for token in ("founder", "founded", "mabel", "ceo")):
         return "founder"
     if any(token in normalized for token in ("office", "location", "where are you", "based")):
