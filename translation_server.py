@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-_GEMINI_MODEL = "gemini-3.5-flash"
+_GEMINI_MODEL = "gemini-3.1-flash-lite"
 _GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
 )
@@ -188,7 +188,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.rstrip("/") == "/health":
-            self._send({"status": "ok", "translation_enabled": _READY})
+            self._send({
+                "status": "ok",
+                "translation_enabled": _READY,
+                "model": _GEMINI_MODEL,
+            })
             return
         self._send({"error": "not found"}, 404)
 
