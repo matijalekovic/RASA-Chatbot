@@ -384,7 +384,10 @@
     RS:"SR", BA:"SR", ME:"SR",
   };
 
-  let currentLang = localStorage.getItem("pax_lang") ?? "";
+  const storedLang = localStorage.getItem("pax_lang");
+  let currentLang = storedLang && storedLang.toUpperCase().startsWith("EN")
+    ? ""
+    : (storedLang ?? "");
 
   function setLang(code) {
     currentLang = code;
@@ -393,6 +396,20 @@
       b.classList.toggle("active", b.dataset.lang === code)
     );
   }
+
+  function responseLang() {
+    return currentLang || "EN";
+  }
+
+  function requestMetadata() {
+    const metadata = { lang: responseLang() };
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (timezone) metadata.timezone = timezone;
+    } catch {}
+    return metadata;
+  }
+
   // Apply stored preference immediately
   setLang(currentLang);
 
@@ -410,7 +427,7 @@
   }
 
   function detectLanguageAndGreet() {
-    if (localStorage.getItem("pax_lang") || typeof fetch !== "function") {
+    if (localStorage.getItem("pax_lang") !== null || typeof fetch !== "function") {
       maybeGreet();
       return;
     }
@@ -663,7 +680,7 @@
   const TARGET_TO_SOURCE = { "PT-PT": "PT", "PT-BR": "PT", "ZH-HANS": "ZH", "ZH-HANT": "ZH" };
 
   async function translateToEnglish(text, lang) {
-    if (!lang) return text;  // already English
+    if (!lang || lang.toUpperCase().startsWith("EN")) return text;
     const sourceLang = TARGET_TO_SOURCE[lang] || lang;
     try {
       const r = await fetch(TRANSLATE_URL, {
@@ -689,7 +706,7 @@
         body: JSON.stringify({
           sender: SESSION_ID,
           message: "hello",
-          ...(lang ? { metadata: { lang } } : {}),
+          metadata: requestMetadata(),
         }),
       });
       typingEl.classList.add("hidden");
@@ -727,7 +744,7 @@
         body: JSON.stringify({
           sender: SESSION_ID,
           message: englishMsg,
-          ...(currentLang ? { metadata: { lang: currentLang } } : {}),
+          metadata: requestMetadata(),
         }),
       });
 

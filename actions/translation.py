@@ -44,15 +44,21 @@ _MAX_SYNC_TRANSLATION_BATCH_CHARS = int(
 _MAX_TRANSLATION_CACHE_ENTRIES = int(
     os.environ.get("MAX_TRANSLATION_CACHE_ENTRIES", "512")
 )
-_TRANSLATION_TIMEOUT_SECONDS = float(os.environ.get("TRANSLATION_TIMEOUT_SECONDS", "4.0"))
+_TRANSLATION_TIMEOUT_SECONDS = float(os.environ.get("TRANSLATION_TIMEOUT_SECONDS", "8.0"))
 _TRANSLATION_BATCH_TIMEOUT_SECONDS = float(
-    os.environ.get("TRANSLATION_BATCH_TIMEOUT_SECONDS", "5.0")
+    os.environ.get("TRANSLATION_BATCH_TIMEOUT_SECONDS", "12.0")
 )
 _TRANSLATION_PROXY_TIMEOUT_SECONDS = float(
     os.environ.get("TRANSLATION_PROXY_TIMEOUT_SECONDS", "12.0")
 )
+_TRANSLATION_LONG_PROXY_TIMEOUT_SECONDS = float(
+    os.environ.get("TRANSLATION_LONG_PROXY_TIMEOUT_SECONDS", "24.0")
+)
+_LONG_TRANSLATION_CHUNK_CHARS = int(
+    os.environ.get("LONG_TRANSLATION_CHUNK_CHARS", "1800")
+)
 _MAX_INDIVIDUAL_TRANSLATION_FALLBACKS = int(
-    os.environ.get("MAX_INDIVIDUAL_TRANSLATION_FALLBACKS", "3")
+    os.environ.get("MAX_INDIVIDUAL_TRANSLATION_FALLBACKS", "8")
 )
 _BATCH_DELIMITER = "<<<1PAX_TRANSLATION_SPLIT_DO_NOT_TRANSLATE>>>"
 _TRANSLATION_PROXY_URL = os.environ.get(
@@ -325,11 +331,120 @@ def _translate_one_uncached(text: str, lang: str) -> str:
     return text
 
 
+def _split_long_text(text: str, max_chars: int = _LONG_TRANSLATION_CHUNK_CHARS) -> list[str]:
+    """Split long Markdown-ish text on paragraph/line boundaries for translation."""
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks: list[str] = []
+    current = ""
+
+    def push(part: str) -> None:
+        nonlocal current
+        if not part:
+            return
+        candidate = part if not current else f"{current}\n\n{part}"
+        if len(candidate) <= max_chars:
+            current = candidate
+            return
+        if current:
+            chunks.append(current)
+            current = ""
+        if len(part) <= max_chars:
+            current = part
+            return
+
+        line_current = ""
+        for line in part.splitlines():
+            candidate_line = line if not line_current else f"{line_current}\n{line}"
+            if len(candidate_line) <= max_chars:
+                line_current = candidate_line
+                continue
+            if line_current:
+                chunks.append(line_current)
+            line_current = line
+        if line_current:
+            current = line_current
+
+    for paragraph in text.split("\n\n"):
+        push(paragraph)
+
+    if current:
+        chunks.append(current)
+
+    return chunks or [text]
+
+
+def _translate_long_uncached(text: str, lang: str) -> str:
+    """Translate long responses in smaller chunks instead of returning English."""
+    chunks = _split_long_text(text)
+    if len(chunks) == 1:
+        return _translate_one_uncached(text, lang)
+
+    proxied = _proxy_translate_texts(
+        chunks,
+        lang,
+        timeout=_TRANSLATION_LONG_PROXY_TIMEOUT_SECONDS,
+    )
+    if proxied is not None:
+        output = "\n\n".join(proxied)
+        _cache_put(lang, text, output)
+        return output
+
+    logger.warning(
+        "Long response batch translation failed; falling back to %s chunk translations.",
+        len(chunks),
+    )
+    translated_chunks = [_translate_one_uncached(chunk, lang) for chunk in chunks]
+    output = "\n\n".join(translated_chunks)
+    _cache_put(lang, text, output)
+    return output
+
+
+def _translate_remaining_with_proxy_chunks(
+    remaining: list[tuple[int, str]],
+    translated: list[Optional[str]],
+    lang: str,
+) -> None:
+    """Retry failed batches in small proxy batches before using single calls."""
+    if len(remaining) <= 1:
+        return
+
+    chunk: list[tuple[int, str]] = []
+    chunk_chars = 0
+
+    def flush() -> None:
+        nonlocal chunk, chunk_chars
+        if not chunk:
+            return
+        sources = [source for _, source in chunk]
+        proxied = _proxy_translate_texts(sources, lang)
+        if proxied is not None:
+            for (index, source), item in zip(chunk, proxied):
+                translated[index] = item
+                _cache_put(lang, source, item)
+        chunk = []
+        chunk_chars = 0
+
+    for item in remaining:
+        _, source = item
+        source_len = len(source)
+        if chunk and (
+            len(chunk) >= 2
+            or chunk_chars + source_len > _MAX_SYNC_TRANSLATION_BATCH_CHARS
+        ):
+            flush()
+        chunk.append(item)
+        chunk_chars += source_len
+    flush()
+
+
 def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
     """
     Translate a group of English response strings to the target language.
-    Batches uncached strings into one Gemini call when possible, preserving the
-    original fallback behavior for oversized strings or failed translations.
+    Batches uncached strings when possible, then retries smaller chunks before
+    falling back to source text. This keeps selected-language conversations from
+    silently switching back to English when one large/busy batch misses.
     """
     lang_code = _normalize_lang(lang)
     if not texts or not lang_code:
@@ -339,18 +454,13 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
     pending: list[tuple[int, str]] = []
 
     for text in texts:
-        if len(text) > _MAX_SYNC_TRANSLATION_CHARS:
-            logger.warning(
-                "Skipping synchronous response translation for %s chars; "
-                "returning source text to avoid action timeout.",
-                len(text),
-            )
-            translated.append(text)
-            continue
-
         cached = _cache_get(lang_code, text)
         if cached is not None:
             translated.append(cached)
+            continue
+
+        if len(text) > _MAX_SYNC_TRANSLATION_CHARS:
+            translated.append(_translate_long_uncached(text, lang_code))
             continue
 
         translated.append(None)
@@ -406,15 +516,15 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
                 logger.warning("Gemini batch translation failed; falling back to singles.")
 
     remaining = [(index, source) for index, source in pending if translated[index] is None]
+    _translate_remaining_with_proxy_chunks(remaining, translated, lang_code)
+    remaining = [(index, source) for index, source in pending if translated[index] is None]
+
     if len(remaining) > _MAX_INDIVIDUAL_TRANSLATION_FALLBACKS:
         logger.warning(
-            "Skipping %s individual translation fallbacks after batch miss; "
-            "returning source text to keep action latency bounded.",
+            "Translating %s individual fallback chunks after batch miss; "
+            "this may add response latency.",
             len(remaining),
         )
-        for index, source in remaining:
-            translated[index] = source
-        remaining = []
 
     for index, source in remaining:
         if translated[index] is None:

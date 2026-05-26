@@ -18,7 +18,7 @@ import os
 import re
 import urllib.error
 import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 _GEMINI_MODEL = "gemini-3.5-flash"
 _GEMINI_URL = (
@@ -264,7 +264,11 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+class TranslationHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("TRANSLATE_PORT", 5056))
     print(f"[translate] Listening on port {port}")
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    TranslationHTTPServer(("0.0.0.0", port), Handler).serve_forever()
