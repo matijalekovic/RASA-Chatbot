@@ -71,18 +71,6 @@ def _normalize(text: str) -> str:
     return re.sub(r'\b1pax\b', '1PAX', text, flags=re.IGNORECASE)
 
 
-def _should_skip_translation(text: str) -> bool:
-    """Keep structured scheduling/contact inputs exact."""
-    stripped = text.strip()
-    if not stripped:
-        return True
-    if re.fullmatch(r"\d{1,2}[.)]?", stripped):
-        return True
-    if re.fullmatch(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", stripped, re.I):
-        return True
-    return False
-
-
 def _normalize_target_lang(lang: str) -> str:
     normalized = (lang or "").strip().upper()
     if not normalized or normalized.startswith("EN"):
@@ -113,11 +101,33 @@ def _gemini_call(prompt: str, system_instruction: str, timeout: float = 10.0) ->
     return result["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
-def _translate_to_english(text: str) -> str:
+def _source_lang_name(lang: str) -> str:
+    normalized = (lang or "").strip().upper()
+    if not normalized:
+        return ""
+    if normalized == "PT":
+        normalized = "PT-PT"
+    if normalized == "ZH":
+        normalized = "ZH-HANS"
+    return _LANG_NAMES.get(normalized, normalized)
+
+
+def _translate_to_english(text: str, source_lang: str = "") -> str:
+    source_name = _source_lang_name(source_lang)
+    prompt = (
+        f"Translate from {source_name} to English: {text}"
+        if source_name
+        else f"Translate to English: {text}"
+    )
     return _gemini_call(
-        prompt=f"Translate to English: {text}",
+        prompt=prompt,
         system_instruction=(
             "You are a translator. Output ONLY the translated text. "
+            "If the input is already English, output it unchanged. "
+            "Preserve names, company names, project names, emails, URLs, phone numbers, "
+            "dates, times, airport codes, and acronyms exactly. "
+            "If the input is Serbian, Croatian, or Bosnian written without accents, "
+            "still translate it to natural English. "
             "No explanations, no quotes, no notes."
         ),
     )
@@ -240,12 +250,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         text = _normalize((data.get("text") or "").strip())
+        source_lang = (data.get("source_lang") or data.get("source") or "").strip()
 
         if not text:
-            self._send({"text": text, "translation_enabled": _READY})
-            return
-
-        if _should_skip_translation(text):
             self._send({"text": text, "translation_enabled": _READY})
             return
 
@@ -254,11 +261,15 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         try:
-            translated = _translate_to_english(text)
+            translated = _translate_to_english(text, source_lang)
             self._send({"text": translated, "translation_enabled": True})
         except Exception as exc:
             print(f"[translate] Gemini error: {exc}")
-            self._send({"text": text, "translation_enabled": True})
+            self._send({
+                "text": text,
+                "translation_enabled": True,
+                "translation_error": True,
+            })
 
     def log_message(self, *args):
         pass

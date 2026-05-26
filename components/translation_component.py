@@ -25,7 +25,7 @@ import os
 import re
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Text
+from typing import Any, Dict, List, Optional, Text
 
 from rasa.engine.graph import GraphComponent, ExecutionContext
 from rasa.engine.recipes.default_recipe import DefaultV1Recipe
@@ -65,6 +65,16 @@ _LANG_MAP: Dict[str, str] = {
 
 LANG_ENTITY = "__lang__"
 
+_LANG_NAMES = {
+    "FR": "French",
+    "ES": "Spanish",
+    "PT-PT": "European Portuguese",
+    "PT-BR": "Brazilian Portuguese",
+    "ZH-HANS": "Simplified Chinese",
+    "ZH-HANT": "Traditional Chinese",
+    "SR": "Serbian (Latin script, never Cyrillic)",
+}
+
 _ENGLISH_HINT_WORDS = {
     "a",
     "about",
@@ -80,6 +90,7 @@ _ENGLISH_HINT_WORDS = {
     "bim",
     "build",
     "buildings",
+    "budget",
     "can",
     "company",
     "contact",
@@ -176,12 +187,22 @@ class TranslationComponent(GraphComponent):
             return
 
         metadata = message.get("metadata") or {}
-        metadata_lang = metadata.get("lang")
+        metadata_lang = _normalize_lang_code(metadata.get("lang"))
         if metadata_lang:
-            # The web UI translates user input to English before sending it to
-            # Rasa, and carries the target response language in metadata.
-            # Re-translating that English text is fragile for short phrases
-            # because langdetect often misclassifies them.
+            # The web UI normally translates user input to English before
+            # sending it to Rasa, and carries the target response language in
+            # metadata. If that proxy returns the original non-English text,
+            # do one more guarded translation pass here instead of letting NLU
+            # classify untranslated Serbian/French/etc.
+            self._set_lang_entity(message, metadata_lang)
+            if _looks_like_english(text):
+                return
+            if not self._api_key:
+                return
+            translated = self._translate_to_english(text, metadata_lang)
+            if translated:
+                message.set("text", translated)
+                logger.debug(f"[translate-in:metadata] → EN: '{text}' → '{translated}'")
             return
 
         if _looks_like_english(text):
@@ -201,18 +222,29 @@ class TranslationComponent(GraphComponent):
         if not self._api_key:
             return
 
-        translated = self._translate_to_english(text)
+        translated = self._translate_to_english(text, lang_code)
         if translated:
             message.set("text", translated)
             logger.debug(f"[translate-in] → EN: '{text}' → '{translated}'")
 
-    def _translate_to_english(self, text: str) -> str:
+    def _translate_to_english(self, text: str, source_lang: Optional[str] = None) -> str:
+        source_name = _LANG_NAMES.get(source_lang or "", source_lang or "")
+        prompt = (
+            f"Translate from {source_name} to English: {text}"
+            if source_name
+            else f"Translate to English: {text}"
+        )
         body = {
-            "contents": [{"parts": [{"text": f"Translate to English: {text}"}]}],
+            "contents": [{"parts": [{"text": prompt}]}],
             "systemInstruction": {
                 "parts": [{
                     "text": (
                         "You are a translator. Output ONLY the translated text. "
+                        "If the input is already English, output it unchanged. "
+                        "Preserve names, company names, project names, emails, URLs, phone numbers, "
+                        "dates, times, airport codes, and acronyms exactly. "
+                        "If the input is Serbian, Croatian, or Bosnian written without accents, "
+                        "still translate it to natural English. "
                         "No explanations, no quotes, no notes."
                     )
                 }]
@@ -251,4 +283,21 @@ def _looks_like_english(text: str) -> bool:
         return False
     if len(tokens) > 8:
         return False
-    return all(token in _ENGLISH_HINT_WORDS for token in tokens)
+    hits = sum(token in _ENGLISH_HINT_WORDS for token in tokens)
+    if hits == len(tokens):
+        return True
+    starters = {"who", "what", "where", "when", "how", "tell", "show", "give", "can", "does", "is"}
+    if tokens[0] in starters and hits >= max(2, len(tokens) // 2):
+        return True
+    return hits >= max(3, int(len(tokens) * 0.6))
+
+
+def _normalize_lang_code(lang: Optional[str]) -> Optional[str]:
+    normalized = (lang or "").strip().upper()
+    if not normalized or normalized.startswith("EN"):
+        return None
+    if normalized == "PT":
+        return "PT-PT"
+    if normalized == "ZH":
+        return "ZH-HANS"
+    return normalized

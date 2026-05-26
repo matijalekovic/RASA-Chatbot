@@ -51,6 +51,8 @@ def strip_ansi(text: str) -> str:
 #   message     : user message text
 #   expect_intent (optional): intended intent for labelling
 #   expect_project (optional): project key the answer should be about
+#   expect_response_contains (optional): strings that must appear in bot text
+#   metadata (optional): webhook metadata, e.g. selected UI language
 #   note        : human label for the test
 #
 # Sessions that share an ID will be sent in order so the slot carries context.
@@ -67,6 +69,10 @@ TESTS = [
     {"session_id": "s_list1",  "message": "Show me all your projects",   "expect_intent": "ask_projects_list",    "note": "List all projects"},
     {"session_id": "s_list2",  "message": "what does 1PAX do",           "expect_intent": "ask_company_overview", "note": "Generic 'what do you do' → company overview"},
     {"session_id": "s_cat1",   "message": "what airport projects do you have?", "expect_intent": "ask_project_category", "note": "Category filter"},
+
+    # ── TEAM MEMBER FALLBACKS ─────────────────────────────────────────────────
+    {"session_id": "s_team1",  "message": "Who is Matija Lekovic", "expect_response_contains": ["Matija", "AI & Digital Specialist"], "note": "Team member — Matija direct English"},
+    {"session_id": "s_team2",  "message": "reci mi nesto o matiji lekovicu", "metadata": {"lang": "SR"}, "expect_response_contains": ["Matija", "AI & Digital Specialist"], "note": "Team member — Matija Serbian inflection"},
 
     # ── ASK ABOUT PROJECT (teaser) ────────────────────────────────────────────
     {"session_id": "s_sofia",  "message": "Tell me about Sofia Airport", "expect_intent": "ask_about_project",   "expect_project": "sofia_airport",    "note": "Sofia Airport teaser"},
@@ -163,10 +169,13 @@ def parse_nlu(message: str) -> dict:
         return {"error": str(e)}
 
 
-def send_message(sender: str, message: str) -> list[dict]:
+def send_message(sender: str, message: str, metadata: Optional[dict] = None) -> list[dict]:
     """Send a message to the REST webhook, return list of bot responses."""
     try:
-        r = requests.post(CHAT_URL, json={"sender": sender, "message": message}, timeout=TIMEOUT)
+        payload = {"sender": sender, "message": message}
+        if metadata:
+            payload["metadata"] = metadata
+        r = requests.post(CHAT_URL, json=payload, timeout=TIMEOUT)
         return r.json()
     except Exception as e:
         return [{"error": str(e)}]
@@ -200,9 +209,13 @@ def run_tests() -> list[dict]:
         sid    = test["session_id"]
         sender = _session_map[sid]
         msg    = test["message"]
+        metadata = test.get("metadata")
         note   = test.get("note", "")
         exp_i  = test.get("expect_intent")
         exp_p  = test.get("expect_project")
+        exp_response = test.get("expect_response_contains") or []
+        if isinstance(exp_response, str):
+            exp_response = [exp_response]
 
         # NLU parse
         nlu    = parse_nlu(msg)
@@ -212,7 +225,7 @@ def run_tests() -> list[dict]:
         int_conf = intent.get("confidence", 0.0)
 
         # Bot response
-        responses = send_message(sender, msg)
+        responses = send_message(sender, msg, metadata=metadata)
         bot_texts  = [r.get("text", "") for r in responses if "text" in r]
 
         # Verdict
@@ -226,19 +239,22 @@ def run_tests() -> list[dict]:
         )
 
         # Naive check: does any bot response mention the expected project?
+        all_text = " ".join(bot_texts).lower()
         if exp_p:
-            all_text = " ".join(bot_texts).lower()
             # Try to match display name fragments or project key words
             project_key_words = exp_p.replace("_", " ").split()
             project_ok = any(w in all_text for w in project_key_words if len(w) > 3)
+        response_ok = all(expected.lower() in all_text for expected in exp_response)
 
         # Status indicator
-        if intent_ok and project_ok:
+        if intent_ok and project_ok and response_ok:
             status_sym = f"{GREEN}✓{RESET}"
-        elif intent_ok and not exp_p:
+        elif intent_ok and not exp_p and response_ok:
             status_sym = f"{GREEN}✓{RESET}"
         elif not intent_ok:
             status_sym = f"{RED}✗ INTENT{RESET}"
+        elif not response_ok:
+            status_sym = f"{RED}✗ RESPONSE{RESET}"
         else:
             status_sym = f"{YELLOW}~ PROJECT?{RESET}"
 
@@ -256,6 +272,9 @@ def run_tests() -> list[dict]:
         if exp_p:
             pr_str = f"{GREEN}found{RESET}" if project_ok else f"{RED}NOT FOUND in response{RESET}"
             print(f"        PROJECT : expected={exp_p} → {pr_str}")
+        if exp_response:
+            resp_str = f"{GREEN}found{RESET}" if response_ok else f"{RED}NOT FOUND in response{RESET}"
+            print(f"        RESPONSE EXPECTED: {exp_response} → {resp_str}")
         for t in bot_texts:
             preview = t[:200].replace("\n", " ↵ ")
             print(f"        RESPONSE: {CYAN}{preview}{RESET}")
@@ -272,8 +291,10 @@ def run_tests() -> list[dict]:
             "entities":    ents,
             "expect_intent":  exp_i,
             "expect_project": exp_p,
+            "expect_response_contains": exp_response,
             "intent_match":   intent_ok,
             "project_match":  project_ok,
+            "response_match": response_ok,
             "bot_responses":  bot_texts,
         }
         results.append(result)
@@ -308,14 +329,23 @@ def write_report(results: list[dict], path: str):
     intent_tested   = sum(1 for r in results if r["expect_intent"])
     project_matches = sum(1 for r in results if r["expect_project"] and r["project_match"])
     project_tested  = sum(1 for r in results if r["expect_project"])
+    response_matches = sum(1 for r in results if r["expect_response_contains"] and r["response_match"])
+    response_tested = sum(1 for r in results if r["expect_response_contains"])
 
     h("SUMMARY")
     lines.append(f"Intent accuracy  : {intent_matches}/{intent_tested} = {intent_matches/intent_tested*100:.0f}%  (tests with expected intent)")
     lines.append(f"Project accuracy : {project_matches}/{project_tested} = {project_matches/project_tested*100:.0f}%  (tests with expected project)")
+    if response_tested:
+        lines.append(f"Response checks  : {response_matches}/{response_tested} = {response_matches/response_tested*100:.0f}%  (tests with required response text)")
     lines.append("")
 
     # Failures
-    failures = [r for r in results if (r["expect_intent"] and not r["intent_match"]) or (r["expect_project"] and not r["project_match"])]
+    failures = [
+        r for r in results
+        if (r["expect_intent"] and not r["intent_match"])
+        or (r["expect_project"] and not r["project_match"])
+        or (r["expect_response_contains"] and not r["response_match"])
+    ]
     h(f"FAILURES ({len(failures)})")
     if not failures:
         lines.append("No failures detected.")
@@ -326,6 +356,8 @@ def write_report(results: list[dict], path: str):
             lines.append(f"       INTENT   : got={r['intent']}  expected={r['expect_intent']}  conf={r['confidence']}")
         if r["expect_project"] and not r["project_match"]:
             lines.append(f"       PROJECT  : expected={r['expect_project']} not found in response")
+        if r["expect_response_contains"] and not r["response_match"]:
+            lines.append(f"       RESPONSE : expected text {r['expect_response_contains']} not found")
         lines.append("")
 
     # Low confidence
@@ -360,6 +392,9 @@ def write_report(results: list[dict], path: str):
         if r["expect_project"]:
             pm = "✓ found" if r["project_match"] else "✗ NOT FOUND"
             lines.append(f"  Project   : expected={r['expect_project']} → {pm}")
+        if r["expect_response_contains"]:
+            rm = "✓ found" if r["response_match"] else "✗ NOT FOUND"
+            lines.append(f"  Response  : expected text {r['expect_response_contains']} → {rm}")
         lines.append(f"  Response(s):")
         for t in r["bot_responses"]:
             for line in t.split("\n"):
@@ -399,10 +434,14 @@ if __name__ == "__main__":
     intent_matches  = sum(1 for r in results if r["intent_match"] and r["expect_intent"])
     project_tested  = sum(1 for r in results if r["expect_project"])
     project_matches = sum(1 for r in results if r["project_match"] and r["expect_project"])
+    response_tested = sum(1 for r in results if r["expect_response_contains"])
+    response_matches = sum(1 for r in results if r["response_match"] and r["expect_response_contains"])
 
     print(f"\n{BOLD}══ RESULTS ══{RESET}")
     print(f"  Intent accuracy  : {GREEN}{intent_matches}/{intent_tested}{RESET}")
     print(f"  Project accuracy : {GREEN}{project_matches}/{project_tested}{RESET}")
+    if response_tested:
+        print(f"  Response checks  : {GREEN}{response_matches}/{response_tested}{RESET}")
 
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")

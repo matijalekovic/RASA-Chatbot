@@ -846,8 +846,8 @@
   const TARGET_TO_SOURCE = { "PT-PT": "PT", "PT-BR": "PT", "ZH-HANS": "ZH", "ZH-HANT": "ZH" };
 
   async function translateToEnglish(text, lang) {
-    if (!lang || lang.toUpperCase().startsWith("EN")) return text;
-    const sourceLang = TARGET_TO_SOURCE[lang] || lang;
+    const selectedLang = lang || "EN";
+    const sourceLang = TARGET_TO_SOURCE[selectedLang] || selectedLang;
     try {
       const r = await fetch(TRANSLATE_URL, {
         method: "POST",

@@ -1277,12 +1277,13 @@ class ActionHandleOutOfScope(Action):
 
         _PERSON_SIGNALS = {"mabel", "miranda", "ceo", "chief executive"}
         _FOUNDER_PERSON_SIGNALS = {"who is founder", "who is the founder", "tell me about founder", "tell me about the founder"}
+        from .team_actions import ActionAnswerTeamQuery, has_known_person_reference
+
         if (
-            any(sig in lower_text for sig in _PERSON_SIGNALS)
+            has_known_person_reference(user_text)
+            or any(sig in lower_text for sig in _PERSON_SIGNALS)
             or any(sig in lower_text for sig in _FOUNDER_PERSON_SIGNALS)
         ):
-            from .team_actions import ActionAnswerTeamQuery
-
             return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
 
         # ── Production safety net: route core flows from raw text ─────────────

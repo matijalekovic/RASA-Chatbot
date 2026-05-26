@@ -14,7 +14,7 @@ Individual intent (ask_about_team_member)
 import random
 import re
 import unicodedata
-from difflib import get_close_matches
+from difflib import SequenceMatcher, get_close_matches
 from typing import Any, Optional, Text, Dict, List
 
 from rasa_sdk import Action, Tracker
@@ -171,7 +171,42 @@ def _lookup_person_from_text(text: str) -> Optional[str]:
             continue
         if re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", norm):
             return key
+
+    tokens = re.findall(r"[a-z0-9]+", norm)
+    if not tokens:
+        return None
+
+    for alias, key in sorted(_PERSON_INDEX.items(), key=lambda item: len(item[0]), reverse=True):
+        alias_tokens = [
+            token for token in re.findall(r"[a-z0-9]+", alias)
+            if len(token) >= 4
+        ]
+        if len(alias_tokens) >= 2 and all(
+            any(_token_matches_alias(alias_token, token) for token in tokens)
+            for alias_token in alias_tokens
+        ):
+            return key
+        if len(alias_tokens) == 1 and len(alias_tokens[0]) >= 5:
+            alias_token = alias_tokens[0]
+            if any(_token_matches_alias(alias_token, token) for token in tokens):
+                return key
     return None
+
+
+def _token_matches_alias(alias_token: str, token: str) -> bool:
+    """Match names with light inflection, e.g. matija→matiji or lekovic→lekovicu."""
+    if alias_token == token:
+        return True
+    if len(alias_token) < 5 or len(token) < 5:
+        return False
+    if alias_token[:5] == token[:5]:
+        return True
+    return SequenceMatcher(None, alias_token, token).ratio() >= 0.84
+
+
+def has_known_person_reference(text: str) -> bool:
+    """Public fallback hook for routing known team-member questions."""
+    return _lookup_person_from_text(text) is not None
 
 
 # ── Action ─────────────────────────────────────────────────────────────────────
