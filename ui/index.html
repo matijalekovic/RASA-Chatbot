@@ -914,17 +914,25 @@
     if (!jobs.length) return;
 
     const chunkSize = 40;
+    const chunks = [];
     for (let start = 0; start < jobs.length; start += chunkSize) {
-      const chunk = jobs.slice(start, start + chunkSize);
-      const translated = await translateTextsFromEnglish(
-        chunk.map(job => job.text),
-        targetLang,
-        "project_labels"
-      );
-      translated.forEach((text, index) => {
-        if (text && text.trim()) chunk[index].element.textContent = text.trim();
-      });
+      chunks.push(jobs.slice(start, start + chunkSize));
     }
+
+    await Promise.all(chunks.map(async chunk => {
+      try {
+        const translated = await translateTextsFromEnglish(
+          chunk.map(job => job.text),
+          targetLang,
+          "project_labels"
+        );
+        translated.forEach((text, index) => {
+          if (text && text.trim()) chunk[index].element.textContent = text.trim();
+        });
+      } catch {
+        // Keep original labels if one translation chunk is unavailable.
+      }
+    }));
     cards.forEach(card => { card.dataset.labelLang = targetLang; });
   }
 
