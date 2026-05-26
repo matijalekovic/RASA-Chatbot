@@ -320,6 +320,9 @@ def _translate_one_uncached(text: str, lang: str) -> str:
         system_instruction=(
             "You are a translator. Output ONLY the translated text. "
             "Preserve all Markdown formatting exactly (bold **, bullets •, hyphens -, etc.). "
+            "Keep brand names, project names, URLs, patents, and technical acronyms themselves "
+            "intact when needed, but translate job titles, role labels, service names, UI labels, "
+            "and every explanatory phrase. "
             "No explanations, no quotes, no notes."
         ),
         timeout=_TRANSLATION_TIMEOUT_SECONDS,
@@ -491,8 +494,9 @@ def translate_responses(texts: list[str], lang: Optional[str]) -> list[str]:
             raw_batch = _gemini_call(
                 prompt=(
                     f"Translate each segment below to {lang_name}. Keep brand names, "
-                    "project names, URLs, Markdown markers, and technical acronyms intact "
-                    "when needed, but translate every explanatory phrase. Keep this delimiter "
+                    "project names, URLs, Markdown markers, and technical acronyms themselves "
+                    "intact when needed, but translate job titles, role labels, service names, UI labels, "
+                    "and every explanatory phrase. Keep this delimiter "
                     f"line exactly unchanged between segments: {_BATCH_DELIMITER}\n\n"
                     f"{batch_text}"
                 ),
