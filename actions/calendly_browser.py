@@ -1,8 +1,8 @@
-"""Headless Calendly page automation used as a last-resort booking fallback.
+"""Headless Calendly hosted-page automation.
 
-Calendly's Scheduling API is still the preferred path. This module exists for
-the hosted booking page case where the invitee form is already prefilled and
-Calendly only needs the selected slot and final "Schedule Event" submission.
+The chatbot uses Calendly's public booking page as the source of truth: inspect
+available times, select the chosen slot, fill the prefilled invitee details, and
+submit the hosted form.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import json
 import re
 import urllib.parse
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Iterable, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -24,6 +24,11 @@ SUCCESS_TEXT_RE = re.compile(
     r"(you are scheduled|this meeting is scheduled|scheduled|confirmed)",
     re.I,
 )
+COOKIE_BUTTON_RE = re.compile(
+    r"^(i understand|accept all|accept|agree|decline)$",
+    re.I,
+)
+TIME_BUTTON_RE = re.compile(r"^\s*(\d{1,2}):(\d{2})(?:\s*([AaPp]\.?[Mm]\.?))?\s*$")
 SLOT_SEGMENT_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$"
 )
@@ -94,6 +99,7 @@ def build_calendly_scheduling_url(
             "name": name,
             "email": email,
             "a1": purpose,
+            "timezone": timezone_name,
             "utm_source": "1pax_chatbot",
             "utm_medium": "chatbot",
             "utm_campaign": "website_consultation",
@@ -127,7 +133,11 @@ def _time_label_candidates(start_time: str, timezone_name: str) -> Iterable[str]
     yield f"{hour_12}:{minute} {suffix.lower()}"
 
 
-def _date_label_candidates(start_time: str, timezone_name: str) -> Iterable[str]:
+def _date_label_candidates(
+    start_time: str,
+    timezone_name: str,
+    include_day_only: bool = True,
+) -> Iterable[str]:
     local_dt = parse_datetime(start_time).astimezone(_zone(timezone_name))
     weekday = local_dt.strftime("%A")
     month = local_dt.strftime("%B")
@@ -135,7 +145,30 @@ def _date_label_candidates(start_time: str, timezone_name: str) -> Iterable[str]
     yield f"{weekday}, {month} {local_dt.day}"
     yield f"{month} {local_dt.day}, {local_dt.year}"
     yield f"{month} {local_dt.day}"
-    yield str(local_dt.day)
+    if include_day_only:
+        yield str(local_dt.day)
+
+
+def _open_requested_month(page, day, timezone_name: str) -> bool:
+    month_label = datetime.combine(day, time.min, tzinfo=_zone(timezone_name)).strftime(
+        "%B %Y"
+    )
+
+    for _ in range(12):
+        if _has_visible(page.get_by_text(re.compile(rf"^{re.escape(month_label)}$", re.I))):
+            return True
+
+        next_month = page.get_by_role(
+            "button",
+            name=re.compile(r"(next month|go to next month|next)", re.I),
+        ).first
+        try:
+            next_month.click(timeout=1000)
+            page.wait_for_timeout(250)
+        except Exception:
+            return False
+
+    return False
 
 
 def _visible_count(locator) -> int:
@@ -163,6 +196,15 @@ def _details_page_ready(page) -> bool:
     return False
 
 
+def _dismiss_cookie_banner(page) -> None:
+    button = page.get_by_role("button", name=COOKIE_BUTTON_RE).last
+    try:
+        button.click(timeout=1500)
+        page.wait_for_timeout(250)
+    except Exception:
+        pass
+
+
 def _fill_first(page, selector: str, value: str) -> bool:
     locator = page.locator(selector)
     count = _visible_count(locator)
@@ -179,18 +221,192 @@ def _fill_first(page, selector: str, value: str) -> bool:
     return False
 
 
-def _click_requested_date(page, start_time: str, timezone_name: str) -> None:
+def _button_by_name(page, label: str):
+    exact = page.get_by_role("button", name=label)
+    if _visible_count(exact):
+        return exact
+    return page.get_by_role(
+        "button",
+        name=re.compile(rf"^{re.escape(label)}$", re.I),
+    )
+
+
+def _parse_visible_time(label: str, day, timezone_name: str) -> Optional[datetime]:
+    match = TIME_BUTTON_RE.match(" ".join(label.split()))
+    if not match:
+        return None
+
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    meridiem = (match.group(3) or "").replace(".", "").lower()
+    if meridiem:
+        if hour < 1 or hour > 12:
+            return None
+        if meridiem == "pm" and hour != 12:
+            hour += 12
+        if meridiem == "am" and hour == 12:
+            hour = 0
+    if hour > 23 or minute > 59:
+        return None
+
+    return datetime.combine(day, time(hour, minute), tzinfo=_zone(timezone_name))
+
+
+def _visible_time_buttons(page) -> Iterable[str]:
+    buttons = page.locator("button")
+    count = _visible_count(buttons)
+    for index in range(count):
+        button = buttons.nth(index)
+        try:
+            if not button.is_visible(timeout=500):
+                continue
+            text = " ".join(button.inner_text(timeout=1000).split())
+        except Exception:
+            continue
+        if TIME_BUTTON_RE.match(text):
+            yield text
+
+
+def find_calendly_available_slots(
+    scheduling_link: str,
+    range_start: datetime,
+    range_end: datetime,
+    timezone_name: str = DEFAULT_TIMEZONE,
+    max_slots: int = 5,
+    timeout_seconds: int = 30,
+    headless: bool = True,
+    executable_path: Optional[str] = None,
+) -> list[str]:
+    """Return available hosted-page slot start times as UTC ISO strings."""
+
+    if not scheduling_link:
+        raise CalendlyBrowserError("scheduling_link is required")
+
+    try:
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise CalendlyBrowserError(
+            "Playwright is not installed. Install it with: "
+            "python -m pip install playwright && python -m playwright install chromium"
+        ) from exc
+
+    tz = _zone(timezone_name)
+    start = range_start.astimezone(tz)
+    end = range_end.astimezone(tz)
+    if end <= start:
+        return []
+
+    timeout_ms = max(5, timeout_seconds) * 1000
+    parsed = urllib.parse.urlsplit(scheduling_link)
+    query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
+    query["timezone"] = timezone_name
+    url = urllib.parse.urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            urllib.parse.urlencode(query),
+            parsed.fragment,
+        )
+    )
+
+    launch_kwargs = {
+        "headless": headless,
+        "args": ["--no-sandbox", "--disable-dev-shm-usage"],
+    }
+    if executable_path:
+        launch_kwargs["executable_path"] = executable_path
+
+    slots: list[str] = []
+    seen: set[str] = set()
+    first_day = start.date()
+    last_day = (end - timedelta(microseconds=1)).date()
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(**launch_kwargs)
+        page = browser.new_page()
+        page.set_default_timeout(timeout_ms)
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            try:
+                page.wait_for_load_state("networkidle", timeout=5000)
+            except PlaywrightTimeoutError:
+                pass
+            _dismiss_cookie_banner(page)
+
+            day = first_day
+            while day <= last_day and len(slots) < max_slots:
+                probe = datetime.combine(day, time.min, tzinfo=tz).isoformat()
+                if not _open_requested_month(page, day, timezone_name):
+                    day += timedelta(days=1)
+                    continue
+                if not _click_requested_date(
+                    page,
+                    probe,
+                    timezone_name,
+                    include_day_only=True,
+                    advance_months=False,
+                ):
+                    day += timedelta(days=1)
+                    continue
+                page.wait_for_timeout(500)
+
+                for label in _visible_time_buttons(page):
+                    local_dt = _parse_visible_time(label, day, timezone_name)
+                    if not local_dt or local_dt < start or local_dt >= end:
+                        continue
+                    value = (
+                        local_dt.astimezone(timezone.utc)
+                        .replace(microsecond=0)
+                        .isoformat()
+                        .replace("+00:00", "Z")
+                    )
+                    if value in seen:
+                        continue
+                    seen.add(value)
+                    slots.append(value)
+                    if len(slots) >= max_slots:
+                        break
+
+                day += timedelta(days=1)
+        finally:
+            browser.close()
+
+    return slots
+
+
+def _click_requested_date(
+    page,
+    start_time: str,
+    timezone_name: str,
+    include_day_only: bool = True,
+    advance_months: bool = True,
+) -> bool:
     for _ in range(12):
-        for label in _date_label_candidates(start_time, timezone_name):
-            button = page.get_by_role(
-                "button",
-                name=re.compile(rf"^{re.escape(label)}$", re.I),
-            )
+        candidate_found = False
+        for label in _date_label_candidates(
+            start_time,
+            timezone_name,
+            include_day_only=include_day_only,
+        ):
+            button = _button_by_name(page, label)
+            try:
+                if button.count():
+                    candidate_found = True
+            except Exception:
+                pass
             try:
                 button.first.click(timeout=1000)
-                return
+                return True
             except Exception:
                 continue
+
+        if candidate_found:
+            return False
+
+        if not advance_months:
+            return False
 
         next_month = page.get_by_role(
             "button",
@@ -200,17 +416,16 @@ def _click_requested_date(page, start_time: str, timezone_name: str) -> None:
             next_month.click(timeout=1000)
             page.wait_for_timeout(250)
         except Exception:
-            return
+            return False
+    return False
 
 
 def _select_requested_slot(page, start_time: str, timezone_name: str, timeout_ms: int) -> None:
-    _click_requested_date(page, start_time, timezone_name)
+    if not _click_requested_date(page, start_time, timezone_name):
+        raise CalendlyBrowserError("The requested Calendly date was not visible.")
 
     for label in _time_label_candidates(start_time, timezone_name):
-        button = page.get_by_role(
-            "button",
-            name=re.compile(rf"\b{re.escape(label)}\b", re.I),
-        )
+        button = _button_by_name(page, label)
         try:
             button.first.click(timeout=2500)
             next_button = page.get_by_role("button", name=NEXT_BUTTON_RE).first
@@ -274,6 +489,7 @@ def book_calendly_event(
                 page.wait_for_load_state("networkidle", timeout=5000)
             except PlaywrightTimeoutError:
                 pass
+            _dismiss_cookie_banner(page)
 
             if not _details_page_ready(page):
                 if not start_time:

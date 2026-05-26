@@ -29,6 +29,7 @@ def test_prefilled_url_pins_selected_slot():
     assert "name=Matija+Lekovic" in url
     assert "email=matija.lekovic%401pax.com" in url
     assert "a1=chatbot+scheduling+testing" in url
+    assert "timezone=Europe%2FBelgrade" in url
     assert "utm_source=1pax_chatbot" in url
 
 

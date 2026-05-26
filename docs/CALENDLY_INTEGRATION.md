@@ -1,82 +1,49 @@
 # Calendly integration
 
-The chatbot can run a Calendly booking flow inside the conversation:
+The chatbot books meetings through the public Calendly hosted page only.
+
+The conversation flow is:
 
 1. Collect invitee name and email.
-2. Ask for a meeting window, such as "tomorrow afternoon" or "next week".
-3. Fetch live availability from Calendly.
-4. Offer numbered time slots.
-5. Ask for explicit confirmation.
-6. Create the Calendly invitee and return the confirmation links.
-
-This uses Calendly's Scheduling API (`GET /event_type_available_times` followed
-by `POST /invitees`), so the invitee should not be sent to a Calendly-hosted
-booking page during the normal flow.
+2. Collect a short meeting purpose.
+3. Ask for a meeting window, such as "tomorrow afternoon" or "next week".
+4. Open the hosted Calendly page in headless Chromium and read available slots.
+5. Offer numbered time slots in chat.
+6. Ask for explicit confirmation.
+7. Reopen the exact prefilled Calendly URL for the selected slot, click through
+   the hosted page, submit **Schedule Event**, and return the confirmation link.
 
 ## Required environment variables
 
-Set these before running the action server:
+Set this before running the action server:
 
 ```bash
-CALENDLY_ACCESS_TOKEN="..."
-CALENDLY_EVENT_TYPE_URI="https://api.calendly.com/event_types/..."
+CALENDLY_SCHEDULING_LINK="https://calendly.com/communications-1pax/30min"
 ```
 
-`CALENDLY_EVENT_TYPE_UUID` can be used instead of `CALENDLY_EVENT_TYPE_URI`.
+No Calendly access token or event type URI is required for the current hosted
+page automation flow.
 
 ## Optional environment variables
 
 ```bash
-CALENDLY_SCHEDULING_LINK="https://calendly.com/..."
 CALENDLY_DEFAULT_TIMEZONE="Europe/Belgrade"
 CALENDLY_MAX_SLOTS="5"
-CALENDLY_LOCATION_KIND="zoom_conference"
-CALENDLY_LOCATION_VALUE=""
-CALENDLY_EVENT_GUESTS="person1@example.com,person2@example.com"
-CALENDLY_ALLOW_LINK_FALLBACK="false"
-CALENDLY_SALESFORCE_UUID=""
-CALENDLY_BROWSER_FALLBACK="false"
-CALENDLY_BROWSER_PREFERRED="false"
+CALENDLY_BROWSER_FALLBACK="true"
 CALENDLY_BROWSER_TIMEOUT_SECONDS="30"
 CALENDLY_BROWSER_HEADFUL="false"
 CALENDLY_BROWSER_EXECUTABLE_PATH=""
-```
-
-`CALENDLY_SCHEDULING_LINK` is only used as a fallback when
-`CALENDLY_ALLOW_LINK_FALLBACK=true`. Leave that disabled when the chatbot must
-complete scheduling without customer intervention in Calendly.
-
-`CALENDLY_LOCATION_KIND` should match the location expected by the Calendly event
-type; omit it when the event type does not require a location object. For the
-smoothest fully-chat booking flow, configure the Calendly event type with one
-fixed location, such as Zoom, Google Meet, Microsoft Teams, or a static custom
-location. If the event type asks the invitee to provide a phone number/location
-or lets them choose from multiple locations, the chatbot must collect and send
-that location data or Calendly will reject `POST /invitees`.
-
-`CALENDLY_SALESFORCE_UUID` is optional. Do not send a blank Salesforce UUID;
-Calendly can reject invalid optional tracking values.
-
-## Optional hosted-page automation fallback
-
-When Calendly rejects `POST /invitees` but the hosted booking page can still
-complete the event, `CALENDLY_ALLOW_LINK_FALLBACK=true` now automatically tries
-the browser automation before showing the finalization link. To make the hosted
-page automation run first on the final confirmation turn, enable:
-
-```bash
-CALENDLY_BROWSER_FALLBACK="true"
-CALENDLY_BROWSER_PREFERRED="true"
 CALENDLY_ALLOW_LINK_FALLBACK="true"
 ```
 
-On confirmation, the bot shows a booking summary and finalizes the meeting. With
-`CALENDLY_BROWSER_PREFERRED=true`, it opens the prefilled Calendly URL in
-headless Chromium first, pins the URL to the already selected slot, fills any
-missing name/email/purpose fields, clicks **Schedule Event**, and returns a
-normal booked confirmation. If browser automation is unavailable or Calendly
-changes the page, the bot uses the Scheduling API and then falls back to the
-same prefilled finalization link.
+With `CALENDLY_SCHEDULING_LINK` configured, browser automation and the manual
+prefilled-link fallback are enabled by default. Set `CALENDLY_BROWSER_FALLBACK`
+to `false` only when you intentionally want to stop automated hosted-page
+submission.
+
+`CALENDLY_BROWSER_HEADFUL=true` is useful for local debugging because it shows
+the Chromium window while the script chooses the slot and submits the form.
+Production should normally keep the default headless mode.
 
 For local setup:
 
@@ -86,13 +53,13 @@ For local setup:
 ```
 
 Docker builds include Chromium by default. To skip the browser payload for a
-deployment that only uses the Scheduling API:
+deployment that will not use Calendly automation:
 
 ```bash
 docker build --build-arg INSTALL_CALENDLY_BROWSER=false .
 ```
 
-You can also run the automation directly for a prefilled page:
+You can also run the automation directly for a selected slot:
 
 ```bash
 .venv/bin/python3 scripts/book_calendly.py \
@@ -104,19 +71,7 @@ You can also run the automation directly for a prefilled page:
   --timezone "Europe/Belgrade"
 ```
 
-## Calendly account setup for fully in-chat scheduling
-
-1. Use a Calendly paid plan that includes Scheduling API access.
-2. Create a personal access token from the Calendly account that owns or can
-   administer the event type.
-3. Set `CALENDLY_ACCESS_TOKEN`.
-4. Set `CALENDLY_EVENT_TYPE_URI` or `CALENDLY_EVENT_TYPE_UUID` for the event
-   type that should be booked by the chatbot.
-5. Configure a single API-compatible event location in Calendly, or set
-   `CALENDLY_LOCATION_KIND` and `CALENDLY_LOCATION_VALUE` to match that event
-   type.
-6. Keep `CALENDLY_ALLOW_LINK_FALLBACK=false` so booking failures surface as
-   configuration/API errors instead of sending the user to Calendly.
+Add `--headful --dry-run` locally to watch it fill the page without submitting.
 
 ## Current chatbot intents
 
