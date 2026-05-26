@@ -76,7 +76,21 @@ def _infer_company_info_type(text: str) -> str:
         return "overview"
     if any(token in normalized for token in ("founder", "founded", "mabel", "ceo")):
         return "founder"
-    if any(token in normalized for token in ("office", "location", "where are you", "based")):
+    if any(
+        token in normalized
+        for token in (
+            "office",
+            "offices",
+            "location",
+            "located",
+            "where are you",
+            "where is the company",
+            "where is 1pax",
+            "where is your company",
+            "based",
+            "headquarter",
+        )
+    ):
         return "offices"
     if any(token in normalized for token in ("mission", "purpose")):
         return "mission"
