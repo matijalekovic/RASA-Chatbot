@@ -14,6 +14,7 @@ from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
 from .services_data import SERVICES_INFO
+from .projects_data import PROJECTS
 from .meeting_prompts import meeting_buttons, meeting_cta_text
 from .translation import get_lang, translate_response, translate_responses
 
@@ -30,6 +31,31 @@ SERVICES_DISPATCH: Dict[str, str] = {
     "interior":        "interior",
     "working_living":  "working_living",
     "bim":             "bim",
+}
+
+_PROJECT_DETAIL_HINTS = {
+    "approach",
+    "architect",
+    "budget",
+    "capacity",
+    "challenge",
+    "client",
+    "commission",
+    "complete",
+    "concept",
+    "cost",
+    "designed",
+    "inaugurated",
+    "location",
+    "partner",
+    "program",
+    "programme",
+    "scope",
+    "status",
+    "strategy",
+    "tender",
+    "timeline",
+    "year",
 }
 
 
@@ -57,6 +83,14 @@ def _infer_service_info_type(text: str) -> str:
     return ""
 
 
+def _should_delegate_to_project(tracker: Tracker, text: str) -> bool:
+    project_values = list(tracker.get_latest_entity_values("project"))
+    if not any(value in PROJECTS for value in project_values):
+        return False
+    normalized = (text or "").lower()
+    return any(hint in normalized for hint in _PROJECT_DETAIL_HINTS)
+
+
 class ActionAnswerServicesQuery(Action):
     """Single router for all ask_service_* and ask_services_list intents."""
 
@@ -80,6 +114,12 @@ class ActionAnswerServicesQuery(Action):
         lang_event = [SlotSet("language", lang)] if lang else []
 
         intent = tracker.latest_message.get("intent", {}).get("name", "")
+        raw_text = tracker.latest_message.get("text", "")
+
+        if _should_delegate_to_project(tracker, raw_text):
+            from .actions import ActionAnswerProjectQuery
+
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         # Strip prefix: "ask_services_list" → "list", "ask_service_airports" → "airports"
         if intent == "ask_services_list":
@@ -87,7 +127,7 @@ class ActionAnswerServicesQuery(Action):
         elif intent.startswith("ask_service_"):
             info_type = intent.replace("ask_service_", "")
         else:
-            info_type = _infer_service_info_type(tracker.latest_message.get("text", ""))
+            info_type = _infer_service_info_type(raw_text)
 
         data_key = SERVICES_DISPATCH.get(info_type)
 

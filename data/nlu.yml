@@ -311,8 +311,8 @@ nlu:
     - tell me about the airport project
     - tell me more about the airport project
     - Sofia Airport project
-    - tell me about [the biggest project](project)
-    - what is [the biggest project](project)?
+    - tell me about the [biggest project](project)
+    - what is the [biggest project](project)?
     - show me [your flagship project](project)
     - what's the airport project?
     - the terminal project
@@ -4845,10 +4845,22 @@ nlu:
   examples: |
     - tell me about [Mabel Miranda](person)
     - who is [Mabel Miranda](person)?
+    - who is [Mabel Miranda](person)
+    - who is [mabel miranda](person)
     - [Mabel Miranda](person) biography
     - [Mabel Miranda](person) background
     - [Mabel](person) bio
     - who is [Mabel](person)?
+    - who is [Mabel](person)
+    - who is [mabel](person)
+    - who is [Mabel](person), our founder?
+    - who is [Mabel Miranda](person), our founder?
+    - who is [Mabel](person) the founder?
+    - tell me about [Mabel](person)
+    - tell me about [mabel](person)
+    - tell me about [Mabel Miranda](person), the founder
+    - who is our [founder](person)?
+    - who is your [founder](person)?
     - where did [Mabel Miranda](person) study?
     - what is [Mabel Miranda](person)'s background?
     - what is [Mabel](person)'s education?
@@ -4937,11 +4949,11 @@ nlu:
     - tell me more about [Boris Stojnic](person)
     - [Matija](person) background
     - what is [Fabiola](person)'s background?
-    - who is [the founder](person)?
-    - tell me about [the CEO](person)
-    - who is [the project director](person)?
+    - who is the [founder](person)?
+    - tell me about the [CEO](person)
+    - who is the [project director](person)?
     - tell me about [Marko](person)
-    - who is [the BIM manager](person) at 1PAX?
+    - who is the [BIM manager](person) at 1PAX?
     - [Renzo](person) background
     - tell me about [Kevin](person)
     - who handles [BIM](person)?
@@ -4955,16 +4967,16 @@ nlu:
     - who at 1PAX would manage [this kind of project](person)?
     - who manages [projects like this](person) at 1PAX?
     - who is the [project manager](person)?
-    - who is [the project director for airport work](person)?
+    - who is the [project director for airport work](person)?
     - who is your [airport project director](person)?
     - who leads [airport projects](person) at 1PAX?
-    - who would be [the main point of contact for a JV](person)?
-    - who would be [the JV contact](person) at 1PAX?
-    - who is [the JV contact](person)?
-    - who is [the point of contact for joint ventures](person)?
+    - who would be the [main point of contact for a JV](person)?
+    - who would be the [JV contact](person) at 1PAX?
+    - who is the [JV contact](person)?
+    - who is the [point of contact for joint ventures](person)?
     - who is 1PAX's [Shanghai representative](person)?
     - who is the [Shanghai representative](person) at 1PAX?
-    - who is [the Shanghai representative](person)?
+    - who is the [Shanghai representative](person)?
     - who is 1PAX's [visualization expert](person)?
 
 # ─────────────────────────────────────────────────────────────────────────────

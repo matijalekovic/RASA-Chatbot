@@ -8,7 +8,7 @@ ActionHandleOutOfScope     — context-aware handler for unrecognised inputs.
 
 import random
 import unicodedata
-from difflib import get_close_matches
+from difflib import SequenceMatcher, get_close_matches
 from typing import Any, Dict, List, Optional, Text, Tuple
 
 from rasa_sdk import Action, Tracker
@@ -380,6 +380,16 @@ _NAME_INDEX.update({
     "sof airport":                 "sofia_airport",
     "sofia t3":                    "sofia_airport",
     "t3 sofia":                    "sofia_airport",
+    "biggest project":             "sofia_airport",
+    "the biggest project":         "sofia_airport",
+    "our biggest project":         "sofia_airport",
+    "your biggest project":        "sofia_airport",
+    "flagship project":            "sofia_airport",
+    "the flagship project":        "sofia_airport",
+    "our flagship project":        "sofia_airport",
+    "your flagship project":       "sofia_airport",
+    "airport project":             "sofia_airport",
+    "terminal project":            "sofia_airport",
     # Bordeaux–Mérignac
     "merignac":                    "bordeaux_airport",
     "bordeaux merignac":           "bordeaux_airport",
@@ -591,6 +601,22 @@ def _ascii_norm(text: str) -> str:
     return ascii_only.replace("-", " ").lower()
 
 
+def _has_meaningful_token_overlap(candidate: str, input_words: List[str]) -> bool:
+    """Require at least one real project/city token before accepting fuzzy aliases."""
+    candidate_words = [w for w in candidate.split() if len(w) >= 3 and w not in _SKIP_WORDS]
+    meaningful_input = [w for w in input_words if len(w) >= 3 and w not in _SKIP_WORDS]
+    if not candidate_words or not meaningful_input:
+        return False
+
+    for candidate_word in candidate_words:
+        for input_word in meaningful_input:
+            if candidate_word == input_word:
+                return True
+            if SequenceMatcher(None, candidate_word, input_word).ratio() >= 0.82:
+                return True
+    return False
+
+
 def _fuzzy_match_project(text: str) -> Optional[str]:
     """
     Try to find a project key from free text using fuzzy matching.
@@ -635,7 +661,7 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
     # 2. Fuzzy full-text match against all known display names / aliases
     # Cutoff 0.80 prevents false matches like "jfk airport" → "sof airport"
     matches = get_close_matches(normed, _NAME_INDEX.keys(), n=1, cutoff=0.80)
-    if matches:
+    if matches and _has_meaningful_token_overlap(matches[0], normed_words):
         return _NAME_INDEX[matches[0]]
 
     return None
@@ -805,7 +831,8 @@ INFO_DISPATCH: Dict[str, Any] = {
 _GENERIC_PROJECT_REF = {
     "the", "this", "that", "these", "those", "it", "them", "here", "there",
     "a", "an", "airport", "terminal", "station", "depot", "tower", "building",
-    "project", "hub", "port", "base", "facility",
+    "project", "hub", "port", "base", "facility", "metro", "rail", "railway",
+    "railways", "stations", "terminals",
 }
 
 
@@ -870,13 +897,48 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
     return None, None
 
 
-def _intent_to_info_type(intent_name: str) -> str:
+def _infer_project_info_type(text: str) -> str:
+    raw = (text or "").lower()
+    if any(token in raw for token in ("scope", "role", "commission", "responsible for")):
+        return "scope"
+    if any(token in raw for token in ("approach", "strategy", "method", "process")):
+        return "approach"
+    if any(token in raw for token in ("concept", "vision", "elevator pitch", "nutshell")):
+        return "concept"
+    if any(token in raw for token in ("challenge", "obstacle", "difficulty")):
+        return "challenge"
+    if any(token in raw for token in ("program", "programme", "what was built", "what is in")):
+        return "program"
+    if any(token in raw for token in ("status", "complete", "completed", "ongoing", "inaugurated", "built")):
+        return "status"
+    if any(token in raw for token in ("cost", "budget", "price", "investment")):
+        return "cost"
+    if any(token in raw for token in ("where", "location", "located")):
+        return "location"
+    if any(token in raw for token in ("when", "year", "timeline")):
+        return "year"
+    if "client" in raw:
+        return "client"
+    if any(token in raw for token in ("area", "size", "big", "large")):
+        return "area"
+    if any(token in raw for token in ("capacity", "passenger")):
+        return "capacity"
+    if any(token in raw for token in ("architect", "designed", "designer")):
+        return "architect"
+    if any(token in raw for token in ("partner", "collaborator")):
+        return "partners"
+    if any(token in raw for token in ("tender", "competition", "selected")):
+        return "tender"
+    return "about_project"
+
+
+def _intent_to_info_type(intent_name: str, text: str = "") -> str:
     if intent_name == "ask_about_project":
         return "about_project"
     prefix = "ask_project_"
     if intent_name.startswith(prefix):
         return intent_name[len(prefix):]
-    return "about_project"
+    return _infer_project_info_type(text)
 
 
 # ── Actions ──────────────────────────────────────────────────────────────────
@@ -944,8 +1006,8 @@ class ActionAnswerProjectQuery(Action):
             return lang_event
 
         intent_name = tracker.latest_message.get("intent", {}).get("name", "")
-        info_type = _intent_to_info_type(intent_name)
         raw_msg = tracker.latest_message.get("text", "").lower()
+        info_type = _intent_to_info_type(intent_name, raw_msg)
 
         # Special case: photo query routed to video intent → acknowledge mismatch
         if info_type == "video":
@@ -1155,6 +1217,16 @@ class ActionHandleOutOfScope(Action):
                 buttons=meeting_buttons(lang),
             )
             return [SlotSet("project_name", None)] + lang_event
+
+        _PERSON_SIGNALS = {"mabel", "miranda", "ceo", "chief executive"}
+        _FOUNDER_PERSON_SIGNALS = {"who is founder", "who is the founder", "tell me about founder", "tell me about the founder"}
+        if (
+            any(sig in lower_text for sig in _PERSON_SIGNALS)
+            or any(sig in lower_text for sig in _FOUNDER_PERSON_SIGNALS)
+        ):
+            from .team_actions import ActionAnswerTeamQuery
+
+            return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
 
         # ── Production safety net: route core flows from raw text ─────────────
         _PROJECT_LIST_SIGNALS = {

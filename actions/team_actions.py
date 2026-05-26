@@ -12,6 +12,7 @@ Individual intent (ask_about_team_member)
 """
 
 import random
+import re
 import unicodedata
 from difflib import get_close_matches
 from typing import Any, Optional, Text, Dict, List
@@ -162,6 +163,17 @@ def _lookup_person(value: str) -> Optional[str]:
     return None
 
 
+def _lookup_person_from_text(text: str) -> Optional[str]:
+    """Find a known person or role alias in raw fallback text."""
+    norm = _ascii_norm(text or "")
+    for alias, key in sorted(_PERSON_INDEX.items(), key=lambda item: len(item[0]), reverse=True):
+        if len(alias) < 3:
+            continue
+        if re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", norm):
+            return key
+    return None
+
+
 # ── Action ─────────────────────────────────────────────────────────────────────
 
 class ActionAnswerTeamQuery(Action):
@@ -187,9 +199,10 @@ class ActionAnswerTeamQuery(Action):
         lang_event = [SlotSet("language", lang)] if lang else []
 
         intent = tracker.latest_message.get("intent", {}).get("name", "")
+        raw_text = tracker.latest_message.get("text", "")
 
         # ── Individual person lookup ─────────────────────────────────────────
-        if intent == "ask_about_team_member":
+        if intent == "ask_about_team_member" or _lookup_person_from_text(raw_text):
             return self._handle_person_query(dispatcher, tracker, lang)
 
         # ── Group dispatch ───────────────────────────────────────────────────
@@ -251,6 +264,9 @@ class ActionAnswerTeamQuery(Action):
             slot_val = tracker.get_slot("person_name")
             if slot_val:
                 person_key = _lookup_person(slot_val)
+
+        if not person_key:
+            person_key = _lookup_person_from_text(tracker.latest_message.get("text", ""))
 
         lang_event = [SlotSet("language", lang)] if lang else []
 
