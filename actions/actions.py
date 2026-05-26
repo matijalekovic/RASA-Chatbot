@@ -667,6 +667,59 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
     return None
 
 
+_SPECIFIC_PROJECT_SIGNALS = {
+    "biggest project",
+    "the biggest project",
+    "your biggest project",
+    "our biggest project",
+    "most famous project",
+    "signature project",
+    "flagship project",
+    "the flagship project",
+    "airport project",
+    "terminal project",
+}
+
+_PROJECT_QUERY_CUES = {
+    "about",
+    "design",
+    "details",
+    "info",
+    "interested",
+    "overview",
+    "project",
+    "airport",
+    "terminal",
+    "metro",
+    "station",
+    "tower",
+    "building",
+    "portfolio",
+}
+
+
+def _looks_like_specific_project_query(text: str) -> bool:
+    """Catch one-project queries when NLU falls back or routes to project list."""
+    lower = text.lower()
+    if any(signal in lower for signal in _SPECIFIC_PROJECT_SIGNALS):
+        return True
+
+    # Plural browse/category prompts should stay with the project-list action.
+    ascii_text = _ascii_norm(lower).strip()
+    words = set(ascii_text.split())
+    if "projects" in words:
+        return False
+
+    if _fuzzy_match_project(lower) is None:
+        return False
+
+    # Exact aliases like "T3" or "Belgrade Metro" are project references by themselves.
+    if ascii_text in _NAME_INDEX:
+        return True
+
+    return any(cue in words for cue in _PROJECT_QUERY_CUES)
+
+
 # ── Formatting helpers ───────────────────────────────────────────────────────
 
 def _short_overview(text: str, max_sentences: int = 2) -> str:
@@ -1085,6 +1138,10 @@ class ActionListProjects(Action):
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
+        raw_msg = tracker.latest_message.get("text", "")
+
+        if _looks_like_specific_project_query(raw_msg):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         if not PROJECTS:
             dispatcher.utter_message(
@@ -1238,6 +1295,9 @@ class ActionHandleOutOfScope(Action):
             "what have you designed",
         }
         _PROJECT_DETAIL_WORDS = {"sofia", "airport", "metro", "tower", "terminal", "belgrade"}
+        if _looks_like_specific_project_query(lower_text):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
+
         if (
             any(sig in lower_text for sig in _PROJECT_LIST_SIGNALS)
             and not any(word in lower_text for word in _PROJECT_DETAIL_WORDS)
