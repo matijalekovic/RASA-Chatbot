@@ -1006,6 +1006,23 @@ class ActionHandleOutOfScope(Action):
         ):
             return ActionGreet().run(dispatcher, tracker, domain)
 
+        # ── Company overview safety net: short translated prompts like
+        # "cime se bavite" often arrive as "What do you do?", and production
+        # lang detection can still route that through out_of_scope.
+        _COMPANY_OVERVIEW_SIGNALS = {
+            "what do you do",
+            "what are you doing",
+            "what work do you do",
+            "what kind of work do you do",
+            "what does your company do",
+            "what does the studio do",
+            "what is your thing",
+        }
+        if any(sig in lower_text for sig in _COMPANY_OVERVIEW_SIGNALS):
+            from .company_actions import ActionAnswerCompanyQuery
+
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         # ── Capability question: "what can you do", "what else can you do", etc. ─
         _CAP_SIGNALS = {"what can you do", "what else can you do", "what do you offer",
                         "what are you capable of", "what do you know", "what can you help",
