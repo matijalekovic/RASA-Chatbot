@@ -12,8 +12,9 @@ The conversation flow is:
 5. Offer numbered time slots in chat.
 6. Ask for explicit confirmation.
 7. Create the invitee with Calendly's `/invitees` API and return the
-   confirmation details. If the API is unavailable, fall back to the hosted
-   page automation or a prefilled hosted Calendly link.
+   confirmation details. If the API is unavailable, fall back to hosted-page
+   automation. Do not end the confirmed flow with a manual Calendly link unless
+   that legacy behavior is explicitly enabled.
 
 ## Required environment variables
 
@@ -38,15 +39,20 @@ CALENDLY_BROWSER_TIMEOUT_SECONDS="30"
 CALENDLY_BROWSER_HEADFUL="false"
 CALENDLY_BROWSER_EXECUTABLE_PATH=""
 CALENDLY_ALLOW_LINK_FALLBACK="true"
+CALENDLY_ALLOW_CONFIRMATION_LINK_FALLBACK="false"
 CALENDLY_LOCATION_KIND="google_conference"
 ```
 
 With `CALENDLY_ACCESS_TOKEN` and `CALENDLY_EVENT_TYPE_URI` configured, the bot
 uses the Calendly API for availability and booking. With
-`CALENDLY_SCHEDULING_LINK` configured, browser automation and the manual
-prefilled-link fallback are enabled by default. Set `CALENDLY_BROWSER_FALLBACK`
-to `false` only when you intentionally want to stop automated hosted-page
-submission.
+`CALENDLY_SCHEDULING_LINK` configured, browser automation is enabled by default.
+`CALENDLY_ALLOW_LINK_FALLBACK` still permits a general fallback link when
+Calendly cannot be reached during slot discovery. After the user explicitly
+confirms a selected slot, `CALENDLY_ALLOW_CONFIRMATION_LINK_FALLBACK` defaults
+to `false` so the bot either books automatically or reports the automation
+failure instead of handing off a final manual link. Set it to `true` only for
+debugging or legacy behavior. Set `CALENDLY_BROWSER_FALLBACK` to `false` only
+when you intentionally want to stop automated hosted-page submission.
 
 `CALENDLY_BROWSER_HEADFUL=true` is useful for local debugging because it shows
 the Chromium window while the script chooses the slot and submits the form.

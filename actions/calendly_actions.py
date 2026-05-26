@@ -11,6 +11,9 @@ import json
 import logging
 import os
 import re
+import shutil
+import subprocess
+import tempfile
 import unicodedata
 import urllib.error
 import urllib.parse
@@ -190,6 +193,7 @@ class CalendlyConfig:
     event_type_uri: str
     location_kind: str
     allow_link_fallback: bool
+    allow_confirmation_link_fallback: bool
     browser_fallback: bool
     browser_headless: bool
     browser_timeout_seconds: int
@@ -244,6 +248,10 @@ def _config_from_env() -> CalendlyConfig:
         "CALENDLY_ALLOW_LINK_FALLBACK",
         default=bool(scheduling_link),
     ) or _env_bool("CALENDLY_ENABLE_LINK_FALLBACK")
+    allow_confirmation_link_fallback = _env_bool(
+        "CALENDLY_ALLOW_CONFIRMATION_LINK_FALLBACK",
+        default=False,
+    )
 
     browser_fallback = (
         _env_bool(
@@ -259,6 +267,7 @@ def _config_from_env() -> CalendlyConfig:
         event_type_uri=event_type_uri,
         location_kind=location_kind,
         allow_link_fallback=allow_link_fallback,
+        allow_confirmation_link_fallback=allow_confirmation_link_fallback,
         browser_fallback=browser_fallback,
         browser_headless=not _env_flag("CALENDLY_BROWSER_HEADFUL"),
         browser_timeout_seconds=max(5, min(browser_timeout_seconds, 120)),
@@ -824,6 +833,16 @@ def _calendly_api_request(
     if query_string:
         url = f"{url}?{query_string}"
 
+    curl_result = _curl_calendly_api_request(
+        cfg,
+        method=method,
+        url=url,
+        payload=payload,
+        timeout=timeout,
+    )
+    if curl_result is not None:
+        return curl_result
+
     body = None
     if payload is not None:
         body = json.dumps(payload).encode("utf-8")
@@ -896,6 +915,102 @@ def _api_available_slot_times(
         if isinstance(start_time, str) and start_time:
             slots.append(_iso_utc(_parse_calendly_dt(start_time)))
     return slots
+
+
+def _curl_calendly_api_request(
+    cfg: CalendlyConfig,
+    method: str,
+    url: str,
+    payload: Optional[Dict[str, Any]] = None,
+    timeout: float = 15.0,
+) -> Optional[Dict[str, Any]]:
+    """Use curl for Calendly API calls when Python's TLS signature is blocked."""
+
+    curl_bin = shutil.which("curl")
+    if not curl_bin:
+        return None
+
+    header_file = None
+    body_file = None
+    try:
+        with tempfile.NamedTemporaryFile("w", delete=False) as headers:
+            header_file = headers.name
+            headers.write(f"Authorization: Bearer {cfg.access_token}\n")
+            headers.write("Accept: application/json\n")
+            headers.write("Content-Type: application/json\n")
+            headers.write(
+                "User-Agent: Mozilla/5.0 AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36\n"
+            )
+
+        cmd = [
+            curl_bin,
+            "--silent",
+            "--show-error",
+            "--location",
+            "--max-time",
+            str(max(5, int(timeout))),
+            "--request",
+            method.upper(),
+            "--url",
+            url,
+            "--header",
+            f"@{header_file}",
+            "--write-out",
+            "\n%{http_code}",
+        ]
+
+        if payload is not None:
+            with tempfile.NamedTemporaryFile("w", delete=False) as body:
+                body_file = body.name
+                json.dump(payload, body)
+            cmd.extend(["--data-binary", f"@{body_file}"])
+
+        completed = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=max(10, timeout + 5),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Calendly curl request failed: %s", exc)
+        return None
+    finally:
+        for path in (header_file, body_file):
+            if path:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+
+    output = completed.stdout or ""
+    if "\n" not in output:
+        logger.warning("Calendly curl request returned no HTTP status.")
+        return None
+
+    raw_body, status_text = output.rsplit("\n", 1)
+    try:
+        status = int(status_text.strip())
+    except ValueError:
+        logger.warning("Calendly curl request returned invalid status: %s", status_text)
+        return None
+
+    if not 200 <= status < 300:
+        raise CalendlyAutomationError(
+            "Calendly API request failed.",
+            status=status,
+            detail=(raw_body or completed.stderr or "")[:500],
+        )
+
+    try:
+        return json.loads(raw_body) if raw_body else {}
+    except ValueError as exc:
+        raise CalendlyAutomationError(
+            "Calendly API returned invalid JSON.",
+            status=status,
+            detail=raw_body[:500],
+        ) from exc
 
 
 def _slot_label(start_time: str, timezone_name: str, lang: Optional[str] = None) -> str:
@@ -1535,19 +1650,25 @@ def run_calendly_scheduling(
                     )
                     return _clear_schedule_events() + events
 
-                fallback = _manual_finalize_message(
-                    cfg,
-                    name=name,
-                    email=email,
-                    purpose=purpose,
-                    selected_label=selected_label,
-                    selected_start_time=selected_slot,
-                    timezone_name=timezone_name,
-                    lang=lang,
-                )
-                if fallback:
-                    _utter(dispatcher, fallback, lang, already_localized=_is_sr(lang))
-                    return _clear_schedule_events() + events
+                if cfg.allow_confirmation_link_fallback:
+                    fallback = _manual_finalize_message(
+                        cfg,
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        selected_label=selected_label,
+                        selected_start_time=selected_slot,
+                        timezone_name=timezone_name,
+                        lang=lang,
+                    )
+                    if fallback:
+                        _utter(
+                            dispatcher,
+                            fallback,
+                            lang,
+                            already_localized=_is_sr(lang),
+                        )
+                        return _clear_schedule_events() + events
 
                 _utter(
                     dispatcher,
