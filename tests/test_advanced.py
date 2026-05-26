@@ -113,6 +113,13 @@ TESTS = [
      "must_not": ["Sofia Airport", "Terminal 3"],
      "any_contain": ["1PAX team", "team members", "Mabel"]},
 
+    {"session_id": "s_ctx_01", "category": "Context Flow",
+     "note": "CTX-01h: company location should not be stolen by active project context",
+     "message": "where is the company located?",
+     "expect_intent": "ask_company_offices",
+     "must_not": ["📍 Location: Sofia", "Location: Sofia"],
+     "any_contain": ["Paris", "Belgrade", "Shanghai", "Barcelona", "Lima"]},
+
     # ── Context switch: switch projects mid-conversation ───────────────────────
 
     {"session_id": "s_ctx_02", "category": "Context Flow",

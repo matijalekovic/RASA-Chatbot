@@ -1427,6 +1427,23 @@ class ActionHandleOutOfScope(Action):
 
             return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
 
+        _COMPANY_LOCATION_SIGNALS = {
+            "where is the company located",
+            "where is the company based",
+            "where is 1pax located",
+            "where is 1pax based",
+            "where are you located",
+            "where are you based",
+            "where are your offices",
+            "where is your office",
+            "where is your head office",
+            "what are your office locations",
+        }
+        if any(sig in lower_text for sig in _COMPANY_LOCATION_SIGNALS):
+            from .company_actions import ActionAnswerCompanyQuery
+
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         # ── Project detail safety net ────────────────────────────────────────
         # Short translated follow-ups such as "what is the passenger capacity"
         # or "what was the budget" can land in nlu_fallback on older models.
