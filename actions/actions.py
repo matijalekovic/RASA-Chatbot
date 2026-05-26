@@ -109,6 +109,102 @@ _OUT_OF_SCOPE_NO_CONTEXT = [
 ]
 
 
+_PROJECT_LIST_TEXT = {
+    "FR": {
+        "intro": "Voici les 58 projets de 1PAX dans notre portefeuille :\n",
+        "suffix": "Posez-moi n'importe quelle question sur un projet — coût, défi de conception, équipe, et plus encore !",
+        "cta": "Si ce projet est proche de ce que vous planifiez, je peux vous aider à planifier une réunion avec 1PAX.",
+        "categories": {
+            "Airports and Transportation": "Aéroports et transports",
+            "Future of Mobility": "Futur de la mobilité",
+            "Industrial Buildings": "Bâtiments industriels",
+            "Working and Living": "Espaces de travail et de vie",
+            "Urbanism and Masterplan": "Urbanisme et masterplan",
+            "Interior Design": "Design d'intérieur",
+        },
+    },
+    "ES": {
+        "intro": "Estos son los 58 proyectos de 1PAX en nuestro portafolio:\n",
+        "suffix": "Pregúnteme cualquier cosa sobre un proyecto: coste, desafío de diseño, equipo y más.",
+        "cta": "Si este proyecto se parece a algo que está planificando, puedo ayudarle a programar una reunión con 1PAX.",
+        "categories": {
+            "Airports and Transportation": "Aeropuertos y transporte",
+            "Future of Mobility": "Futuro de la movilidad",
+            "Industrial Buildings": "Edificios industriales",
+            "Working and Living": "Espacios de trabajo y vivienda",
+            "Urbanism and Masterplan": "Urbanismo y masterplan",
+            "Interior Design": "Diseño interior",
+        },
+    },
+    "PT": {
+        "intro": "Estes são os 58 projetos da 1PAX no nosso portefólio:\n",
+        "suffix": "Pergunte-me qualquer coisa sobre um projeto — custo, desafio de design, equipa e muito mais.",
+        "cta": "Se este projeto for próximo de algo que está a planear, posso ajudar a agendar uma reunião com a 1PAX.",
+        "categories": {
+            "Airports and Transportation": "Aeroportos e transportes",
+            "Future of Mobility": "Futuro da mobilidade",
+            "Industrial Buildings": "Edifícios industriais",
+            "Working and Living": "Espaços de trabalho e vida",
+            "Urbanism and Masterplan": "Urbanismo e masterplan",
+            "Interior Design": "Design de interiores",
+        },
+    },
+    "ZH": {
+        "intro": "以下是 1PAX 项目组合中的 58 个项目：\n",
+        "suffix": "您可以询问任何项目相关问题：成本、设计挑战、团队等。",
+        "cta": "如果这个项目接近您正在规划的内容，我可以帮助您与 1PAX 安排会议。",
+        "categories": {
+            "Airports and Transportation": "机场与交通",
+            "Future of Mobility": "未来出行",
+            "Industrial Buildings": "工业建筑",
+            "Working and Living": "工作与生活空间",
+            "Urbanism and Masterplan": "城市规划与总体规划",
+            "Interior Design": "室内设计",
+        },
+    },
+    "SR": {
+        "intro": "Ovo je svih 58 projekata iz 1PAX portfolija:\n",
+        "suffix": "Pitajte me bilo šta o projektu — troškovima, izazovu dizajna, timu i još mnogo toga.",
+        "cta": "Ako je ovaj projekat sličan nečemu što planirate, mogu vam pomoći da zakažete sastanak sa 1PAX.",
+        "categories": {
+            "Airports and Transportation": "Aerodromi i saobraćaj",
+            "Future of Mobility": "Budućnost mobilnosti",
+            "Industrial Buildings": "Industrijski objekti",
+            "Working and Living": "Radni i stambeni prostori",
+            "Urbanism and Masterplan": "Urbanizam i masterplan",
+            "Interior Design": "Dizajn enterijera",
+        },
+    },
+}
+
+
+def _project_list_lang(lang: Optional[str]) -> Optional[str]:
+    if not lang:
+        return None
+    normalized = lang.upper()
+    if normalized.startswith("EN"):
+        return None
+    if normalized.startswith("PT"):
+        return "PT"
+    if normalized.startswith("ZH"):
+        return "ZH"
+    return normalized if normalized in _PROJECT_LIST_TEXT else None
+
+
+def _localized_project_list_text(lang: Optional[str], key: str, fallback: str) -> str:
+    lang_key = _project_list_lang(lang)
+    if not lang_key:
+        return fallback
+    return _PROJECT_LIST_TEXT[lang_key].get(key, fallback)
+
+
+def _localized_project_category(category: str, lang: Optional[str]) -> str:
+    lang_key = _project_list_lang(lang)
+    if not lang_key:
+        return category
+    return _PROJECT_LIST_TEXT[lang_key]["categories"].get(category, category)
+
+
 # ── Greet / Goodbye / Bot challenge ─────────────────────────────────────────
 
 
@@ -934,14 +1030,15 @@ class ActionListProjects(Action):
             )
             return lang_event
 
-        lines = [random.choice([
+        intro = random.choice([
             "Here are 1PAX's architectural projects:\n",
             "1PAX's portfolio spans 6 categories — here's the full list:\n",
             "These are all 58 1PAX projects across our portfolio:\n",
-        ])]
+        ])
+        lines = [_localized_project_list_text(lang, "intro", intro)]
 
         for category, project_keys in CATEGORIES.items():
-            lines.append(f"**{category}**")
+            lines.append(f"**{_localized_project_category(category, lang)}**")
             for key in project_keys:
                 p = PROJECTS[key]
                 lines.append(
@@ -949,16 +1046,20 @@ class ActionListProjects(Action):
                 )
             lines.append("")
 
-        lines.append(random.choice([
+        suffix = random.choice([
             "Ask me anything about a project — cost, design challenge, team, and more!",
             "Just name a project and I'll tell you all about it — budget, approach, sustainability, and more.",
             "Pick any project and ask away — I can cover cost, location, design approach, and much more.",
-        ]))
+        ])
+        lines.append(_localized_project_list_text(lang, "suffix", suffix))
         lines.append("")
-        lines.append(meeting_cta_text("project"))
+        lines.append(_localized_project_list_text(lang, "cta", meeting_cta_text("project")))
 
+        list_text = "\n".join(lines)
+        if not _project_list_lang(lang):
+            list_text = translate_response(list_text, lang)
         dispatcher.utter_message(
-            text=translate_response("\n".join(lines), lang),
+            text=list_text,
             buttons=meeting_buttons(lang),
         )
         return lang_event
