@@ -964,7 +964,7 @@ def _infer_project_info_type(text: str) -> str:
         return "program"
     if any(token in raw for token in ("status", "complete", "completed", "ongoing", "inaugurated", "built")):
         return "status"
-    if any(token in raw for token in ("cost", "budget", "price", "investment")):
+    if any(token in raw for token in ("cost", "budget", "price", "investment", "capex", "funding", "contract value")):
         return "cost"
     if any(token in raw for token in ("where", "location", "located")):
         return "location"
@@ -974,7 +974,7 @@ def _infer_project_info_type(text: str) -> str:
         return "client"
     if any(token in raw for token in ("area", "size", "big", "large")):
         return "area"
-    if any(token in raw for token in ("capacity", "passenger")):
+    if any(token in raw for token in ("capacity", "passenger", "traveler", "traveller", "throughput", "mppa", "volume", "gate")):
         return "capacity"
     if any(token in raw for token in ("architect", "designed", "designer")):
         return "architect"
@@ -983,6 +983,49 @@ def _infer_project_info_type(text: str) -> str:
     if any(token in raw for token in ("tender", "competition", "selected")):
         return "tender"
     return "about_project"
+
+
+def _looks_like_project_detail_followup(text: str, has_project_context: bool = False) -> bool:
+    """Detect project-field questions even when NLU falls back."""
+    info_type = _infer_project_info_type(text)
+    if info_type != "about_project":
+        return True
+
+    raw = _ascii_norm(text or "")
+    words = {
+        word.strip("?!.,;:\"'()[]{}")
+        for word in raw.split()
+        if word.strip("?!.,;:\"'()[]{}")
+    }
+    common_followups = {
+        "budget",
+        "cost",
+        "price",
+        "capacity",
+        "passenger",
+        "passengers",
+        "area",
+        "size",
+        "client",
+        "owner",
+        "architect",
+        "partners",
+        "challenge",
+        "approach",
+        "concept",
+        "status",
+        "scope",
+        "program",
+        "programme",
+        "highlights",
+        "facts",
+        "timeline",
+        "year",
+    }
+    if words & common_followups:
+        return True
+
+    return has_project_context and bool(words & {"team"})
 
 
 def _intent_to_info_type(intent_name: str, text: str = "") -> str:
@@ -1317,6 +1360,18 @@ class ActionHandleOutOfScope(Action):
             from .calendly_actions import run_calendly_scheduling
 
             return run_calendly_scheduling(dispatcher, tracker, domain)
+
+        # ── Project detail safety net ────────────────────────────────────────
+        # Short translated follow-ups such as "what is the passenger capacity"
+        # or "what was the budget" can land in nlu_fallback on older models.
+        # Route them through the normal project action so active slot context is
+        # still respected, or so the user is asked which project if none exists.
+        active_project_key, _ = _resolve_project(tracker)
+        if _looks_like_project_detail_followup(
+            user_text,
+            has_project_context=bool(active_project_key),
+        ):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         _SERVICE_SIGNALS = {
             "service",

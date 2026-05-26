@@ -797,6 +797,14 @@ nlu:
     - [Sofia Airport](project) cost
     - [Sofia Airport](project) budget
     - 200 million euros — is that the budget?
+    - what was the budget?
+    - what is the budget?
+    - what was the project budget?
+    - what is the project budget?
+    - and the budget?
+    - and what was the budget?
+    - which was the budget?
+    - which budget was it?
     - how expensive was the project?
     - what was the construction budget?
     - project cost?
@@ -886,6 +894,14 @@ nlu:
     - passenger capacity of [Sofia Airport](project)
     - [Sofia Airport](project) capacity
     - [T3](project) passenger capacity
+    - what is the passenger capacity?
+    - what is passenger capacity?
+    - what was the passenger capacity?
+    - which is the passenger capacity?
+    - which passenger capacity?
+    - and the passenger capacity?
+    - and what is the passenger capacity?
+    - passenger capacity?
     - how many travelers per year?
     - 15 million passengers — is that correct?
     - annual passenger throughput

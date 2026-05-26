@@ -140,6 +140,20 @@ _ENGLISH_HINT_WORDS = {
     "your",
 }
 
+try:
+    from actions.projects_data import PROJECTS as _PROJECTS_FOR_LANG_HINTS
+except Exception:
+    _PROJECTS_FOR_LANG_HINTS = {}
+
+for _project_key, _project_data in _PROJECTS_FOR_LANG_HINTS.items():
+    _ENGLISH_HINT_WORDS.update(
+        re.findall(r"[a-zA-Z]+", _project_key.replace("_", " ").lower())
+    )
+    for _field in ("display_name", "location", "category"):
+        _ENGLISH_HINT_WORDS.update(
+            re.findall(r"[a-zA-Z]+", str(_project_data.get(_field, "")).lower())
+        )
+
 
 @DefaultV1Recipe.register(
     DefaultV1Recipe.ComponentType.MESSAGE_FEATURIZER, is_trainable=False

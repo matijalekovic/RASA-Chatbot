@@ -86,7 +86,14 @@ TESTS = [
      "any_contain": ["Sofia"]},
 
     {"session_id": "s_ctx_01", "category": "Context Flow",
-     "note": "CTX-01d: follow-up challenge — no project named",
+     "note": "CTX-01d: translated SR follow-up capacity — no project named",
+     "message": "what is the passenger capacity",
+     "expect_intent": "ask_project_capacity",
+     "expect_project": "sofia_airport",
+     "any_contain": ["Sofia", "passenger", "million"]},
+
+    {"session_id": "s_ctx_01", "category": "Context Flow",
+     "note": "CTX-01e: follow-up challenge — no project named",
      "message": "what was the key challenge?",
      "expect_intent": "ask_project_challenge",
      "expect_project": "sofia_airport",
@@ -413,6 +420,13 @@ TESTS = [
      "note": "EDGE-02: 'what's the budget?' with no prior context → asks which",
      "message": "what's the budget?",
      "must_not": ["Budget:", "million"],
+     "any_contain": ["which project", "Which project", "which one", "what project", "name a", "Name a"]},
+
+    {"session_id": "s_edge_02b", "category": "Edge Cases",
+     "note": "EDGE-02b: translated SR capacity with no prior context → asks which",
+     "message": "what is the passenger capacity",
+     "expect_intent": "ask_project_capacity",
+     "must_not": ["Passenger capacity:", "million"],
      "any_contain": ["which project", "Which project", "which one", "what project", "name a", "Name a"]},
 
     {"session_id": "s_edge_03", "category": "Edge Cases",

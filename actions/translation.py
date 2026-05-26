@@ -24,6 +24,7 @@ Env var:   GEMINI_API_KEY
 import json
 import logging
 import os
+import re
 import socket
 import threading
 import urllib.error
@@ -111,6 +112,112 @@ _LANGDETECT_MAP: dict = {
 }
 
 
+_ENGLISH_HINT_WORDS = {
+    "a",
+    "about",
+    "airport",
+    "airports",
+    "am",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "based",
+    "bim",
+    "build",
+    "buildings",
+    "budget",
+    "can",
+    "capacity",
+    "client",
+    "company",
+    "concept",
+    "contact",
+    "cost",
+    "design",
+    "designer",
+    "designers",
+    "do",
+    "does",
+    "doing",
+    "exactly",
+    "firm",
+    "for",
+    "founded",
+    "from",
+    "have",
+    "help",
+    "hello",
+    "hi",
+    "how",
+    "in",
+    "is",
+    "kind",
+    "list",
+    "location",
+    "me",
+    "mission",
+    "of",
+    "offer",
+    "offers",
+    "overview",
+    "passenger",
+    "passengers",
+    "pax",
+    "projects",
+    "schedule",
+    "services",
+    "show",
+    "sofia",
+    "status",
+    "studio",
+    "team",
+    "tell",
+    "the",
+    "there",
+    "what",
+    "where",
+    "who",
+    "work",
+    "you",
+    "your",
+}
+
+try:
+    from .projects_data import PROJECTS as _PROJECTS_FOR_LANG_HINTS
+except Exception:
+    _PROJECTS_FOR_LANG_HINTS = {}
+
+for _project_key, _project_data in _PROJECTS_FOR_LANG_HINTS.items():
+    _ENGLISH_HINT_WORDS.update(
+        re.findall(r"[a-zA-Z]+", _project_key.replace("_", " ").lower())
+    )
+    for _field in ("display_name", "location", "category"):
+        _ENGLISH_HINT_WORDS.update(
+            re.findall(r"[a-zA-Z]+", str(_project_data.get(_field, "")).lower())
+        )
+
+
+def _looks_like_english(text: str) -> bool:
+    """Protect short English/domain phrases from langdetect false positives."""
+    tokens = re.findall(r"[a-zA-Z]+", text.lower())
+    if not tokens:
+        return False
+    if len(tokens) > 8:
+        return False
+    hits = sum(token in _ENGLISH_HINT_WORDS for token in tokens)
+    if hits == len(tokens):
+        return True
+    starters = {
+        "who", "what", "where", "when", "how", "tell", "show",
+        "give", "can", "does", "is",
+    }
+    if tokens[0] in starters and hits >= max(2, len(tokens) // 2):
+        return True
+    return hits >= max(3, int(len(tokens) * 0.6))
+
+
 def get_lang(tracker) -> Optional[str]:
     """
     Return the language code for the current user turn, or None for English.
@@ -136,6 +243,8 @@ def get_lang(tracker) -> Optional[str]:
     if _LANGDETECT_OK:
         text = (tracker.latest_message.get("text") or "").strip()
         if len(text) >= 4:
+            if _looks_like_english(text):
+                return None
             try:
                 raw = detect(text)
                 return _LANGDETECT_MAP.get(raw)
