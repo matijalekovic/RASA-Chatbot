@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 import urllib.parse
 from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta, timezone
@@ -194,6 +195,17 @@ def _details_page_ready(page) -> bool:
     if _has_visible(page.get_by_role("button", name=SCHEDULE_BUTTON_RE)):
         return True
     return False
+
+
+def _wait_for_details_page(page, timeout_ms: int) -> bool:
+    deadline = max(1000, min(timeout_ms, 20000))
+    try:
+        page.locator("input[type='email'], input[name='email']").first.wait_for(
+            timeout=deadline
+        )
+        return True
+    except Exception:
+        return _details_page_ready(page)
 
 
 def _dismiss_cookie_banner(page) -> None:
@@ -484,6 +496,7 @@ def book_calendly_event(
         page.set_default_timeout(timeout_ms)
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            print(f"opened_url={page.url}", file=sys.stderr, flush=True)
 
             try:
                 page.wait_for_load_state("networkidle", timeout=5000)
@@ -491,12 +504,13 @@ def book_calendly_event(
                 pass
             _dismiss_cookie_banner(page)
 
-            if not _details_page_ready(page):
+            if not _wait_for_details_page(page, timeout_ms):
                 if not start_time:
                     raise CalendlyBrowserError(
                         "Calendly did not open on the details page, and no start time "
                         "was provided for slot selection."
                     )
+                print("details_page_not_ready_selecting_slot", file=sys.stderr, flush=True)
                 _select_requested_slot(page, start_time, timezone_name, timeout_ms)
 
             _fill_first(page, "input[name='name'], input[autocomplete='name']", name)
@@ -514,6 +528,7 @@ def book_calendly_event(
             page.get_by_role("button", name=SCHEDULE_BUTTON_RE).first.click(
                 timeout=timeout_ms
             )
+            print("clicked_schedule_event", file=sys.stderr, flush=True)
 
             try:
                 page.wait_for_load_state("networkidle", timeout=timeout_ms)
@@ -523,6 +538,16 @@ def book_calendly_event(
             try:
                 page.get_by_text(SUCCESS_TEXT_RE).first.wait_for(timeout=timeout_ms)
             except PlaywrightTimeoutError as exc:
+                try:
+                    body_text = page.locator("body").inner_text(timeout=2000)
+                except Exception:
+                    body_text = ""
+                print(
+                    "confirmation_not_visible body="
+                    + " ".join(body_text.split())[:1200],
+                    file=sys.stderr,
+                    flush=True,
+                )
                 raise CalendlyBrowserError(
                     "Calendly did not show a booking confirmation after submission."
                 ) from exc

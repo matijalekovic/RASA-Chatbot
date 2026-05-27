@@ -1270,6 +1270,12 @@ def _book_invitee_with_browser(
         timezone_name,
         cfg.browser_timeout_seconds,
     )
+    print(
+        "[calendly] browser automation starting "
+        f"start_time={start_time} timezone={timezone_name} "
+        f"timeout={cfg.browser_timeout_seconds}s",
+        flush=True,
+    )
     try:
         completed = subprocess.run(
             cmd,
@@ -1283,6 +1289,13 @@ def _book_invitee_with_browser(
         return None
 
     if completed.returncode != 0:
+        print(
+            "[calendly] browser automation failed "
+            f"rc={completed.returncode} "
+            f"stderr={(completed.stderr or '')[-1200:]} "
+            f"stdout={(completed.stdout or '')[-500:]}",
+            flush=True,
+        )
         logger.warning(
             "Calendly browser automation failed: rc=%s stderr=%s stdout=%s",
             completed.returncode,
@@ -1294,6 +1307,11 @@ def _book_invitee_with_browser(
     try:
         result = json.loads(completed.stdout)
     except ValueError:
+        print(
+            "[calendly] browser automation invalid json "
+            f"stdout={(completed.stdout or '')[-500:]}",
+            flush=True,
+        )
         logger.warning(
             "Calendly browser automation returned invalid JSON: %s",
             (completed.stdout or "")[-500:],
@@ -1301,6 +1319,11 @@ def _book_invitee_with_browser(
         return None
 
     if not result.get("scheduled"):
+        print(
+            "[calendly] browser automation did not submit "
+            f"message={result.get('message', '')}",
+            flush=True,
+        )
         logger.warning(
             "Calendly browser automation did not submit: %s",
             result.get("message", ""),
@@ -1309,6 +1332,11 @@ def _book_invitee_with_browser(
 
     logger.warning(
         "Calendly browser automation completed: start_time=%s", start_time
+    )
+    print(
+        "[calendly] browser automation completed "
+        f"start_time={start_time}",
+        flush=True,
     )
     return {
         "final_url": result.get("final_url", ""),
