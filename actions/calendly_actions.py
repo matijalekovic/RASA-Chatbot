@@ -1299,6 +1299,7 @@ def _book_invitee_with_api(
             "utm_campaign": "website_consultation",
             "utm_content": purpose[:255],
             "utm_term": "meeting_request",
+            "salesforce_uuid": "",
         },
     }
     if cfg.location_kind:

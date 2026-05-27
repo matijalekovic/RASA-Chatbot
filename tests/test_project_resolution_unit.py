@@ -9,7 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from actions.actions import _fuzzy_match_project, _intent_to_info_type, _resolve_project
+from actions.actions import (
+    ActionHandleOutOfScope,
+    _fuzzy_match_project,
+    _intent_to_info_type,
+    _resolve_project,
+)
 from actions.projects_data import PROJECTS
 
 
@@ -57,6 +62,13 @@ def test_explicit_detail_question_still_wins_after_title_stripping():
     assert _intent_to_info_type("ask_about_project", text, project_key) == "architect"
 
 
+def test_partial_title_residue_still_routes_to_overview():
+    text = "Please tell me about Aéroport de Marseille Provence Architectural Assistance"
+    project_key = "marseille_commercial_assistance"
+
+    assert _intent_to_info_type("ask_project_architect", text, project_key) == "about_project"
+
+
 def test_current_website_titles_resolve_to_expected_projects():
     expected = {
         "Al Wakrah Metro Depot Masterplan": "doha_metro_depot",
@@ -85,6 +97,7 @@ class _Tracker:
     def __init__(self, text, entities=None, slot=None):
         self.latest_message = {
             "text": text,
+            "metadata": {"lang": "EN"},
             "entities": [{"entity": "project", "value": value} for value in entities or []],
         }
         self.events = []
@@ -105,6 +118,14 @@ class _Tracker:
         return None
 
 
+class _Dispatcher:
+    def __init__(self):
+        self.messages = []
+
+    def utter_message(self, **kwargs):
+        self.messages.append(kwargs)
+
+
 def test_full_title_beats_broad_extracted_entity():
     tracker = _Tracker(
         "Tell me about Nikola Tesla International Airport – Wayfinding Signage Design",
@@ -116,10 +137,31 @@ def test_full_title_beats_broad_extracted_entity():
     assert project_key == "belgrade_wayfinding"
 
 
+def test_out_of_scope_project_safety_net_keeps_media_and_link():
+    tracker = _Tracker("Tell me about Félix Eboué Cayenne Airport – Interior Design")
+    dispatcher = _Dispatcher()
+
+    events = ActionHandleOutOfScope().run(dispatcher, tracker, {})
+
+    assert dispatcher.messages
+    message = dispatcher.messages[0]
+    project = PROJECTS["cayenne_interior_design"]
+    assert message["image"] == project["cover_image_url"]
+    assert project["project_url"] in message["text"]
+    assert any(
+        event.get("event") == "slot"
+        and event.get("name") == "project_name"
+        and event.get("value") == "cayenne_interior_design"
+        for event in events
+    )
+
+
 if __name__ == "__main__":
     test_every_display_name_maps_to_itself()
     test_title_words_do_not_hijack_general_project_questions()
     test_explicit_detail_question_still_wins_after_title_stripping()
+    test_partial_title_residue_still_routes_to_overview()
     test_current_website_titles_resolve_to_expected_projects()
     test_full_title_beats_broad_extracted_entity()
+    test_out_of_scope_project_safety_net_keeps_media_and_link()
     print("Project resolution unit checks passed.")

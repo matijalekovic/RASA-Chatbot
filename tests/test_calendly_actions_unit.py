@@ -123,6 +123,7 @@ def test_api_booking_payload_contains_invitee_location_and_tracking():
     assert payload["location"] == {"kind": "google_conference"}
     assert payload["questions_and_answers"][0]["answer"] == "Project consultation"
     assert payload["tracking"]["utm_source"] == "1pax_chatbot"
+    assert payload["tracking"]["salesforce_uuid"] == ""
     assert result["cancel_url"].endswith("/test")
     assert result["reschedule_url"].endswith("/test")
 

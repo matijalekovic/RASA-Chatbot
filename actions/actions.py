@@ -1037,7 +1037,13 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
 
 
 def _infer_project_info_type(text: str) -> str:
-    raw = (text or "").lower()
+    raw = _ascii_norm(text or "")
+    words = set(raw.split())
+
+    def has_phrase(*phrases: str) -> bool:
+        padded = f" {raw} "
+        return any(f" {_ascii_norm(phrase)} " in padded for phrase in phrases)
+
     if any(token in raw for token in (
         "scope",
         "role",
@@ -1087,9 +1093,12 @@ def _infer_project_info_type(text: str) -> str:
         return "area"
     if any(token in raw for token in ("capacity", "passenger", "traveler", "traveller", "throughput", "mppa", "volume", "gate")):
         return "capacity"
-    if any(token in raw for token in ("architect", "designed", "designer")):
+    if (
+        words & {"architect", "architects", "designer", "designers"}
+        or has_phrase("who designed", "designed by", "design team")
+    ):
         return "architect"
-    if any(token in raw for token in ("partner", "collaborator")):
+    if any(token in raw for token in ("partner", "collaborator", "team")):
         return "partners"
     if any(token in raw for token in ("tender", "competition", "selected")):
         return "tender"
@@ -1163,6 +1172,25 @@ def _is_general_project_intro(text: str) -> bool:
     return not remaining
 
 
+def _starts_with_general_project_intro(text: str) -> bool:
+    generic_starts = (
+        "can you tell me about",
+        "could you tell me about",
+        "describe",
+        "explain",
+        "give me information about",
+        "i want to know about",
+        "please tell me about",
+        "reci mi nesto o",
+        "recite mi nesto o",
+        "tell me about",
+        "tell me more about",
+        "tell me something about",
+        "what can you tell me about",
+    )
+    return any(text == start or text.startswith(f"{start} ") for start in generic_starts)
+
+
 def _looks_like_project_detail_followup(text: str, has_project_context: bool = False) -> bool:
     """Detect project-field questions even when NLU falls back."""
     raw = _ascii_norm(text or "")
@@ -1234,7 +1262,10 @@ def _intent_to_info_type(
         # DIET often over-weights words inside project titles, e.g.
         # "Architectural Assistance" → ask_project_architect. If the remaining
         # user phrase is just "tell me about", treat it as a general overview.
-        if project_key and _is_general_project_intro(text_without_project):
+        if project_key and (
+            _is_general_project_intro(text_without_project)
+            or _starts_with_general_project_intro(text_without_project)
+        ):
             return "about_project"
         return intent_name[len(prefix):]
     return inferred
@@ -1683,9 +1714,14 @@ class ActionHandleOutOfScope(Action):
         fuzzy_key = None if _is_genuine_oos else _fuzzy_match_project(user_text)
         if fuzzy_key and fuzzy_key in PROJECTS:
             p = PROJECTS[fuzzy_key]
-            for text in _fmt_teaser(p).split("\n\n"):
-                if text.strip():
-                    dispatcher.utter_message(text=translate_response(text.strip(), lang))
+            _utter_project_response(
+                dispatcher,
+                _fmt_teaser(p),
+                p,
+                lang,
+                "about_project",
+                user_text,
+            )
             return schedule_reset_events + [SlotSet("project_name", fuzzy_key)] + lang_event
 
         # ── Normal out-of-scope / fallback handling ───────────────────────────────
