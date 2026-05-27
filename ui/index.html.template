@@ -439,7 +439,8 @@
     const rawDelay = Number(custom.redirect_delay_ms);
     const delay = Number.isFinite(rawDelay) ? Math.max(0, Math.min(rawDelay, 3000)) : 600;
     window.setTimeout(() => {
-      window.location.assign(url);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) window.location.assign(url);
     }, delay);
   }
 
