@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Pure-function checks for Calendly API scheduling helpers."""
+"""Pure-function checks for Calendly hosted-page scheduling helpers."""
 
-from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 
@@ -36,8 +35,6 @@ def test_confirmation_link_fallback_defaults_off():
 def _cfg() -> calendly_actions.CalendlyConfig:
     return calendly_actions.CalendlyConfig(
         scheduling_link="https://calendly.com/communications-1pax/30min",
-        access_token="test-token",
-        event_type_uri="https://api.calendly.com/event_types/test",
         location_kind="google_conference",
         allow_link_fallback=True,
         allow_confirmation_link_fallback=False,
@@ -50,123 +47,48 @@ def _cfg() -> calendly_actions.CalendlyConfig:
     )
 
 
-def test_api_available_slot_times_filters_and_normalizes():
-    original = calendly_actions._calendly_api_request
+def test_api_runtime_is_removed_even_when_credentials_exist():
+    cfg = _cfg()
+    assert cfg.is_connected is True
+    assert not hasattr(cfg, "api_connected")
+    assert not hasattr(cfg, "access_token")
+    assert not hasattr(cfg, "event_type_uri")
+    assert not hasattr(calendly_actions, "_calendly_api_request")
+    assert not hasattr(calendly_actions, "_api_available_slot_times")
+    assert not hasattr(calendly_actions, "_book_invitee_with_api")
 
-    def fake_request(cfg, method, path, query=None, payload=None, timeout=15.0):
-        assert method == "GET"
-        assert path == "/event_type_available_times"
-        assert query["event_type"] == cfg.event_type_uri
-        return {
-            "collection": [
-                {
-                    "start_time": "2026-05-29T08:00:00Z",
-                    "status": "available",
-                    "invitees_remaining": 1,
-                },
-                {
-                    "start_time": "2026-05-29T08:30:00+00:00",
-                    "status": "available",
-                    "invitees_remaining": 0,
-                },
-                {
-                    "start_time": "2026-05-29T09:00:00Z",
-                    "status": "unavailable",
-                    "invitees_remaining": 1,
-                },
-            ]
-        }
 
-    calendly_actions._calendly_api_request = fake_request
-    try:
-        start = datetime.fromisoformat("2026-05-29T00:00:00+02:00")
-        end = start + timedelta(days=1)
-        assert calendly_actions._api_available_slot_times(_cfg(), start, end) == [
-            "2026-05-29T08:00:00Z"
+def test_available_slots_uses_hosted_page_only():
+    import actions.calendly_browser as calendly_browser
+
+    original = calendly_browser.find_calendly_available_slots
+    captured = {}
+
+    def fake_find_slots(**kwargs):
+        captured.update(kwargs)
+        return [
+            "2026-05-29T07:00:00Z",
+            "2026-05-29T09:00:00Z",
+            "2026-05-29T15:00:00Z",
         ]
-    finally:
-        calendly_actions._calendly_api_request = original
 
-
-def test_api_booking_payload_contains_invitee_location_and_tracking():
-    captured = {}
-    original = calendly_actions._calendly_api_request
-
-    def fake_request(cfg, method, path, query=None, payload=None, timeout=15.0):
-        captured.update({"method": method, "path": path, "payload": payload})
-        return {
-            "resource": {
-                "uri": "https://api.calendly.com/invitees/test",
-                "cancel_url": "https://calendly.com/cancellations/test",
-                "reschedule_url": "https://calendly.com/reschedulings/test",
-            }
-        }
-
-    calendly_actions._calendly_api_request = fake_request
+    calendly_browser.find_calendly_available_slots = fake_find_slots
     try:
-        result = calendly_actions._book_invitee_with_api(
+        slots, matched = calendly_actions._available_slots(
             _cfg(),
-            name="Matija Lekovic",
-            email="matija@example.com",
-            purpose="Project consultation",
-            timezone_name="Europe/Belgrade",
-            start_time="2026-05-29T08:00:00Z",
+            "Friday morning",
+            "Europe/Belgrade",
         )
     finally:
-        calendly_actions._calendly_api_request = original
+        calendly_browser.find_calendly_available_slots = original
 
-    assert captured["method"] == "POST"
-    assert captured["path"] == "/invitees"
-    payload = captured["payload"]
-    assert payload["invitee"]["name"] == "Matija Lekovic"
-    assert payload["invitee"]["email"] == "matija@example.com"
-    assert payload["invitee"]["timezone"] == "Europe/Belgrade"
-    assert payload["location"] == {"kind": "google_conference"}
-    assert payload["questions_and_answers"][0]["answer"] == "Project consultation"
-    assert payload["tracking"]["utm_source"] == "1pax_chatbot"
-    assert payload["tracking"]["salesforce_uuid"] == ""
-    assert result["cancel_url"].endswith("/test")
-    assert result["reschedule_url"].endswith("/test")
-
-
-def test_api_request_uses_curl_without_leaking_token_in_args():
-    original_which = calendly_actions.shutil.which
-    original_run = calendly_actions.subprocess.run
-    captured = {}
-
-    def fake_which(name):
-        assert name == "curl"
-        return "/usr/bin/curl"
-
-    def fake_run(cmd, **kwargs):
-        captured["cmd"] = cmd
-        header_arg = cmd[cmd.index("--header") + 1]
-        assert header_arg.startswith("@")
-        with open(header_arg[1:], encoding="utf-8") as headers:
-            captured["headers"] = headers.read()
-
-        class Result:
-            stdout = '{"ok": true}\n201'
-            stderr = ""
-
-        return Result()
-
-    calendly_actions.shutil.which = fake_which
-    calendly_actions.subprocess.run = fake_run
-    try:
-        result = calendly_actions._calendly_api_request(
-            _cfg(),
-            "POST",
-            "/invitees",
-            payload={"hello": "world"},
-        )
-    finally:
-        calendly_actions.shutil.which = original_which
-        calendly_actions.subprocess.run = original_run
-
-    assert result == {"ok": True}
-    assert "Bearer test-token" in captured["headers"]
-    assert "test-token" not in " ".join(captured["cmd"])
+    assert captured["scheduling_link"] == "https://calendly.com/communications-1pax/30min"
+    assert captured["timezone_name"] == "Europe/Belgrade"
+    assert matched is True
+    assert [slot["start_time"] for slot in slots] == [
+        "2026-05-29T07:00:00Z",
+        "2026-05-29T09:00:00Z",
+    ]
 
 
 def test_browser_booking_runs_as_subprocess_script():
@@ -210,8 +132,7 @@ def test_browser_booking_runs_as_subprocess_script():
 
 if __name__ == "__main__":
     test_confirmation_link_fallback_defaults_off()
-    test_api_available_slot_times_filters_and_normalizes()
-    test_api_booking_payload_contains_invitee_location_and_tracking()
-    test_api_request_uses_curl_without_leaking_token_in_args()
+    test_api_runtime_is_removed_even_when_credentials_exist()
+    test_available_slots_uses_hosted_page_only()
     test_browser_booking_runs_as_subprocess_script()
     print("Calendly action unit checks passed.")
