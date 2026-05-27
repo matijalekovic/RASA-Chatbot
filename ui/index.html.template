@@ -479,8 +479,8 @@
         for (const reply of replies) {
           if (reply.text || reply.image || reply.buttons?.length) {
             appendMessage("bot", reply.text || "", { image: reply.image }, reply.buttons || []);
-            handleBotCustom(reply.custom);
           }
+          handleBotCustom(reply.custom);
         }
       }
     } catch (err) {

@@ -967,8 +967,8 @@
         for (const r of replies) {
           if (r.text || r.image || r.buttons?.length) {
             appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
-            handleBotCustom(r.custom);
           }
+          handleBotCustom(r.custom);
         }
       }
     } catch {
@@ -1023,8 +1023,8 @@
         for (const r of replies) {
           if (r.text || r.image || r.buttons?.length) {
             appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
-            handleBotCustom(r.custom);
           }
+          handleBotCustom(r.custom);
         }
       }
       inputEl.focus();
