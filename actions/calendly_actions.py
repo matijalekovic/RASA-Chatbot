@@ -233,10 +233,10 @@ def _config_from_env() -> CalendlyConfig:
 
     try:
         browser_timeout_seconds = int(
-            os.environ.get("CALENDLY_BROWSER_TIMEOUT_SECONDS", "30")
+            os.environ.get("CALENDLY_BROWSER_TIMEOUT_SECONDS", "45")
         )
     except ValueError:
-        browser_timeout_seconds = 30
+        browser_timeout_seconds = 45
 
     scheduling_link = (
         os.environ.get("CALENDLY_SCHEDULING_LINK", "").strip()
@@ -1263,6 +1263,13 @@ def _book_invitee_with_browser(
     if cfg.browser_executable_path:
         cmd.extend(["--executable-path", cfg.browser_executable_path])
 
+    logger.warning(
+        "Calendly browser automation starting: start_time=%s timezone=%s "
+        "timeout=%ss",
+        start_time,
+        timezone_name,
+        cfg.browser_timeout_seconds,
+    )
     try:
         completed = subprocess.run(
             cmd,
@@ -1300,6 +1307,9 @@ def _book_invitee_with_browser(
         )
         return None
 
+    logger.warning(
+        "Calendly browser automation completed: start_time=%s", start_time
+    )
     return {
         "final_url": result.get("final_url", ""),
         "message": result.get("message", ""),
@@ -1651,7 +1661,7 @@ def run_calendly_scheduling(
                 )
                 offered_slots = []
             else:
-                booking = _book_invitee_with_api(
+                booking = _book_invitee_with_browser(
                     cfg,
                     name=name,
                     email=email,
@@ -1660,7 +1670,7 @@ def run_calendly_scheduling(
                     start_time=selected_slot,
                 )
                 if not booking:
-                    booking = _book_invitee_with_browser(
+                    booking = _book_invitee_with_api(
                         cfg,
                         name=name,
                         email=email,

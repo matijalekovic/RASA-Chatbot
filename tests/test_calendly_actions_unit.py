@@ -30,6 +30,7 @@ def test_confirmation_link_fallback_defaults_off():
     assert cfg.allow_link_fallback is True
     assert cfg.browser_fallback is True
     assert cfg.allow_confirmation_link_fallback is False
+    assert cfg.browser_timeout_seconds == 45
 
 
 def _cfg() -> calendly_actions.CalendlyConfig:
