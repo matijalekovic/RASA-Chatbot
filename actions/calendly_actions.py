@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unicodedata
 import urllib.error
@@ -1238,32 +1239,71 @@ def _book_invitee_with_browser(
     if not (cfg.browser_fallback and cfg.scheduling_link):
         return None
 
-    try:
-        from .calendly_browser import book_calendly_event
+    script_path = os.path.join(os.path.dirname(__file__), "calendly_browser.py")
+    cmd = [
+        sys.executable,
+        script_path,
+        "--link",
+        cfg.scheduling_link,
+        "--name",
+        name,
+        "--email",
+        email,
+        "--purpose",
+        purpose,
+        "--start-time",
+        start_time,
+        "--timezone",
+        timezone_name,
+        "--timeout-seconds",
+        str(cfg.browser_timeout_seconds),
+    ]
+    if not cfg.browser_headless:
+        cmd.append("--headful")
+    if cfg.browser_executable_path:
+        cmd.extend(["--executable-path", cfg.browser_executable_path])
 
-        result = book_calendly_event(
-            scheduling_link=cfg.scheduling_link,
-            name=name,
-            email=email,
-            purpose=purpose,
-            start_time=start_time,
-            timezone_name=timezone_name,
-            timeout_seconds=cfg.browser_timeout_seconds,
-            headless=cfg.browser_headless,
-            executable_path=cfg.browser_executable_path or None,
+    try:
+        completed = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=max(20, cfg.browser_timeout_seconds + 15),
         )
     except Exception as exc:
         logger.warning("Calendly browser automation failed: %s", exc)
         return None
 
-    if not result.scheduled:
-        logger.warning("Calendly browser automation did not submit: %s", result.message)
+    if completed.returncode != 0:
+        logger.warning(
+            "Calendly browser automation failed: rc=%s stderr=%s stdout=%s",
+            completed.returncode,
+            (completed.stderr or "")[-500:],
+            (completed.stdout or "")[-500:],
+        )
+        return None
+
+    try:
+        result = json.loads(completed.stdout)
+    except ValueError:
+        logger.warning(
+            "Calendly browser automation returned invalid JSON: %s",
+            (completed.stdout or "")[-500:],
+        )
+        return None
+
+    if not result.get("scheduled"):
+        logger.warning(
+            "Calendly browser automation did not submit: %s",
+            result.get("message", ""),
+        )
         return None
 
     return {
-        "final_url": result.final_url,
-        "message": result.message,
-        "confirmation_text": result.confirmation_text,
+        "final_url": result.get("final_url", ""),
+        "message": result.get("message", ""),
+        "confirmation_text": result.get("confirmation_text", ""),
     }
 
 

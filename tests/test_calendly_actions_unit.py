@@ -168,9 +168,49 @@ def test_api_request_uses_curl_without_leaking_token_in_args():
     assert "test-token" not in " ".join(captured["cmd"])
 
 
+def test_browser_booking_runs_as_subprocess_script():
+    original_run = calendly_actions.subprocess.run
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        captured["kwargs"] = kwargs
+
+        class Result:
+            returncode = 0
+            stdout = (
+                '{"scheduled": true, "final_url": "https://calendly.com/scheduled", '
+                '"message": "ok", "confirmation_text": "confirmed"}'
+            )
+            stderr = ""
+
+        return Result()
+
+    calendly_actions.subprocess.run = fake_run
+    try:
+        result = calendly_actions._book_invitee_with_browser(
+            _cfg(),
+            name="Matija Lekovic",
+            email="matija@example.com",
+            purpose="Project consultation",
+            timezone_name="Europe/Belgrade",
+            start_time="2026-05-29T08:00:00Z",
+        )
+    finally:
+        calendly_actions.subprocess.run = original_run
+
+    assert result["final_url"] == "https://calendly.com/scheduled"
+    assert captured["cmd"][1].endswith("calendly_browser.py")
+    assert "--link" in captured["cmd"]
+    assert "--start-time" in captured["cmd"]
+    assert captured["kwargs"]["capture_output"] is True
+    assert captured["kwargs"]["text"] is True
+
+
 if __name__ == "__main__":
     test_confirmation_link_fallback_defaults_off()
     test_api_available_slot_times_filters_and_normalizes()
     test_api_booking_payload_contains_invitee_location_and_tracking()
     test_api_request_uses_curl_without_leaking_token_in_args()
+    test_browser_booking_runs_as_subprocess_script()
     print("Calendly action unit checks passed.")
