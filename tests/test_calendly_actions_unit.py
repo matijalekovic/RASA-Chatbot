@@ -2,6 +2,7 @@
 """Pure-function checks for Calendly hosted-page scheduling helpers."""
 
 from pathlib import Path
+import json
 import sys
 
 
@@ -10,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import actions.calendly_actions as calendly_actions
+from rasa_sdk.executor import CollectingDispatcher
 
 
 def test_confirmation_link_fallback_defaults_off():
@@ -171,10 +173,73 @@ def test_browser_booking_runs_as_subprocess_script():
     assert captured["kwargs"]["text"] is True
 
 
+class _ConfirmTracker:
+    latest_message = {
+        "text": "yes",
+        "intent": {"name": "affirm"},
+        "entities": [],
+        "metadata": {"lang": "EN", "timezone": "Europe/Belgrade"},
+    }
+
+    _slots = {
+        "language": "EN",
+        "schedule_stage": "confirm",
+        "schedule_name": "Matija Lekovic",
+        "schedule_email": "matija@example.com",
+        "schedule_purpose": "Project consultation",
+        "schedule_time_preference": "Friday morning",
+        "schedule_timezone": "Europe/Belgrade",
+        "schedule_offered_slots": json.dumps(
+            [{"start_time": "2026-05-29T08:00:00Z"}]
+        ),
+        "schedule_selected_slot": "2026-05-29T08:00:00Z",
+        "schedule_selected_slot_label": "Friday, May 29 at 10:00",
+    }
+
+    def get_slot(self, name):
+        return self._slots.get(name)
+
+
+def test_confirm_redirects_to_prefilled_calendly_without_browser_submit():
+    original_config = calendly_actions._config_from_env
+    original_browser = calendly_actions._book_invitee_with_browser
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("Final confirmation should redirect, not run browser submit")
+
+    calendly_actions._config_from_env = _cfg
+    calendly_actions._book_invitee_with_browser = fail_if_called
+    dispatcher = CollectingDispatcher()
+    try:
+        events = calendly_actions.run_calendly_scheduling(
+            dispatcher,
+            _ConfirmTracker(),
+            {},
+        )
+    finally:
+        calendly_actions._config_from_env = original_config
+        calendly_actions._book_invitee_with_browser = original_browser
+
+    assert dispatcher.messages
+    message = dispatcher.messages[-1]
+    redirect_url = message["custom"]["redirect_url"]
+    assert redirect_url.startswith(
+        "https://calendly.com/communications-1pax/30min/2026-05-29T10:00:00+02:00"
+    )
+    assert "name=Matija+Lekovic" in redirect_url
+    assert "email=matija%40example.com" in redirect_url
+    assert message["custom"]["redirect_reason"] == "calendly_prefilled_confirmation"
+    assert any(
+        event.get("name") == "schedule_stage" and event.get("value") is None
+        for event in events
+    )
+
+
 if __name__ == "__main__":
     test_confirmation_link_fallback_defaults_off()
     test_booking_api_runtime_is_removed_even_when_credentials_exist()
     test_api_available_slot_times_filters_and_normalizes()
     test_available_slots_prefers_read_only_api_before_hosted_page()
     test_browser_booking_runs_as_subprocess_script()
+    test_confirm_redirects_to_prefilled_calendly_without_browser_submit()
     print("Calendly action unit checks passed.")

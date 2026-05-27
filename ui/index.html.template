@@ -432,6 +432,17 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  function handleBotCustom(custom = {}) {
+    const url = safeHttpUrl(custom.redirect_url || custom.open_url);
+    if (!url) return;
+
+    const rawDelay = Number(custom.redirect_delay_ms);
+    const delay = Number.isFinite(rawDelay) ? Math.max(0, Math.min(rawDelay, 3000)) : 600;
+    window.setTimeout(() => {
+      window.location.assign(url);
+    }, delay);
+  }
+
   messagesEl.addEventListener("click", e => {
     const action = e.target.closest(".quick-action");
     if (!action) return;
@@ -468,6 +479,7 @@
         for (const reply of replies) {
           if (reply.text || reply.image || reply.buttons?.length) {
             appendMessage("bot", reply.text || "", { image: reply.image }, reply.buttons || []);
+            handleBotCustom(reply.custom);
           }
         }
       }

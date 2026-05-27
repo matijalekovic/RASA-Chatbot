@@ -13,10 +13,9 @@ The conversation flow is:
    back to the public hosted Calendly page if needed.
 5. Offer numbered time slots in chat.
 6. Ask for explicit confirmation.
-7. Open the pre-filled hosted Calendly page in browser automation, click the
-   final scheduling button, and return the confirmation details. Do not end the
-   confirmed flow with a manual Calendly link unless that legacy behavior is
-   explicitly enabled.
+7. Send the exact pre-filled hosted Calendly URL back to the UI as a
+   `redirect_url` custom payload. The web UI redirects the user's browser to
+   Calendly, where the user completes the final Calendly confirmation click.
 
 ## Required environment variables
 
@@ -28,8 +27,8 @@ CALENDLY_ACCESS_TOKEN="..."
 CALENDLY_EVENT_TYPE_URI="https://api.calendly.com/event_types/..."
 ```
 
-The scheduling link powers hosted-page browser submission. The API credentials
-are used only for read-only slot availability.
+The scheduling link powers the final browser redirect. The API credentials are
+used only for read-only slot availability.
 
 ## Optional environment variables
 
@@ -45,15 +44,12 @@ CALENDLY_ALLOW_CONFIRMATION_LINK_FALLBACK="false"
 CALENDLY_LOCATION_KIND="google_conference"
 ```
 
-With `CALENDLY_SCHEDULING_LINK` configured, browser automation is enabled by
-default. `CALENDLY_ALLOW_LINK_FALLBACK` still permits a general fallback link
-when Calendly cannot be reached during slot discovery. After the user explicitly
-confirms a selected slot, `CALENDLY_ALLOW_CONFIRMATION_LINK_FALLBACK` defaults
-to `false` so the bot either books automatically through the hosted page or
-reports the automation failure instead of handing off a final manual link. Set
-it to `true` only for debugging or legacy behavior. Set
-`CALENDLY_BROWSER_FALLBACK` to `false` only when you intentionally want to stop
-automated hosted-page submission.
+After the user explicitly confirms a selected slot, the action no longer tries
+server-side browser submission. Calendly blocks headless/data-center sessions
+for the final hosted-page confirmation, so the reliable public-web flow is to
+redirect the user's own browser to the pre-filled Calendly slot. The browser
+automation settings remain available for local diagnostics and hosted-page slot
+discovery fallback.
 
 `CALENDLY_BROWSER_HEADFUL=true` is useful for local debugging because it shows
 the Chromium window while the script chooses the slot and submits the form.

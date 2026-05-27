@@ -844,6 +844,17 @@
     translateProjectCards(wrap).catch(() => {});
   }
 
+  function handleBotCustom(custom = {}) {
+    const url = safeHttpUrl(custom.redirect_url || custom.open_url);
+    if (!url) return;
+
+    const rawDelay = Number(custom.redirect_delay_ms);
+    const delay = Number.isFinite(rawDelay) ? Math.max(0, Math.min(rawDelay, 3000)) : 600;
+    window.setTimeout(() => {
+      window.location.assign(url);
+    }, delay);
+  }
+
   function setLoading(on) {
     sendBtn.disabled = on;
     inputEl.disabled = on;
@@ -956,6 +967,7 @@
         for (const r of replies) {
           if (r.text || r.image || r.buttons?.length) {
             appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
+            handleBotCustom(r.custom);
           }
         }
       }
@@ -1011,6 +1023,7 @@
         for (const r of replies) {
           if (r.text || r.image || r.buttons?.length) {
             appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
+            handleBotCustom(r.custom);
           }
         }
       }

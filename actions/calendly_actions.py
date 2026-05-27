@@ -1449,6 +1449,51 @@ def _manual_finalize_message(
     return "\n\n".join(lines)
 
 
+def _calendly_redirect_message(
+    name: str,
+    email: str,
+    purpose: str,
+    selected_label: Optional[str],
+    link: str,
+    lang: Optional[str] = None,
+) -> str:
+    lines = _booking_summary_lines(name, email, purpose, selected_label, lang)
+    lines.append("")
+    if _is_sr(lang):
+        lines.append(
+            "Otvaram tačan, unapred popunjen Calendly termin u vašem browseru."
+        )
+        lines.append(
+            "Ako se stranica ne otvori automatski, koristite ovaj link: "
+            f"[Otvori u Calendlyju]({link})"
+        )
+        return "\n\n".join(lines)
+
+    lines.append("Opening the exact pre-filled Calendly slot in your browser.")
+    lines.append(
+        "If it does not open automatically, use this link: "
+        f"[Open in Calendly]({link})"
+    )
+    return "\n\n".join(lines)
+
+
+def _utter_calendly_redirect(
+    dispatcher: CollectingDispatcher,
+    text: str,
+    link: str,
+    lang: Optional[str],
+    already_localized: bool = False,
+) -> None:
+    dispatcher.utter_message(
+        text=text if already_localized else translate_response(text, lang),
+        json_message={
+            "redirect_url": link,
+            "redirect_delay_ms": 600,
+            "redirect_reason": "calendly_prefilled_confirmation",
+        },
+    )
+
+
 def run_calendly_scheduling(
     dispatcher: CollectingDispatcher,
     tracker: Tracker,
@@ -1612,57 +1657,35 @@ def run_calendly_scheduling(
                 )
                 offered_slots = []
             else:
-                booking = _book_invitee_with_browser(
-                    cfg,
+                redirect_link = _prefilled_scheduling_link(
+                    cfg=cfg,
                     name=name,
                     email=email,
                     purpose=purpose,
-                    timezone_name=timezone_name,
                     start_time=selected_slot,
+                    timezone_name=timezone_name,
                 )
-                if booking:
-                    confirmation_url = booking.get("final_url") or None
-                    _utter(
+                if redirect_link:
+                    _utter_calendly_redirect(
                         dispatcher,
-                        _booking_success_message(
+                        _calendly_redirect_message(
                             name=name,
                             email=email,
                             purpose=purpose,
                             selected_label=selected_label,
-                            confirmation_url=confirmation_url,
-                            cancel_url=booking.get("cancel_url") or None,
-                            reschedule_url=booking.get("reschedule_url") or None,
+                            link=redirect_link,
                             lang=lang,
                         ),
+                        redirect_link,
                         lang,
                         already_localized=_is_sr(lang),
                     )
                     return _clear_schedule_events() + events
 
-                if cfg.allow_confirmation_link_fallback:
-                    fallback = _manual_finalize_message(
-                        cfg,
-                        name=name,
-                        email=email,
-                        purpose=purpose,
-                        selected_label=selected_label,
-                        selected_start_time=selected_slot,
-                        timezone_name=timezone_name,
-                        lang=lang,
-                    )
-                    if fallback:
-                        _utter(
-                            dispatcher,
-                            fallback,
-                            lang,
-                            already_localized=_is_sr(lang),
-                        )
-                        return _clear_schedule_events() + events
-
                 _utter(
                     dispatcher,
-                    "I could not automate the Calendly booking page right now. "
-                    "Please choose another time, or try again shortly.",
+                    "I could not prepare the Calendly confirmation link right "
+                    "now. Please choose another time, or try again shortly.",
                     lang,
                 )
                 return events + _set_stage("select_slot")
