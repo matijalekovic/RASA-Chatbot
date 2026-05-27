@@ -1,14 +1,16 @@
 # Calendly integration
 
-The chatbot books meetings through Calendly's public hosted page only. It does
-not call Calendly's scheduling API for availability or booking.
+The chatbot books meetings through Calendly's public hosted page only. It may
+use Calendly's read-only availability API to find open slots, but it never
+creates invitees or schedules events through the API.
 
 The conversation flow is:
 
 1. Collect invitee name and email.
 2. Collect a short meeting purpose.
 3. Ask for a meeting window, such as "tomorrow afternoon" or "next week".
-4. Read available slots from the public hosted Calendly page.
+4. Read available slots from Calendly's read-only availability API, falling
+   back to the public hosted Calendly page if needed.
 5. Offer numbered time slots in chat.
 6. Ask for explicit confirmation.
 7. Open the pre-filled hosted Calendly page in browser automation, click the
@@ -22,11 +24,12 @@ Set this before running the action server:
 
 ```bash
 CALENDLY_SCHEDULING_LINK="https://calendly.com/communications-1pax/30min"
+CALENDLY_ACCESS_TOKEN="..."
+CALENDLY_EVENT_TYPE_URI="https://api.calendly.com/event_types/..."
 ```
 
-The scheduling link powers both hosted-page slot discovery and hosted-page
-browser submission. Calendly API credentials are intentionally ignored by the
-runtime flow.
+The scheduling link powers hosted-page browser submission. The API credentials
+are used only for read-only slot availability.
 
 ## Optional environment variables
 

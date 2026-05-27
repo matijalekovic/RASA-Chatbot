@@ -11,9 +11,14 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, Text, Tuple
@@ -185,6 +190,8 @@ _SLOT_WORD_TO_NUMBER = {
 @dataclass(frozen=True)
 class CalendlyConfig:
     scheduling_link: str
+    access_token: str
+    event_type_uri: str
     location_kind: str
     allow_link_fallback: bool
     allow_confirmation_link_fallback: bool
@@ -198,6 +205,10 @@ class CalendlyConfig:
     @property
     def is_connected(self) -> bool:
         return bool(self.scheduling_link)
+
+    @property
+    def availability_api_connected(self) -> bool:
+        return bool(self.access_token and self.event_type_uri)
 
 
 class CalendlyAutomationError(RuntimeError):
@@ -231,6 +242,8 @@ def _config_from_env() -> CalendlyConfig:
         os.environ.get("CALENDLY_SCHEDULING_LINK", "").strip()
         or os.environ.get("CALENDLY_SCHEDULING_URL", "").strip()
     )
+    access_token = os.environ.get("CALENDLY_ACCESS_TOKEN", "").strip()
+    event_type_uri = os.environ.get("CALENDLY_EVENT_TYPE_URI", "").strip()
     location_kind = os.environ.get("CALENDLY_LOCATION_KIND", "").strip()
     allow_link_fallback = _env_bool(
         "CALENDLY_ALLOW_LINK_FALLBACK",
@@ -251,6 +264,8 @@ def _config_from_env() -> CalendlyConfig:
 
     return CalendlyConfig(
         scheduling_link=scheduling_link,
+        access_token=access_token,
+        event_type_uri=event_type_uri,
         location_kind=location_kind,
         allow_link_fallback=allow_link_fallback,
         allow_confirmation_link_fallback=allow_confirmation_link_fallback,
@@ -803,6 +818,183 @@ def _parse_calendly_dt(value: str) -> datetime:
     return datetime.fromisoformat(normalized).astimezone(timezone.utc)
 
 
+def _iso_utc(dt: datetime) -> str:
+    return (
+        dt.astimezone(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def _calendly_api_get(
+    cfg: CalendlyConfig,
+    path: str,
+    query: Optional[Dict[str, str]] = None,
+    timeout: float = 15.0,
+) -> Dict[str, Any]:
+    """Read-only Calendly API helper.
+
+    This intentionally supports GET only. Booking is always done through the
+    hosted Calendly page and browser automation.
+    """
+
+    if not cfg.access_token:
+        raise CalendlyAutomationError("Calendly API token is not configured.")
+
+    query_string = urllib.parse.urlencode(query or {})
+    url = f"https://api.calendly.com/{path.lstrip('/')}"
+    if query_string:
+        url = f"{url}?{query_string}"
+
+    curl_result = _curl_calendly_api_get(cfg, url=url, timeout=timeout)
+    if curl_result is not None:
+        return curl_result
+
+    req = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {cfg.access_token}",
+            "Accept": "application/json",
+            "User-Agent": "1PAX-Chatbot/1.0",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        body_text = exc.read().decode("utf-8", errors="replace")[:500]
+        raise CalendlyAutomationError(
+            "Calendly API request failed.",
+            status=exc.code,
+            detail=body_text,
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise CalendlyAutomationError("Calendly API request failed.") from exc
+
+
+def _curl_calendly_api_get(
+    cfg: CalendlyConfig,
+    url: str,
+    timeout: float = 15.0,
+) -> Optional[Dict[str, Any]]:
+    """Use curl for read-only Calendly API calls if urllib TLS is blocked."""
+
+    curl_bin = shutil.which("curl")
+    if not curl_bin:
+        return None
+
+    header_file = None
+    try:
+        with tempfile.NamedTemporaryFile("w", delete=False) as headers:
+            header_file = headers.name
+            headers.write(f"Authorization: Bearer {cfg.access_token}\n")
+            headers.write("Accept: application/json\n")
+            headers.write(
+                "User-Agent: Mozilla/5.0 AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36\n"
+            )
+
+        completed = subprocess.run(
+            [
+                curl_bin,
+                "--silent",
+                "--show-error",
+                "--location",
+                "--max-time",
+                str(max(5, int(timeout))),
+                "--request",
+                "GET",
+                "--url",
+                url,
+                "--header",
+                f"@{header_file}",
+                "--write-out",
+                "\n%{http_code}",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=max(10, timeout + 5),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Calendly curl availability request failed: %s", exc)
+        return None
+    finally:
+        if header_file:
+            try:
+                os.unlink(header_file)
+            except OSError:
+                pass
+
+    output = completed.stdout or ""
+    if "\n" not in output:
+        logger.warning("Calendly curl availability request returned no HTTP status.")
+        return None
+
+    raw_body, status_text = output.rsplit("\n", 1)
+    try:
+        status = int(status_text.strip())
+    except ValueError:
+        logger.warning(
+            "Calendly curl availability request returned invalid status: %s",
+            status_text,
+        )
+        return None
+
+    if not 200 <= status < 300:
+        raise CalendlyAutomationError(
+            "Calendly API availability request failed.",
+            status=status,
+            detail=(raw_body or completed.stderr or "")[:500],
+        )
+
+    try:
+        return json.loads(raw_body) if raw_body else {}
+    except ValueError as exc:
+        raise CalendlyAutomationError(
+            "Calendly API returned invalid JSON.",
+            status=status,
+            detail=raw_body[:500],
+        ) from exc
+
+
+def _api_available_slot_times(
+    cfg: CalendlyConfig,
+    start: datetime,
+    end: datetime,
+) -> List[str]:
+    if not cfg.availability_api_connected:
+        return []
+
+    data = _calendly_api_get(
+        cfg,
+        "/event_type_available_times",
+        query={
+            "event_type": cfg.event_type_uri,
+            "start_time": _iso_utc(start),
+            "end_time": _iso_utc(end),
+        },
+    )
+
+    slots: List[str] = []
+    for item in data.get("collection", []):
+        if item.get("status") and item.get("status") != "available":
+            continue
+        if (
+            item.get("invitees_remaining") is not None
+            and item.get("invitees_remaining") <= 0
+        ):
+            continue
+        start_time = item.get("start_time")
+        if isinstance(start_time, str) and start_time:
+            slots.append(_iso_utc(_parse_calendly_dt(start_time)))
+    return slots
+
+
 def _slot_label(start_time: str, timezone_name: str, lang: Optional[str] = None) -> str:
     tz = _zone(timezone_name)
     dt = _parse_calendly_dt(start_time).astimezone(tz)
@@ -922,7 +1114,22 @@ def _available_slots(
         end = start + timedelta(days=_MAX_RANGE_DAYS)
 
     raw_slots: List[str] = []
-    if cfg.scheduling_link:
+    api_error: Optional[Exception] = None
+
+    if cfg.availability_api_connected:
+        try:
+            raw_slots = _api_available_slot_times(cfg, start, end)
+        except Exception as exc:
+            api_error = exc
+            detail = getattr(exc, "detail", None)
+            status = getattr(exc, "status", None)
+            logger.warning(
+                "Calendly read-only availability failed: status=%s detail=%s",
+                status,
+                detail,
+            )
+
+    if not raw_slots and cfg.scheduling_link:
         try:
             from .calendly_browser import find_calendly_available_slots
 
@@ -938,9 +1145,17 @@ def _available_slots(
             )
         except Exception as exc:
             logger.warning("Calendly hosted-page availability failed: %s", exc)
+            if api_error:
+                raise CalendlyAutomationError(
+                    "Calendly availability could not be reached."
+                ) from exc
             raise CalendlyAutomationError(
                 "Calendly hosted page could not be reached."
             ) from exc
+    elif not raw_slots and api_error:
+        raise CalendlyAutomationError(
+            "Calendly availability could not be reached."
+        ) from api_error
 
     window = _time_window(preference)
     filtered = raw_slots
