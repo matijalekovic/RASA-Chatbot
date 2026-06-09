@@ -203,12 +203,14 @@ class _ConfirmTracker:
 def test_confirm_redirects_to_prefilled_calendly_without_browser_submit():
     original_config = calendly_actions._config_from_env
     original_browser = calendly_actions._book_invitee_with_browser
+    original_env = dict(calendly_actions.os.environ)
 
     def fail_if_called(*args, **kwargs):
         raise AssertionError("Final confirmation should redirect, not run browser submit")
 
     calendly_actions._config_from_env = _cfg
     calendly_actions._book_invitee_with_browser = fail_if_called
+    calendly_actions.os.environ["SCHEDULING_PROVIDER"] = "calendly"
     dispatcher = CollectingDispatcher()
     try:
         events = calendly_actions.run_calendly_scheduling(
@@ -219,6 +221,8 @@ def test_confirm_redirects_to_prefilled_calendly_without_browser_submit():
     finally:
         calendly_actions._config_from_env = original_config
         calendly_actions._book_invitee_with_browser = original_browser
+        calendly_actions.os.environ.clear()
+        calendly_actions.os.environ.update(original_env)
 
     assert dispatcher.messages
     message = dispatcher.messages[-1]

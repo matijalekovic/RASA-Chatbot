@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        "langdetect>=1.0.9" \
        "tzdata>=2025.2" \
        "playwright>=1.44,<2.0" \
+       "google-api-python-client>=2.120,<3.0" \
+       "google-auth>=2.29,<3.0" \
     && if [ "${INSTALL_CALENDLY_BROWSER}" = "true" ]; then \
        /opt/venv/bin/python -m playwright install --with-deps chromium; \
        fi
@@ -23,9 +25,15 @@ WORKDIR /app
 # Copy project files
 COPY . /app
 
-# Use the locally prepared Rasa model artifact. Training is intentionally done
-# before deployment so Railway only packages and runs the application.
-RUN test -f /app/models/production.tar.gz
+# Railway deploys the locally trained artifact by default. Set this to true
+# only for an intentional image-build retrain.
+ARG TRAIN_RASA_MODEL=false
+RUN if [ "${TRAIN_RASA_MODEL}" = "true" ]; then \
+      rm -f /app/models/*.tar.gz && \
+      /opt/venv/bin/rasa train --out /app/models --fixed-model-name production; \
+    else \
+      test -f /app/models/production.tar.gz; \
+    fi
 
 # Runtime memory controls. Keep these after training so image builds can still
 # use normal TensorFlow parallelism while the live service keeps bounded RSS

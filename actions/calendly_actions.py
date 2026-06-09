@@ -28,6 +28,7 @@ from rasa_sdk import Action, Tracker
 from rasa_sdk.events import SlotSet
 from rasa_sdk.executor import CollectingDispatcher
 
+from . import google_calendar_scheduler as gcal
 from .translation import get_lang, translate_response
 
 
@@ -46,6 +47,17 @@ _SCHEDULE_SLOTS = [
     "schedule_offered_slots",
     "schedule_selected_slot",
     "schedule_selected_slot_label",
+    "schedule_detected_language",
+    "schedule_region",
+    "schedule_region_label",
+    "schedule_colleague_id",
+    "schedule_colleague_label",
+    "schedule_colleague_office",
+    "schedule_colleague_timezone",
+    "schedule_colleague_calendar_id",
+    "schedule_colleague_options",
+    "schedule_booking_event_id",
+    "schedule_booking_meet_link",
 ]
 
 _WEEKDAYS = {
@@ -428,15 +440,17 @@ def _utter(
     text: str,
     lang: Optional[str],
     already_localized: bool = False,
+    buttons: Optional[List[Dict[str, str]]] = None,
 ) -> None:
     if _is_sr(lang) and not already_localized:
         sr_text = _sr_scheduler_text(text)
         if sr_text:
-            dispatcher.utter_message(text=sr_text)
+            dispatcher.utter_message(text=sr_text, buttons=buttons)
             return
 
     dispatcher.utter_message(
-        text=text if already_localized else translate_response(text, lang)
+        text=text if already_localized else translate_response(text, lang),
+        buttons=buttons,
     )
 
 
@@ -616,6 +630,249 @@ def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
         return True
 
     return stage in {"select_slot", "confirm"} and lowered in {"no", "ne"}
+
+
+def _scheduling_provider() -> str:
+    return (
+        os.environ.get("SCHEDULING_PROVIDER")
+        or os.environ.get("MEETING_SCHEDULING_PROVIDER")
+        or "google"
+    ).strip().lower()
+
+
+def _google_calendar_config() -> gcal.GoogleCalendarConfig:
+    return gcal.config_from_env()
+
+
+def _google_calendar_client(cfg: gcal.GoogleCalendarConfig) -> gcal.GoogleCalendarClient:
+    return gcal.GoogleCalendarClient(cfg)
+
+
+def _route_confirmation_buttons(
+    colleague: gcal.CalendarColleague,
+    lang: Optional[str],
+) -> List[Dict[str, str]]:
+    base = (_lang_code(lang).split("-", 1)[0] or "EN").upper()
+    labels = {
+        "ES": ("Sí, usar esta oficina", "Ver otras oficinas"),
+        "ZH": ("是的，使用这个办公室", "查看其他办公室"),
+        "FR": ("Oui, utiliser ce bureau", "Voir d'autres bureaux"),
+        "SR": ("Da, ova kancelarija", "Prikaži druge opcije"),
+    }
+    yes, other = labels.get(base, ("Yes, use this office", "Show other offices"))
+    return [
+        {
+            "title": yes,
+            "payload": f"Yes, schedule with {colleague.office}",
+        },
+        {
+            "title": other,
+            "payload": "Show other scheduling options",
+        },
+    ]
+
+
+def _colleague_option_buttons(
+    options: List[gcal.CalendarColleague],
+) -> List[Dict[str, str]]:
+    return [
+        {
+            "title": f"{idx}. {colleague.office}",
+            "payload": f"Use option {idx}: {colleague.office}",
+        }
+        for idx, colleague in enumerate(options[:5], start=1)
+    ]
+
+
+def _route_confirmation_text(
+    context: gcal.SchedulingContext,
+    colleague: gcal.CalendarColleague,
+) -> str:
+    languages = ", ".join(lang.upper() for lang in colleague.languages)
+    return (
+        "Based on your language, region, and timezone, I suggest scheduling "
+        f"this with **{colleague.display_name}**.\n\n"
+        f"Office: **{colleague.office}**\n"
+        f"Timezone: **{colleague.timezone}**\n"
+        f"Languages: **{languages}**\n"
+        f"Detected region: **{context.region_label}**\n\n"
+        "Does this work for you?"
+    )
+
+
+def _route_options_text(options: List[gcal.CalendarColleague]) -> str:
+    lines = ["Of course. Please choose the office or colleague you prefer:"]
+    for idx, colleague in enumerate(options[:5], start=1):
+        languages = ", ".join(lang.upper() for lang in colleague.languages)
+        lines.append(
+            f"{idx}. **{colleague.display_name}** — {colleague.timezone}; {languages}"
+        )
+    lines.append("")
+    lines.append("Reply with a number, office, or colleague name.")
+    return "\n".join(lines)
+
+
+def _is_route_rejection(text: str) -> bool:
+    lowered = (text or "").lower().strip(" .!?,")
+    if lowered in {"no", "ne", "not that one", "another", "other"}:
+        return True
+    return any(
+        phrase in lowered
+        for phrase in (
+            "other option",
+            "other office",
+            "show other",
+            "someone else",
+            "different colleague",
+            "different office",
+            "not this",
+            "not that",
+        )
+    )
+
+
+def _google_context_events(
+    context: gcal.SchedulingContext,
+    colleague: Optional[gcal.CalendarColleague] = None,
+    options: Optional[List[gcal.CalendarColleague]] = None,
+) -> List[SlotSet]:
+    events: List[SlotSet] = [
+        SlotSet("schedule_detected_language", context.language),
+        SlotSet("schedule_region", context.region),
+        SlotSet("schedule_region_label", context.region_label),
+    ]
+    if colleague:
+        events.extend(
+            [
+                SlotSet("schedule_colleague_id", colleague.id),
+                SlotSet("schedule_colleague_label", colleague.label),
+                SlotSet("schedule_colleague_office", colleague.office),
+                SlotSet("schedule_colleague_timezone", colleague.timezone),
+                SlotSet("schedule_colleague_calendar_id", colleague.calendar_id),
+            ]
+        )
+    if options:
+        events.append(SlotSet("schedule_colleague_options", gcal.colleague_options_payload(options)))
+    return events
+
+
+def _google_slot_dict(slot: gcal.CalendarSlot) -> Dict[str, str]:
+    return {
+        "start_time": slot.start_time,
+        "end_time": slot.end_time,
+        "calendar_id": slot.calendar_id,
+        "colleague_id": slot.colleague_id,
+        "colleague_label": slot.colleague_label,
+        "colleague_office": slot.colleague_office,
+        "colleague_timezone": slot.colleague_timezone,
+        "label": slot.label,
+    }
+
+
+def _google_colleague_from_slots(
+    cfg: gcal.GoogleCalendarConfig,
+    tracker: Tracker,
+) -> Optional[gcal.CalendarColleague]:
+    return gcal.colleague_by_id(cfg.roster, tracker.get_slot("schedule_colleague_id"))
+
+
+def _google_available_slots(
+    cfg: gcal.GoogleCalendarConfig,
+    colleague: gcal.CalendarColleague,
+    preference: str,
+    timezone_name: str,
+    lang: Optional[str],
+) -> Tuple[List[Dict[str, str]], bool]:
+    tz = _zone(timezone_name)
+    start, end = _date_range_for_preference(preference, tz)
+    if end - start > timedelta(days=_MAX_RANGE_DAYS):
+        end = start + timedelta(days=_MAX_RANGE_DAYS)
+
+    client = _google_calendar_client(cfg)
+    slots, matched = gcal.available_slots(
+        cfg=cfg,
+        client=client,
+        colleague=colleague,
+        range_start=start,
+        range_end=end,
+        visitor_timezone=timezone_name,
+        preferred_hour_window=_time_window(preference),
+        label_formatter=lambda start_time, display_tz: _slot_label(
+            start_time,
+            display_tz,
+            lang,
+        ),
+    )
+    return [_google_slot_dict(slot) for slot in slots], matched
+
+
+def _google_booking_success_message(
+    email: str,
+    purpose: str,
+    selected_label: Optional[str],
+    colleague: gcal.CalendarColleague,
+    booking: gcal.CalendarBooking,
+    lang: Optional[str] = None,
+) -> str:
+    dry_note = " This was created in dry-run mode." if booking.dry_run else ""
+    if _is_sr(lang):
+        lines = [
+            f"Sastanak je zakazan: **{selected_label}**.",
+            f"Domaćin: **{colleague.display_name}**.",
+            f"Google Calendar će poslati pozivnicu na **{email}**.",
+            f"Povod: **{purpose}**.{dry_note}",
+        ]
+        if booking.meet_link:
+            lines.append(f"Google Meet: {booking.meet_link}")
+        if booking.html_link:
+            lines.append(f"Calendar event: {booking.html_link}")
+        return "\n\n".join(lines)
+
+    lines = [
+        f"You're booked: **{selected_label}**.",
+        f"Host: **{colleague.display_name}**.",
+        f"Google Calendar will send the invitation to **{email}**.",
+        f"Purpose: **{purpose}**.{dry_note}",
+    ]
+    if booking.meet_link:
+        lines.append(f"Google Meet: {booking.meet_link}")
+    if booking.html_link:
+        lines.append(f"Calendar event: {booking.html_link}")
+    return "\n\n".join(lines)
+
+
+def _book_google_calendar_event(
+    cfg: gcal.GoogleCalendarConfig,
+    colleague: gcal.CalendarColleague,
+    name: str,
+    email: str,
+    purpose: str,
+    selected_slot: str,
+    selected_end: Optional[str],
+    timezone_name: str,
+) -> gcal.CalendarBooking:
+    client = _google_calendar_client(cfg)
+    start = _parse_calendly_dt(selected_slot)
+    end = (
+        _parse_calendly_dt(selected_end)
+        if selected_end
+        else start + timedelta(minutes=cfg.event_duration_minutes)
+    )
+
+    calendar_id = colleague.calendar_id or f"dryrun:{colleague.id}"
+    busy = client.freebusy([calendar_id], start, end).get(calendar_id, [])
+    if busy:
+        raise gcal.GoogleCalendarError("That time was just booked. Please choose another slot.")
+
+    return client.create_event(
+        colleague=colleague,
+        start=start,
+        end=end,
+        name=name,
+        email=email,
+        purpose=purpose,
+        timezone_name=timezone_name,
+    )
 
 
 def _looks_like_content_shift_while_scheduling(text: str, stage: Optional[str]) -> bool:
@@ -1021,8 +1278,16 @@ def _format_slots(
     timezone_name: str,
     lang: Optional[str] = None,
 ) -> str:
+    host = (slots[0].get("colleague_label") or "").strip() if slots else ""
+    office = (slots[0].get("colleague_office") or "").strip() if slots else ""
+    host_label = f"{host} ({office})" if host and office else host
     if _is_sr(lang):
-        lines = [f"Pronašao sam ove dostupne termine ({timezone_name}):"]
+        intro = (
+            f"Pronašao sam ove dostupne termine sa {host_label} ({timezone_name}):"
+            if host_label
+            else f"Pronašao sam ove dostupne termine ({timezone_name}):"
+        )
+        lines = [intro]
         for idx, slot in enumerate(slots, start=1):
             lines.append(
                 f"{idx}. **{_slot_label(slot['start_time'], timezone_name, lang)}**"
@@ -1031,7 +1296,12 @@ def _format_slots(
         lines.append("Odgovorite brojem, ili recite drugi dan/vreme.")
         return "\n".join(lines)
 
-    lines = [f"I found these available times ({timezone_name}):"]
+    intro = (
+        f"I found these available times with {host_label} ({timezone_name}):"
+        if host_label
+        else f"I found these available times ({timezone_name}):"
+    )
+    lines = [intro]
     for idx, slot in enumerate(slots, start=1):
         lines.append(f"{idx}. **{slot['label']}**")
     lines.append("")
@@ -1334,22 +1604,34 @@ def _booking_summary_lines(
     purpose: str,
     selected_label: Optional[str],
     lang: Optional[str] = None,
+    colleague_label: Optional[str] = None,
 ) -> List[str]:
     if _is_sr(lang):
-        return [
+        lines = [
             "**Rezime rezervacije**",
             f"Vreme: **{selected_label or 'Izabrani Calendly termin'}**",
+        ]
+        if colleague_label:
+            lines.append(f"Domaćin: **{colleague_label}**")
+        lines.extend([
             f"Ime: **{name}**",
             f"Email: **{email}**",
             f"Povod: **{purpose}**",
-        ]
-    return [
+        ])
+        return lines
+
+    lines = [
         "**Booking summary**",
         f"Time: **{selected_label or 'Selected Calendly slot'}**",
+    ]
+    if colleague_label:
+        lines.append(f"Host: **{colleague_label}**")
+    lines.extend([
         f"Name: **{name}**",
         f"Email: **{email}**",
         f"Purpose: **{purpose}**",
-    ]
+    ])
+    return lines
 
 
 def _booking_confirmation_prompt(
@@ -1358,8 +1640,16 @@ def _booking_confirmation_prompt(
     purpose: str,
     selected_label: Optional[str],
     lang: Optional[str] = None,
+    colleague_label: Optional[str] = None,
 ) -> str:
-    lines = _booking_summary_lines(name, email, purpose, selected_label, lang)
+    lines = _booking_summary_lines(
+        name,
+        email,
+        purpose,
+        selected_label,
+        lang,
+        colleague_label=colleague_label,
+    )
     lines.append("")
     if _is_sr(lang):
         lines.append("Odgovorite **da** i odmah ću završiti rezervaciju.")
@@ -1499,7 +1789,403 @@ def run_calendly_scheduling(
     tracker: Tracker,
     domain: Dict[Text, Any],
 ) -> List[SlotSet]:
-    """Shared implementation used by the scheduling action and active fallback."""
+    """Shared scheduling entrypoint used by the action and active fallback."""
+
+    if _scheduling_provider() != "calendly":
+        return run_google_calendar_scheduling(dispatcher, tracker, domain)
+    return _run_calendly_scheduling(dispatcher, tracker, domain)
+
+
+def run_google_calendar_scheduling(
+    dispatcher: CollectingDispatcher,
+    tracker: Tracker,
+    domain: Dict[Text, Any],
+) -> List[SlotSet]:
+    """Conversational Google Calendar scheduler."""
+
+    del domain
+    lang = get_lang(tracker)
+    events: List[SlotSet] = _lang_event(lang)
+    cfg = _google_calendar_config()
+
+    text = tracker.latest_message.get("text") or ""
+    intent = tracker.latest_message.get("intent", {}).get("name", "")
+    stage = tracker.get_slot("schedule_stage")
+
+    if _is_cancel(text, intent, stage):
+        _utter(
+            dispatcher,
+            "No problem. I will leave the meeting scheduling there.",
+            lang,
+        )
+        return _clear_schedule_events() + events
+
+    timezone_name = _user_timezone(tracker, cfg)
+    metadata = tracker.latest_message.get("metadata") or {}
+    context = gcal.detect_scheduling_context(
+        lang=lang,
+        metadata=metadata,
+        text=text,
+        timezone_name=timezone_name,
+    )
+    ranked_options = gcal.options_from_payload(
+        tracker.get_slot("schedule_colleague_options"),
+        cfg.roster,
+    ) or gcal.rank_colleagues(cfg.roster, context)
+    selected_colleague = _google_colleague_from_slots(cfg, tracker)
+
+    name = tracker.get_slot("schedule_name")
+    email = tracker.get_slot("schedule_email")
+    purpose = tracker.get_slot("schedule_purpose")
+    time_preference = tracker.get_slot("schedule_time_preference")
+    selected_slot = tracker.get_slot("schedule_selected_slot")
+    selected_label = tracker.get_slot("schedule_selected_slot_label")
+    offered_slots = _json_slot(tracker.get_slot("schedule_offered_slots"), [])
+
+    extracted_name = _extract_name(text, stage)
+    if extracted_name:
+        name = extracted_name
+        events.append(SlotSet("schedule_name", name))
+
+    extracted_email = _extract_email(text)
+    if extracted_email:
+        email = extracted_email
+        events.append(SlotSet("schedule_email", email))
+
+    extracted_purpose = _extract_purpose(text, stage)
+    if extracted_purpose:
+        purpose = extracted_purpose
+        events.append(SlotSet("schedule_purpose", purpose))
+
+    extracted_time_preference = (
+        None if stage == "collect_purpose" else _extract_time_preference(text, stage)
+    )
+    if extracted_time_preference and stage not in {"select_slot", "confirm"}:
+        time_preference = extracted_time_preference
+        offered_slots = []
+        selected_slot = None
+        selected_label = None
+        events.extend(
+            [
+                SlotSet("schedule_time_preference", time_preference),
+                SlotSet("schedule_offered_slots", None),
+                SlotSet("schedule_selected_slot", None),
+                SlotSet("schedule_selected_slot_label", None),
+            ]
+        )
+
+    if not name:
+        _utter(
+            dispatcher,
+            "Of course. I can help schedule a meeting with 1PAX. What name "
+            "should I put on the invite?",
+            lang,
+        )
+        return events + _set_stage("collect_name")
+
+    if not email:
+        _utter(
+            dispatcher,
+            f"Thanks, {name}. What email address should Google Calendar send "
+            "the invitation to?",
+            lang,
+        )
+        return events + _set_stage("collect_email")
+
+    if not purpose:
+        _utter(
+            dispatcher,
+            "What is the purpose of the meeting? A short note is enough, for "
+            "example: project consultation, partnership, proposal, careers, "
+            "press, or a general introduction.",
+            lang,
+        )
+        return events + _set_stage("collect_purpose")
+
+    if stage == "confirm_route":
+        parsed_choice = gcal.parse_colleague_choice(text, ranked_options)
+        if parsed_choice:
+            selected_colleague = parsed_choice
+            offered_slots = []
+            events.extend(
+                _google_context_events(context, selected_colleague, ranked_options)
+            )
+        elif _is_affirmation(text) and selected_colleague:
+            events.extend(
+                _google_context_events(context, selected_colleague, ranked_options)
+            )
+        elif _is_route_rejection(text):
+            _utter(
+                dispatcher,
+                _route_options_text(ranked_options),
+                lang,
+                buttons=_colleague_option_buttons(ranked_options),
+            )
+            return events + _google_context_events(
+                context,
+                selected_colleague,
+                ranked_options,
+            ) + _set_stage("choose_route")
+        else:
+            prompt_colleague = selected_colleague or ranked_options[0]
+            _utter(
+                dispatcher,
+                "Please reply yes to use that office, or say you would like "
+                "another option.",
+                lang,
+                buttons=_route_confirmation_buttons(prompt_colleague, lang),
+            )
+            return events + _set_stage("confirm_route")
+
+    if stage == "choose_route":
+        selected_colleague = gcal.parse_colleague_choice(text, ranked_options)
+        if not selected_colleague:
+            _utter(
+                dispatcher,
+                _route_options_text(ranked_options),
+                lang,
+                buttons=_colleague_option_buttons(ranked_options),
+            )
+            return events + _google_context_events(
+                context,
+                options=ranked_options,
+            ) + _set_stage("choose_route")
+        offered_slots = []
+        events.extend(_google_context_events(context, selected_colleague, ranked_options))
+
+    if not selected_colleague:
+        if not ranked_options:
+            _utter(
+                dispatcher,
+                "I can help schedule meetings, but no Google Calendar colleagues "
+                "are configured yet.",
+                lang,
+            )
+            return _clear_schedule_events() + events
+
+        selected_colleague = ranked_options[0]
+        _utter(
+            dispatcher,
+            _route_confirmation_text(context, selected_colleague),
+            lang,
+            buttons=_route_confirmation_buttons(selected_colleague, lang),
+        )
+        return events + _google_context_events(
+            context,
+            selected_colleague,
+            ranked_options,
+        ) + _set_stage("confirm_route")
+
+    if not time_preference:
+        _utter(
+            dispatcher,
+            f"Great. I will look for times with {selected_colleague.display_name}. "
+            "When would you like to meet? You can say *tomorrow afternoon*, "
+            "*next Tuesday morning*, or *any time next week*.",
+            lang,
+        )
+        return events + _google_context_events(
+            context,
+            selected_colleague,
+            ranked_options,
+        ) + [
+            SlotSet("schedule_timezone", timezone_name),
+            SlotSet("schedule_stage", "collect_time"),
+        ]
+
+    if stage == "select_slot" and offered_slots:
+        choice = _parse_slot_choice(text, offered_slots, timezone_name)
+        if choice:
+            selected_slot = choice["start_time"]
+            selected_label = choice.get("label") or _slot_label(
+                selected_slot,
+                timezone_name,
+                lang,
+            )
+            slot_colleague = gcal.colleague_by_id(cfg.roster, choice.get("colleague_id"))
+            if slot_colleague:
+                selected_colleague = slot_colleague
+                events.extend(_google_context_events(context, selected_colleague, ranked_options))
+            events.extend(
+                [
+                    SlotSet("schedule_selected_slot", selected_slot),
+                    SlotSet("schedule_selected_slot_label", selected_label),
+                ]
+            )
+            _utter(
+                dispatcher,
+                _booking_confirmation_prompt(
+                    name=name,
+                    email=email,
+                    purpose=purpose,
+                    selected_label=selected_label,
+                    lang=lang,
+                    colleague_label=selected_colleague.display_name,
+                ),
+                lang,
+                already_localized=_is_sr(lang),
+            )
+            return events + _set_stage("confirm")
+
+        if _has_time_words(text) and not _looks_like_slot_choice_only(text):
+            time_preference = text.strip()
+            events.extend(
+                [
+                    SlotSet("schedule_time_preference", time_preference),
+                    SlotSet("schedule_selected_slot", None),
+                    SlotSet("schedule_selected_slot_label", None),
+                ]
+            )
+        else:
+            _utter(
+                dispatcher,
+                "I did not catch which time you wanted. Please reply with one "
+                "of the numbers, or tell me another day/time.",
+                lang,
+            )
+            return events + _set_stage("select_slot")
+
+    if stage == "confirm":
+        if _is_affirmation(text):
+            if not selected_slot:
+                _utter(
+                    dispatcher,
+                    "I lost the selected time. Let me show the available slots "
+                    "again.",
+                    lang,
+                )
+                offered_slots = []
+            else:
+                selected_payload = next(
+                    (
+                        slot
+                        for slot in offered_slots
+                        if slot.get("start_time") == selected_slot
+                    ),
+                    {},
+                )
+                try:
+                    booking = _book_google_calendar_event(
+                        cfg=cfg,
+                        colleague=selected_colleague,
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        selected_slot=selected_slot,
+                        selected_end=selected_payload.get("end_time"),
+                        timezone_name=timezone_name,
+                    )
+                except gcal.GoogleCalendarError as exc:
+                    logger.warning("Google Calendar booking failed: %s", exc)
+                    _utter(
+                        dispatcher,
+                        "Google Calendar could not complete the booking inside "
+                        "the chat yet. Please choose another time, or try again "
+                        "after the Workspace calendar connection is configured.",
+                        lang,
+                    )
+                    return events + _set_stage("select_slot")
+
+                _utter(
+                    dispatcher,
+                    _google_booking_success_message(
+                        email=email,
+                        purpose=purpose,
+                        selected_label=selected_label,
+                        colleague=selected_colleague,
+                        booking=booking,
+                        lang=lang,
+                    ),
+                    lang,
+                    already_localized=_is_sr(lang),
+                )
+                return _clear_schedule_events() + events + [
+                    SlotSet("schedule_booking_event_id", booking.event_id),
+                    SlotSet("schedule_booking_meet_link", booking.meet_link or None),
+                ]
+
+        _utter(
+            dispatcher,
+            "Please reply yes to book that time, or no to cancel.",
+            lang,
+        )
+        return events + _set_stage("confirm")
+
+    if not offered_slots:
+        try:
+            offered_slots, matched_preference = _google_available_slots(
+                cfg,
+                selected_colleague,
+                time_preference,
+                timezone_name,
+                lang,
+            )
+        except gcal.GoogleCalendarError as exc:
+            logger.warning("Google Calendar availability failed: %s", exc)
+            _utter(
+                dispatcher,
+                "I can route the meeting inside the chat, but live Google "
+                "Calendar availability is not connected yet. Once the Workspace "
+                "calendar authentication is configured, I will show open times "
+                "and book the event here without sending you to another page.",
+                lang,
+            )
+            return events + _google_context_events(
+                context,
+                selected_colleague,
+                ranked_options,
+            ) + _set_stage("collect_time")
+
+        if not offered_slots:
+            _utter(
+                dispatcher,
+                f"I could not find open times with {selected_colleague.display_name} "
+                "in that window. Try another option, like *tomorrow morning* "
+                "or *next week*, or ask for another office.",
+                lang,
+            )
+            return events + _set_stage("collect_time")
+
+        events.extend(
+            [
+                SlotSet("schedule_timezone", timezone_name),
+                SlotSet("schedule_offered_slots", json.dumps(offered_slots)),
+            ]
+        )
+        if not matched_preference:
+            _utter(
+                dispatcher,
+                "I could not find times in that exact part of the day, but "
+                "these nearby options are open.",
+                lang,
+            )
+        _utter(
+            dispatcher,
+            _format_slots(offered_slots, timezone_name, lang),
+            lang,
+            already_localized=_is_sr(lang),
+        )
+        return events + _google_context_events(
+            context,
+            selected_colleague,
+            ranked_options,
+        ) + _set_stage("select_slot")
+
+    _utter(
+        dispatcher,
+        _format_slots(offered_slots, timezone_name, lang),
+        lang,
+        already_localized=_is_sr(lang),
+    )
+    return events + _set_stage("select_slot")
+
+
+def _run_calendly_scheduling(
+    dispatcher: CollectingDispatcher,
+    tracker: Tracker,
+    domain: Dict[Text, Any],
+) -> List[SlotSet]:
+    """Legacy Calendly implementation."""
 
     del domain
     lang = get_lang(tracker)

@@ -10,7 +10,7 @@ import random
 import re
 import unicodedata
 from difflib import SequenceMatcher, get_close_matches
-from typing import Any, Dict, List, Optional, Text, Tuple
+from typing import Any, Dict, List, Optional, Set, Text, Tuple
 
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
@@ -633,6 +633,485 @@ def _contains_normalized_phrase(text: str, phrase: str) -> bool:
     return f" {phrase} " in f" {text} "
 
 
+# ── Project geolocation ─────────────────────────────────────────────────────
+
+_GEO_AREA_INFO: Dict[str, Dict[str, Tuple[str, ...]]] = {
+    "Bulgaria": {
+        "aliases": ("bulgarian",),
+        "regions": ("Europe", "Balkans", "Southeast Europe"),
+    },
+    "Serbia": {
+        "aliases": ("serbian",),
+        "regions": ("Europe", "Balkans", "Southeast Europe"),
+    },
+    "Maldives": {
+        "aliases": ("maldivian",),
+        "regions": ("Asia", "South Asia", "Indian Ocean"),
+    },
+    "France": {
+        "aliases": ("french", "metropolitan france"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "French Guiana": {
+        "aliases": ("guyane", "cayenne", "french guyana"),
+        "regions": ("South America", "Latin America"),
+    },
+    "Guadeloupe": {
+        "aliases": ("pointe a pitre", "pointe-a-pitre"),
+        "regions": ("Caribbean", "Latin America"),
+    },
+    "Guinea": {
+        "aliases": ("guinean", "conakry"),
+        "regions": ("Africa", "West Africa", "Francophone Africa"),
+    },
+    "French Polynesia": {
+        "aliases": ("tahiti", "papeete"),
+        "regions": ("Oceania", "Pacific"),
+    },
+    "Cabo Verde": {
+        "aliases": ("cape verde", "macaronesia"),
+        "regions": ("Africa", "West Africa", "Macaronesia", "Francophone Africa"),
+    },
+    "China": {
+        "aliases": ("chinese",),
+        "regions": ("Asia", "East Asia"),
+    },
+    "Iran": {
+        "aliases": ("iranian", "mashhad"),
+        "regions": ("Asia", "Middle East"),
+    },
+    "Kazakhstan": {
+        "aliases": ("kazakh", "almaty"),
+        "regions": ("Asia", "Central Asia"),
+    },
+    "Rwanda": {
+        "aliases": ("rwandan", "kigali"),
+        "regions": ("Africa", "East Africa", "Francophone Africa"),
+    },
+    "Panama": {
+        "aliases": ("panamanian", "tocumen", "panama city"),
+        "regions": ("Latin America", "Central America"),
+    },
+    "Peru": {
+        "aliases": ("peruvian", "lima", "callao", "cusco", "cuzco"),
+        "regions": ("South America", "Latin America"),
+    },
+    "India": {
+        "aliases": ("indian",),
+        "regions": ("Asia", "South Asia"),
+    },
+    "Singapore": {
+        "aliases": ("singaporean",),
+        "regions": ("Asia", "Southeast Asia"),
+    },
+    "Qatar": {
+        "aliases": ("qatari", "doha", "gulf"),
+        "regions": ("Asia", "Middle East", "Gulf Region"),
+    },
+    "Latvia": {
+        "aliases": ("latvian", "riga"),
+        "regions": ("Europe", "Baltics"),
+    },
+    "Japan": {
+        "aliases": ("japanese", "tokyo"),
+        "regions": ("Asia", "East Asia"),
+    },
+    "Thailand": {
+        "aliases": ("thai", "bangkok"),
+        "regions": ("Asia", "Southeast Asia"),
+    },
+    "Portugal": {
+        "aliases": ("portuguese", "montijo"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Chile": {
+        "aliases": ("chilean", "santiago", "santiago de chile"),
+        "regions": ("South America", "Latin America"),
+    },
+    # Known broader client/geography references without a project row today.
+    "Mexico": {
+        "aliases": ("mexican",),
+        "regions": ("Latin America", "North America"),
+    },
+    "Bolivia": {
+        "aliases": ("bolivian",),
+        "regions": ("South America", "Latin America"),
+    },
+    "Senegal": {
+        "aliases": ("senegalese",),
+        "regions": ("Africa", "West Africa", "Francophone Africa"),
+    },
+    # Common geography filters where the public project database has no
+    # standalone project today. Keeping them here prevents filtered project
+    # queries from falling through to the full portfolio list.
+    "Australia": {
+        "aliases": ("australian", "sydney", "melbourne", "brisbane", "perth"),
+        "regions": ("Oceania", "Pacific"),
+    },
+    "United States": {
+        "aliases": ("usa", "u s a", "united states of america", "american"),
+        "regions": ("North America",),
+    },
+    "Canada": {
+        "aliases": ("canadian",),
+        "regions": ("North America",),
+    },
+    "United Kingdom": {
+        "aliases": ("uk", "u k", "great britain", "britain", "england", "london", "british"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Spain": {
+        "aliases": ("spanish", "barcelona", "madrid"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Belgium": {
+        "aliases": ("belgian", "brussels"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Germany": {
+        "aliases": ("german", "berlin", "frankfurt", "munich"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Switzerland": {
+        "aliases": ("swiss", "zurich", "geneva"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Italy": {
+        "aliases": ("italian", "rome", "milan"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Netherlands": {
+        "aliases": ("dutch", "amsterdam"),
+        "regions": ("Europe", "Western Europe"),
+    },
+    "Brazil": {
+        "aliases": ("brazilian",),
+        "regions": ("South America", "Latin America"),
+    },
+    "Argentina": {
+        "aliases": ("argentinian", "argentine"),
+        "regions": ("South America", "Latin America"),
+    },
+    "Colombia": {
+        "aliases": ("colombian",),
+        "regions": ("South America", "Latin America"),
+    },
+    "Morocco": {
+        "aliases": ("moroccan", "casablanca", "marrakesh", "marrakech", "rabat"),
+        "regions": ("Africa", "North Africa", "Francophone Africa"),
+    },
+    "Algeria": {
+        "aliases": ("algerian", "algiers"),
+        "regions": ("Africa", "North Africa", "Francophone Africa"),
+    },
+    "Egypt": {
+        "aliases": ("egyptian", "cairo"),
+        "regions": ("Africa", "North Africa"),
+    },
+    "United Arab Emirates": {
+        "aliases": ("uae", "u a e", "emirati"),
+        "regions": ("Asia", "Middle East", "Gulf Region"),
+    },
+    "Saudi Arabia": {
+        "aliases": ("saudi", "riyadh", "jeddah"),
+        "regions": ("Asia", "Middle East", "Gulf Region"),
+    },
+    "Turkey": {
+        "aliases": ("turkish", "istanbul"),
+        "regions": ("Europe", "Asia", "Middle East"),
+    },
+}
+
+_GEO_REGION_ALIASES: Dict[str, Tuple[str, ...]] = {
+    "Europe": ("european", "eu", "western europe", "southeast europe", "balkans", "balkan"),
+    "Asia": ("asian", "east asia", "south asia", "southeast asia", "central asia"),
+    "Africa": ("african",),
+    "Latin America": ("latin american", "latam", "central america", "central and south america"),
+    "South America": ("south american",),
+    "Middle East": ("middle east", "middle eastern", "gulf", "gulf region"),
+    "Caribbean": ("caribbean",),
+    "Francophone Africa": ("francophone africa", "french speaking africa", "french-speaking africa"),
+    "West Africa": ("west africa", "western africa"),
+    "North Africa": ("north africa", "northern africa"),
+    "North America": ("north america", "north american"),
+    "Oceania": ("oceania", "pacific"),
+}
+
+_GEO_BROWSE_CUES = (
+    "airport",
+    "airports",
+    "built",
+    "delivered",
+    "designed",
+    "did",
+    "do in",
+    "done",
+    "experience",
+    "have in",
+    "portfolio",
+    "project",
+    "projects",
+    "show me",
+    "what work",
+    "what did",
+    "work in",
+    "worked in",
+)
+
+_COUNTRY_ONLY_FALLBACKS = {
+    "Mexico": "Latin America",
+    "Bolivia": "Latin America",
+    "Senegal": "Africa",
+}
+
+_GEO_REGION_NOTES = {
+    "Latin America": (
+        "Broader regional references also include **Bolivia**, although no standalone "
+        "Bolivia project is currently listed in the project database."
+    ),
+    "South America": (
+        "For the wider **Latin America** portfolio, 1PAX also has work in **Panama** "
+        "and **Guadeloupe**. Broader regional references include **Bolivia**, although "
+        "no standalone Bolivia project is currently listed in the project database."
+    ),
+}
+
+
+def _geo_area_regions(area: str) -> Set[str]:
+    return set(_GEO_AREA_INFO.get(area, {}).get("regions", ()))
+
+
+def _areas_for_region(region: str) -> Set[str]:
+    return {
+        area
+        for area in _GEO_AREA_INFO
+        if region == area or region in _geo_area_regions(area)
+    }
+
+
+def _project_geo_areas(project: Dict) -> Tuple[str, ...]:
+    location_norm = _ascii_norm(project.get("location", ""))
+    areas = []
+    for area in _GEO_AREA_INFO:
+        area_norm = _ascii_norm(area)
+        if _contains_normalized_phrase(location_norm, area_norm):
+            areas.append(area)
+    return tuple(areas)
+
+
+_PROJECT_GEO_AREAS: Dict[str, Tuple[str, ...]] = {
+    key: _project_geo_areas(project)
+    for key, project in PROJECTS.items()
+}
+
+_PROJECT_ORDER = {
+    key: index
+    for index, key in enumerate(
+        key
+        for project_keys in CATEGORIES.values()
+        for key in project_keys
+    )
+}
+
+_GEO_TARGETS: Dict[str, Dict[str, Any]] = {}
+for _area, _info in _GEO_AREA_INFO.items():
+    for _alias in (_area, *_info.get("aliases", ())):
+        _GEO_TARGETS[_ascii_norm(_alias)] = {
+            "kind": "area",
+            "label": _area,
+            "areas": {_area},
+            "fallback_region": _COUNTRY_ONLY_FALLBACKS.get(_area),
+        }
+
+for _region, _aliases in _GEO_REGION_ALIASES.items():
+    for _alias in (_region, *_aliases):
+        _GEO_TARGETS[_ascii_norm(_alias)] = {
+            "kind": "region",
+            "label": _region,
+            "areas": _areas_for_region(_region),
+            "fallback_region": None,
+        }
+
+_SORTED_GEO_TARGETS = sorted(
+    _GEO_TARGETS.items(),
+    key=lambda item: (len(item[0].split()), len(item[0])),
+    reverse=True,
+)
+
+
+def _find_geo_target(text: str) -> Optional[Dict[str, Any]]:
+    normalized = _ascii_norm(text or "")
+    if not normalized:
+        return None
+
+    for alias, target in _SORTED_GEO_TARGETS:
+        if _contains_normalized_phrase(normalized, alias):
+            return target
+    return None
+
+
+def _looks_like_project_geo_query(text: str) -> bool:
+    normalized = _ascii_norm(text or "")
+    if not normalized or not _find_geo_target(normalized):
+        return False
+    words = set(normalized.split())
+    plural_or_browse = any(
+        cue in normalized
+        for cue in (
+            "projects",
+            "show me",
+            "list",
+            "what projects",
+            "which projects",
+            "what work",
+            "what did",
+            "experience",
+            "worked in",
+            "work in",
+            "have in",
+            "done",
+            "delivered",
+            "designed",
+        )
+    )
+    if "projects" not in words and not plural_or_browse and _fuzzy_match_project(text):
+        return False
+    return any(cue in normalized for cue in _GEO_BROWSE_CUES)
+
+
+def _project_keys_for_areas(areas: Set[str]) -> List[str]:
+    keys = [
+        key
+        for key, project_areas in _PROJECT_GEO_AREAS.items()
+        if areas.intersection(project_areas)
+    ]
+    return sorted(keys, key=lambda key: _PROJECT_ORDER.get(key, 9999))
+
+
+def _project_geo_result(text: str) -> Optional[Dict[str, Any]]:
+    if not _looks_like_project_geo_query(text):
+        return None
+
+    target = _find_geo_target(text)
+    if not target:
+        return None
+
+    direct_keys = _project_keys_for_areas(target["areas"])
+    if direct_keys:
+        return {
+            "direct": True,
+            "label": target["label"],
+            "kind": target["kind"],
+            "matched_label": target["label"],
+            "project_keys": direct_keys,
+            "areas": target["areas"],
+        }
+
+    fallback_region = target.get("fallback_region")
+    if not fallback_region:
+        return {
+            "direct": False,
+            "label": target["label"],
+            "kind": target["kind"],
+            "matched_label": target["label"],
+            "project_keys": [],
+            "areas": target["areas"],
+            "fallback_label": None,
+        }
+
+    fallback_areas = _areas_for_region(fallback_region)
+    fallback_keys = _project_keys_for_areas(fallback_areas)
+    return {
+        "direct": False,
+        "label": target["label"],
+        "kind": target["kind"],
+        "matched_label": fallback_region,
+        "project_keys": fallback_keys,
+        "areas": fallback_areas,
+        "fallback_label": fallback_region,
+    }
+
+
+def _city_from_location(location: str) -> str:
+    return location.split(",")[0].strip()
+
+
+def _areas_for_project_key(project_key: str) -> Tuple[str, ...]:
+    return _PROJECT_GEO_AREAS.get(project_key, ())
+
+
+def _format_geo_project_list(result: Dict[str, Any]) -> str:
+    label = result["label"]
+    matched_label = result.get("matched_label") or label
+    project_keys = result.get("project_keys", [])
+
+    if result["direct"]:
+        intro = f"1PAX projects in **{label}**:"
+    elif project_keys:
+        intro = (
+            f"I don't see a current 1PAX project tagged directly to **{label}** "
+            f"in the project database. The closest regional view is **{matched_label}**:"
+        )
+    else:
+        intro = (
+            f"I don't see a current 1PAX project tagged to **{label}** in the project database."
+        )
+
+    lines = [intro]
+    if not project_keys:
+        lines.append(
+            "\nThe current public portfolio does not list a project in this area yet. "
+            "1PAX works internationally and is open to future collaborations, so if "
+            "you're exploring an opportunity there, I can help you schedule a meeting "
+            "with the team."
+        )
+        lines.append(
+            "\nYou can also browse current project locations such as **Serbia**, "
+            "**France**, **Latin America**, **Europe**, **Africa**, or **Asia**."
+        )
+        return "\n".join(lines)
+
+    covered_areas = []
+    for key in project_keys:
+        for area in _areas_for_project_key(key):
+            if area in result["areas"] and area not in covered_areas:
+                covered_areas.append(area)
+    if covered_areas:
+        lines.append(f"Countries / territories covered: **{', '.join(covered_areas)}**.")
+
+    grouped: Dict[str, List[str]] = {}
+    for key in project_keys:
+        areas = [area for area in _areas_for_project_key(key) if area in result["areas"]]
+        group = areas[0] if areas else "Other"
+        grouped.setdefault(group, []).append(key)
+
+    for area in covered_areas or grouped.keys():
+        keys = grouped.get(area, [])
+        if not keys:
+            continue
+        city_names = sorted({_city_from_location(PROJECTS[key]["location"]) for key in keys})
+        if city_names:
+            lines.append(f"\n**{area}** — {', '.join(city_names)}")
+        else:
+            lines.append(f"\n**{area}**")
+        for key in keys:
+            project = PROJECTS[key]
+            lines.append(
+                f"• **{project['display_name']}** — {project['location']} "
+                f"({project['category']}, {project['year']})"
+            )
+
+    note = _GEO_REGION_NOTES.get(matched_label)
+    if note:
+        lines.append(f"\n{note}")
+
+    lines.append(
+        "\nName any of these projects and I can go deeper into the budget, scope, "
+        "timeline, design approach, or key challenge."
+    )
+    return "\n".join(lines)
+
+
 def _register_project_alias(
     alias: str,
     project_key: str,
@@ -713,6 +1192,12 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
         return direct_key
     for phrase, project_key in _SORTED_NORMALIZED_ALIASES:
         if len(phrase) < 3:
+            continue
+        phrase_words = phrase.split()
+        if (
+            normed != phrase
+            and not any(word not in _SKIP_WORDS and len(word) >= 3 for word in phrase_words)
+        ):
             continue
         if _contains_normalized_phrase(normed, phrase):
             return project_key
@@ -969,7 +1454,7 @@ _GENERIC_PROJECT_REF = {
     "the", "this", "that", "these", "those", "it", "them", "here", "there",
     "a", "an", "airport", "terminal", "station", "depot", "tower", "building",
     "project", "hub", "port", "base", "facility", "metro", "rail", "railway",
-    "railways", "stations", "terminals",
+    "railways", "stations", "terminals", "exactly",
 }
 
 
@@ -1044,6 +1529,8 @@ def _infer_project_info_type(text: str) -> str:
         padded = f" {raw} "
         return any(f" {_ascii_norm(phrase)} " in padded for phrase in phrases)
 
+    if any(token in raw for token in ("tender", "competition", "selected")):
+        return "tender"
     if any(token in raw for token in (
         "scope",
         "role",
@@ -1100,8 +1587,6 @@ def _infer_project_info_type(text: str) -> str:
         return "architect"
     if any(token in raw for token in ("partner", "collaborator", "team")):
         return "partners"
-    if any(token in raw for token in ("tender", "competition", "selected")):
-        return "tender"
     return "about_project"
 
 
@@ -1300,6 +1785,12 @@ class ActionAnswerProjectQuery(Action):
 
         lang = get_lang(tracker)
         lang_event = [SlotSet("language", lang)] if lang else []
+        raw_text = tracker.latest_message.get("text", "")
+        intent_name = tracker.latest_message.get("intent", {}).get("name", "")
+        raw_msg = raw_text.lower()
+
+        if _looks_like_project_geo_query(raw_text):
+            return ActionListProjects().run(dispatcher, tracker, domain)
 
         entity_value = next(tracker.get_latest_entity_values("project"), None)
         project_key, project = _resolve_project(tracker)
@@ -1313,13 +1804,26 @@ class ActionAnswerProjectQuery(Action):
                     ]), lang
                 ))
             else:
-                dispatcher.utter_message(text=translate_response(
-                    random.choice([
-                        "Which project are you asking about? You can name a city, airport, or project — like **Sofia Airport**, **Belgrade Metro**, or **Lima Food Hall**.",
-                        "Sure! Which project did you have in mind? Try saying **Tahiti airport**, **Paris Heliport**, or type 'list projects' for the full catalogue.",
-                        "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects.",
-                    ]), lang
-                ))
+                if intent_name == "ask_project_sustainability":
+                    dispatcher.utter_message(text=translate_response(
+                        (
+                            "A strong sustainable project example is **Félix Eboué Cayenne Airport – New Terminal**, "
+                            "where the programme includes solar panels, natural ventilation, rainwater harvesting, "
+                            "and a climate-responsive tropical design strategy.\n\n"
+                            "**Bordeaux–Mérignac Airport – Hall B New Façades** is another good example: it focuses "
+                            "on adaptive reuse, material performance, energy efficiency, and environmental quality "
+                            "through a targeted façade reconstruction.\n\n"
+                            "You can name either project if you want the detailed sustainability story."
+                        ), lang
+                    ))
+                else:
+                    dispatcher.utter_message(text=translate_response(
+                        random.choice([
+                            "Which project are you asking about? You can name a city, airport, or project — like **Sofia Airport**, **Belgrade Metro**, or **Lima Food Hall**.",
+                            "Sure! Which project did you have in mind? Try saying **Tahiti airport**, **Paris Heliport**, or type 'list projects' for the full catalogue.",
+                            "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects.",
+                        ]), lang
+                    ))
             return schedule_reset_events + lang_event
 
         if not project:
@@ -1336,8 +1840,6 @@ class ActionAnswerProjectQuery(Action):
             ]), lang))
             return schedule_reset_events + lang_event
 
-        intent_name = tracker.latest_message.get("intent", {}).get("name", "")
-        raw_msg = tracker.latest_message.get("text", "").lower()
         info_type = _intent_to_info_type(intent_name, raw_msg, project_key)
 
         # Special case: photo query routed to video intent → acknowledge mismatch
@@ -1422,6 +1924,13 @@ class ActionListProjects(Action):
 
         if _looks_like_specific_project_query(raw_msg):
             return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
+
+        geo_result = _project_geo_result(raw_msg)
+        if geo_result:
+            dispatcher.utter_message(
+                text=translate_response(_format_geo_project_list(geo_result), lang)
+            )
+            return schedule_reset_events + lang_event
 
         if not PROJECTS:
             dispatcher.utter_message(
@@ -1540,7 +2049,7 @@ class ActionHandleOutOfScope(Action):
                     "• Office locations and how we work\n"
                     "• Design approach and principles\n"
                     "• Sustainability, innovation, and urbanism\n"
-                    "• Careers, culture, and open roles\n\n"
+                    "• Careers, applications, culture, and open roles\n\n"
                     "**Our project portfolio (58 projects):**\n"
                     "• Ask *'show me all projects'* to browse by category\n"
                     "• Ask about any project by name, city, or airport code\n"
@@ -1555,6 +2064,77 @@ class ActionHandleOutOfScope(Action):
                 buttons=meeting_buttons(lang),
             )
             return schedule_reset_events + [SlotSet("project_name", None)] + lang_event
+
+        # ── Careers/applicant safety net: "join your team" and CV questions
+        # can otherwise drift into team-roster answers when NLU is uncertain.
+        from .company_actions import ActionAnswerCompanyQuery, looks_like_career_question
+
+        if looks_like_career_question(user_text):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
+        # ── Company fact safety net: MTM-0040 queries like "what are your
+        # patents?", "main clients", or "phone number" should never fall
+        # through to a generic out-of-scope response.
+        _COMPANY_FACT_SIGNALS = {
+            "patent",
+            "patents",
+            "patented",
+            "client",
+            "clients",
+            "phone",
+            "telephone",
+            "your number",
+            "office number",
+            "1pax's number",
+            "1pax number",
+            "call 1pax",
+            "call your office",
+            "email",
+            "e-mail",
+            "contact",
+            "contact form",
+            "get in touch",
+            "reach you",
+            "reach 1pax",
+            "say ciao",
+            "media inquiries",
+            "journalists",
+            "clients and partners",
+            "customer",
+            "customers",
+            "who trusts",
+            "who hires",
+            "who commissions",
+            "airport operators",
+            "concessionaires",
+            "public authorities",
+            "transport authorities",
+            "government ministries",
+            "utility model",
+            "protected innovation",
+            "protected by 1pax",
+            "license its innovations",
+            "licensing innovations",
+            "commercializing patents",
+            "commercialize patents",
+            "ecoport",
+            "pax cart",
+            "pax mobility",
+            "passenger assisted",
+            "patented cart",
+            "airport cart",
+            "skylo",
+            "aerial logistics",
+            "low-altitude economy",
+            "low altitude economy",
+            "low-altitude mobility",
+            "low altitude mobility",
+            "drone logistics",
+            "drone network",
+            "drone networks",
+        }
+        if any(sig in lower_text for sig in _COMPANY_FACT_SIGNALS):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
         # ── Production safety net: route core project browse/detail flows from raw text.
         # Do this before person aliases so "airport projects" means portfolio browsing,
@@ -1575,6 +2155,9 @@ class ActionHandleOutOfScope(Action):
         )
         if _looks_like_specific_project_query(lower_text):
             return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
+
+        if _looks_like_project_geo_query(user_text):
+            return ActionListProjects().run(dispatcher, tracker, domain)
 
         if any(sig in lower_text for sig in _PROJECT_LIST_SIGNALS) and not person_question:
             return ActionListProjects().run(dispatcher, tracker, domain)

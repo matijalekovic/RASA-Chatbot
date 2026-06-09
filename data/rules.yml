@@ -226,6 +226,11 @@ rules:
     - intent: ask_company_clients
     - action: action_answer_company_query
 
+- rule: Handle company contact details
+  steps:
+    - intent: ask_company_contact
+    - action: action_answer_company_query
+
 - rule: Handle company difference
   steps:
     - intent: ask_company_difference
@@ -241,14 +246,49 @@ rules:
     - intent: ask_company_careers
     - action: action_answer_company_query
 
+- rule: Handle company applications
+  steps:
+    - intent: ask_company_application
+    - action: action_answer_company_query
+
+- rule: Handle company hiring process
+  steps:
+    - intent: ask_company_hiring_process
+    - action: action_answer_company_query
+
+- rule: Handle company candidate profile
+  steps:
+    - intent: ask_company_candidate_profile
+    - action: action_answer_company_query
+
+- rule: Handle company compensation and benefits
+  steps:
+    - intent: ask_company_compensation
+    - action: action_answer_company_query
+
+- rule: Handle company visa and relocation
+  steps:
+    - intent: ask_company_visa_relocation
+    - action: action_answer_company_query
+
 - rule: Handle company culture
   steps:
     - intent: ask_company_culture
     - action: action_answer_company_query
 
+- rule: Handle company work arrangements
+  steps:
+    - intent: ask_company_work_arrangements
+    - action: action_answer_company_query
+
 - rule: Handle company mentorship
   steps:
     - intent: ask_company_mentorship
+    - action: action_answer_company_query
+
+- rule: Handle company internships
+  steps:
+    - intent: ask_company_internships
     - action: action_answer_company_query
 
 - rule: Handle company open roles
@@ -306,6 +346,11 @@ rules:
 - rule: Handle company ethics plan
   steps:
     - intent: ask_company_plan
+    - action: action_answer_company_query
+
+- rule: Handle company patents
+  steps:
+    - intent: ask_company_patents
     - action: action_answer_company_query
 
 # ── Team intents — ALL routed to action_answer_team_query ────────────────
@@ -432,4 +477,9 @@ rules:
 - rule: Ecoport product query
   steps:
   - intent: ask_company_ecoport
+  - action: action_answer_company_query
+
+- rule: Skylo research query
+  steps:
+  - intent: ask_company_skylo
   - action: action_answer_company_query

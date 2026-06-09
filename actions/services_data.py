@@ -22,8 +22,9 @@ SERVICES_INFO = {
             "multimodal hubs, fire safety, and station design.\n\n"
             "**2. Urbanism & Masterplan** — Development strategy, airport city planning, traffic "
             "simulation, construction phasing, and security reviews.\n\n"
-            "**3. Innovation & Patents** — Patented cart and furniture systems, licensing, passenger "
-            "experience consulting, and commercial roll-out of proprietary innovations.\n\n"
+            "**3. Innovation & Patents** — SKYLO aerial logistics research, patented passenger mobility "
+            "and vertiport systems, licensing, passenger experience consulting, and commercial roll-out "
+            "of proprietary innovations.\n\n"
             "**4. Future Mobility** — Vertiport and eVTOL facility design, urban mobility hubs, "
             "MaaS integration, and smart city advisory.\n\n"
             "**5. Control Towers & Ancillary Buildings** — ATCT site selection, visibility analysis, "
@@ -105,7 +106,13 @@ SERVICES_INFO = {
         (
             "Our innovation and patent services include:\n\n"
             "- **PAX (Passenger Assisted Experience)** — 1PAX's patented all-in-one mobility product: seat, cart, "
-            "stroller, and stacking system in one elegant object. Patent: EU 4096986B1. Ask *'tell me about the PAX cart'* for full details.\n"
+            "stroller, and stacking system in one elegant object. Patent references: EU 4096986B1 "
+            "and CN 202530430900.9. Ask *'tell me about the PAX cart'* for full details.\n"
+            "- **Ecoport** — 1PAX's modular multimodal vertiport system for advanced air mobility, "
+            "protected by utility model CN 202530610079.9. Ask *'tell me about Ecoport'* for full details.\n"
+            "- **SKYLO** — 1PAX's strategic research framework for aerial logistics and the low-altitude "
+            "economy, connecting cities, peri-urban zones, and rural landscapes through drones and "
+            "eVTOL aircraft. Ask *'tell me about Skylo'* for full details.\n"
             "- **Modular airport furniture systems** — adaptable, scalable furniture solutions designed "
             "specifically for high-traffic airport environments\n"
             "- **Patent licensing** — we license our innovations to airport operators, retailers, and "
@@ -129,7 +136,9 @@ SERVICES_INFO = {
         (
             "**Future Mobility** is one of 1PAX's most forward-looking service areas — "
             "designing the infrastructure for how people will move tomorrow. "
-            "This includes **Ecoport**, 1PAX's patented modular vertiport system (ask *'tell me about Ecoport'* for details)."
+            "This includes **Ecoport**, 1PAX's protected modular vertiport system "
+            "(ask *'tell me about Ecoport'* for details), and **SKYLO**, our aerial "
+            "logistics research framework for drones, eVTOLs, and low-altitude mobility networks."
         ),
         (
             "Our future mobility services cover:\n\n"

@@ -282,6 +282,13 @@ class ActionAnswerTeamQuery(Action):
         intent = tracker.latest_message.get("intent", {}).get("name", "")
         raw_text = tracker.latest_message.get("text", "")
 
+        # Career/applicant questions often say "join the team"; keep those in
+        # the company careers path instead of showing the team roster.
+        from .company_actions import ActionAnswerCompanyQuery, looks_like_career_question
+
+        if looks_like_career_question(raw_text):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         # ── Individual person lookup ─────────────────────────────────────────
         if intent == "ask_about_team_member" or _lookup_person_from_text(raw_text):
             return schedule_reset_events + self._handle_person_query(dispatcher, tracker, lang)

@@ -46,11 +46,19 @@ intents:
   - ask_company_urbanism
   - ask_company_methodology
   - ask_company_clients
+  - ask_company_contact
   - ask_company_difference
   - ask_company_why
   - ask_company_careers
+  - ask_company_application
+  - ask_company_hiring_process
+  - ask_company_candidate_profile
+  - ask_company_compensation
+  - ask_company_visa_relocation
   - ask_company_culture
+  - ask_company_work_arrangements
   - ask_company_mentorship
+  - ask_company_internships
   - ask_company_open_roles
   - ask_company_values
   # ── Company ethics & pillars (all handled by action_answer_company_query) ─
@@ -63,8 +71,10 @@ intents:
   - ask_company_suppliers
   - ask_company_ip
   - ask_company_plan
+  - ask_company_patents
   - ask_company_pax_cart
   - ask_company_ecoport
+  - ask_company_skylo
   # ── Team (all handled by action_answer_team_query) ───────────────────────
   - ask_team_overview
   - ask_team_leadership
@@ -96,6 +106,7 @@ intents:
 entities:
   - project
   - person
+  - client
 
 slots:
   language:
@@ -156,6 +167,61 @@ slots:
     mappings:
       - type: custom
   schedule_selected_slot_label:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_detected_language:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_region:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_region_label:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_colleague_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_colleague_label:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_colleague_office:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_colleague_timezone:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_colleague_calendar_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_colleague_options:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_booking_event_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  schedule_booking_meet_link:
     type: text
     influence_conversation: false
     mappings:

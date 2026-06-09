@@ -88,6 +88,7 @@
       display: flex;
       flex-direction: column;
       max-width: 84%;
+      min-width: 0;
       animation: fadeIn 0.14s ease;
     }
     @keyframes fadeIn {
@@ -102,11 +103,14 @@
     .message.user + .message.bot { margin-top: 14px; }
 
     .bubble {
+      max-width: 100%;
+      min-width: 0;
       padding: 10px 14px;
       border-radius: var(--radius);
       font-size: 14.5px;
       line-height: 1.65;
       word-break: break-word;
+      overflow-wrap: anywhere;
     }
     .message.user .bubble {
       background: #111;
@@ -173,6 +177,10 @@
       flex-shrink: 0;
       margin-top: 3px;
     }
+    .bubble li span:last-child {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
     .message.user .bubble li .li-dot { color: rgba(255,255,255,0.35); }
 
     /* ── Project / entity chips ── */
@@ -181,6 +189,9 @@
       flex-direction: column;
       gap: 3px;
       margin: 4px 0 6px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
     .proj-list:last-child { margin-bottom: 0; }
 
@@ -196,6 +207,8 @@
       transition: background 0.1s, border-color 0.1s;
       text-align: left;
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
     .proj-chip:hover  { background: #eae8e4; border-color: #c8c5bf; }
     .proj-chip:active { background: #ddd9d3; }
@@ -664,11 +677,15 @@
     return s;
   }
 
-  // A bullet item is a clickable project chip if it has **Name** — Meta with parens
-  // (all location/year metas have parens; feature descriptions like "resting points..." don't)
+  // A bullet item is a clickable project chip if it has **Name** — Meta ending
+  // in a project year/status parenthetical. Company/client bullets can also
+  // contain parentheses, so checking for any parens is too broad.
   function parseChip(raw) {
     const m = raw.match(/^<strong>(.+?)<\/strong>\s*[—\-]\s*(.+)$/);
-    if (!m || !m[2].includes("(")) return null;
+    const meta = (m?.[2] || "").trim();
+    const hasProjectYearTail =
+      /\([\s\S]*(?:\d{4}|ongoing|disclosed|construction|built|competition|concession|phase|delivery)[\s\S]*\)\.?$/i.test(meta);
+    if (!m || !hasProjectYearTail) return null;
     return { name: m[1], meta: m[2] };
   }
 

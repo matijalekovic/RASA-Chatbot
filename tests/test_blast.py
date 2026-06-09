@@ -70,9 +70,26 @@ TESTS = [
     {"session_id": "s_list2",  "message": "what does 1PAX do",           "expect_intent": "ask_company_overview", "note": "Generic 'what do you do' → company overview"},
     {"session_id": "s_cat1",   "message": "what airport projects do you have?", "expect_intent": "ask_project_category", "note": "Category filter"},
 
+    # ── MTM-0040: company fact gaps ─────────────────────────────────────────
+    {"session_id": "s_mtm40_patents", "message": "what are your patents?",       "expect_intent": "ask_company_patents", "expect_response_contains": ["PAX Cart", "Ecoport", "Skylo", "4096986", "202530610079.9"], "note": "MTM-0040: patent question"},
+    {"session_id": "s_mtm40_clients", "message": "what are your main clients",   "expect_intent": "ask_company_clients", "expect_response_contains": ["VINCI Airports", "SOF Connect", "Groupe ADP", "Lagardère"], "note": "MTM-0040: main clients"},
+    {"session_id": "s_mtm40_phone",   "message": "what is your phone number?",   "expect_intent": "ask_company_contact", "expect_response_contains": ["+33 9 67 72 55 89", "contact@1pax.com"], "note": "MTM-0040: phone/contact"},
+
     # ── TEAM MEMBER FALLBACKS ─────────────────────────────────────────────────
     {"session_id": "s_team1",  "message": "Who is Matija Lekovic", "expect_response_contains": ["Matija", "AI & Digital Specialist"], "note": "Team member — Matija direct English"},
     {"session_id": "s_team2",  "message": "reci mi nesto o matiji lekovicu", "metadata": {"lang": "SR"}, "expect_response_contains": ["Matija", "AI & Digital Specialist"], "note": "Team member — Matija Serbian inflection"},
+
+    # ── CAREERS / APPLICANTS ─────────────────────────────────────────────────
+    {"session_id": "s_job1",   "message": "Where can I send my CV?",       "expect_intent": "ask_company_application", "expect_response_contains": ["CV", "www.1pax.com/contact"], "note": "Careers — CV application link"},
+    {"session_id": "s_job2",   "message": "I want to join your team",      "expect_intent": "ask_company_careers", "expect_response_contains": ["Join", "1PAX", "www.1pax.com/contact"], "note": "Careers — join team should not show roster"},
+    {"session_id": "s_job3",   "message": "What is the hiring process?",   "expect_intent": "ask_company_hiring_process", "expect_response_contains": ["Hiring process", "www.1pax.com/contact"], "note": "Careers — hiring process"},
+    {"session_id": "s_job4",   "message": "Do you offer internships or graduate fellowships?", "expect_intent": "ask_company_internships", "expect_response_contains": ["Graduate Fellowship", "www.1pax.com/contact"], "note": "Careers — internships/fellowships"},
+    {"session_id": "s_job5",   "message": "Do I need airport experience to apply?", "expect_intent": "ask_company_candidate_profile", "expect_response_contains": ["Airport experience", "www.1pax.com/contact"], "note": "Careers — candidate profile"},
+    {"session_id": "s_job6",   "message": "What salary and benefits do you offer?", "expect_intent": "ask_company_compensation", "expect_response_contains": ["Compensation", "www.1pax.com/contact"], "note": "Careers — compensation and benefits"},
+    {"session_id": "s_job7",   "message": "Does 1PAX sponsor visas or relocation?", "expect_intent": "ask_company_visa_relocation", "expect_response_contains": ["visa", "relocation", "www.1pax.com/contact"], "note": "Careers — visa and relocation"},
+
+    # ── SCHEDULING / SERVICES BOUNDARY ───────────────────────────────────────
+    {"session_id": "s_sched1", "message": "Can I book a call about an airport terminal project?", "expect_intent": "ask_schedule_meeting", "expect_response_contains": ["schedule a meeting", "What name"], "note": "Scheduling — book call with airport-service wording"},
 
     # ── ASK ABOUT PROJECT (teaser) ────────────────────────────────────────────
     {"session_id": "s_sofia",  "message": "Tell me about Sofia Airport", "expect_intent": "ask_about_project",   "expect_project": "sofia_airport",    "note": "Sofia Airport teaser"},

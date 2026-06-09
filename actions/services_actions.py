@@ -70,7 +70,7 @@ def _infer_service_info_type(text: str) -> str:
         return "interior"
     if any(token in normalized for token in ("working", "living", "office", "residential", "workplace")):
         return "working_living"
-    if any(token in normalized for token in ("future mobility", "vertiport", "evtol", "mobility")):
+    if any(token in normalized for token in ("future mobility", "vertiport", "evtol", "mobility", "skylo", "drone logistics", "aerial logistics", "low-altitude", "low altitude")):
         return "future_mobility"
     if any(token in normalized for token in ("innovation", "research", "ai", "patent")):
         return "innovation"

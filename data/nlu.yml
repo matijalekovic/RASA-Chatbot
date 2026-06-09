@@ -243,7 +243,43 @@ nlu:
     - show me projects in Asia
     - do you have any Asian projects?
     - what projects do you have in Europe?
+    - what are your projects in Europe?
+    - what did you do in Europe?
+    - what European projects does 1PAX have?
+    - does 1PAX have experience in Europe?
     - show me South American projects
+    - what did you do in South America?
+    - which projects does 1PAX have in South America?
+    - what projects does 1PAX have in South America?
+    - what is 1PAX's experience in South America?
+    - what is 1PAX's experience in South America overall?
+    - has 1PAX worked in South America?
+    - does 1PAX work in South America?
+    - what projects does 1PAX have in Latin America?
+    - what is 1PAX's experience in Latin America?
+    - what work has 1PAX done in Latin America?
+    - what did you do in Latin America?
+    - what projects do you have in Mexico?
+    - what are your projects in Mexico?
+    - do you have projects in Mexico?
+    - what have you done in Mexico?
+    - have you worked in Mexico?
+    - what projects does 1PAX have in France?
+    - does 1PAX work in France?
+    - what work has 1PAX done in France?
+    - show me all the 1PAX projects in France
+    - what projects does 1PAX have in Serbia?
+    - what are your projects in Serbia?
+    - what other projects does 1PAX have in Serbia?
+    - do you have projects in Serbia?
+    - what work has 1PAX done in Serbia?
+    - show me Serbian projects
+    - what projects does 1PAX have in Asia?
+    - what are your projects in Asia?
+    - what did you do in Asia?
+    - does 1PAX work in China?
+    - what projects does 1PAX have in Africa?
+    - what other African projects has 1PAX done?
     - do you have projects in Africa?
     - any train station work
     - transit hub projects
@@ -271,6 +307,10 @@ nlu:
     - show me projects in Africa
     - any Middle East projects?
     - do you have projects in the Middle East?
+    - does 1PAX have experience in the Middle East?
+    - have you worked in the Middle East?
+    - what is your experience in the Middle East?
+    - have you delivered projects in the Middle East?
     - show me your work in South America
     - any Latin American airport projects?
     - how many airports have you designed?
@@ -639,7 +679,6 @@ nlu:
     - everything about this project
     - executive summary of this project
     - project brief
-    - what was the scope of engagement
     - can you summarize the project
     - give me a comprehensive overview
     - describe it to me fully
@@ -1296,6 +1335,16 @@ nlu:
     - what is the sustainability story on this project?
     - what is the sustainability angle on this project?
     - tell me the sustainability story
+    - tell me about a sustainable project
+    - can you show me a sustainable project example?
+    - what is a good example of 1PAX's sustainable design?
+    - tell me about a sustainable project 1PAX has done
+    - can you give me an example of a green project you've built?
+    - what are some examples of sustainable projects 1PAX has delivered?
+    - give me an example of an eco-friendly project 1PAX worked on
+    - what's a good sustainable project from 1PAX?
+    - do you have any examples of green design in your portfolio?
+    - which 1PAX project is a good sustainability example?
     - tell me about sustainability on this one
     - how did this project handle sustainability?
     - how did you handle sustainability here?
@@ -1365,6 +1414,14 @@ nlu:
     - what's the concept in a nutshell?
     - what was the main idea?
     - elevator pitch for this project
+    - elevator pitch for [Belgrade Airport](project)
+    - elevator pitch for [Sofia Airport](project)
+    - give me the elevator pitch for [Belgrade Airport](project)
+    - short pitch for [Velana Airport](project)
+    - quick pitch for [Bordeaux Airport](project)
+    - one-line pitch for [Pointe-à-Pitre T1](project)
+    - pitch me the [Sofia Airport](project) project
+    - concise concept for [Belgrade Airport](project)
     - what's the project in a nutshell?
     - what was the driving idea?
     - what's 1PAX's vision for this?
@@ -1377,6 +1434,16 @@ nlu:
     - what's the concept?
     - concept
     - in a nutshell?
+    - in a nutshell
+    - nutshell version
+    - nutshell version?
+    - project in a nutshell
+    - this project in a nutshell
+    - can you put this project in a nutshell?
+    - boil this project down
+    - boil it down for me
+    - what's the short concept?
+    - short concept version
     - how would you pitch this project?
     - what is this project all about in a sentence?
     - what's the main idea here?
@@ -1589,6 +1656,11 @@ nlu:
     - what was 1PAX's mission on this project?
     - what services did 1PAX provide?
     - what was the design scope?
+    - project scope
+    - what is the project scope?
+    - what was the project scope?
+    - scope for this project
+    - what was the scope of engagement?
     - what exactly was done by 1PAX?
     - tell me about 1PAX's role
     - what was 1PAX hired to do?
@@ -1642,6 +1714,10 @@ nlu:
 - intent: ask_project_program
   examples: |
     - what does this building include?
+    - what does the [Sofia Airport](project) project include?
+    - what does [Sofia Airport](project) include?
+    - what is included in [Sofia Airport](project)?
+    - what did [Sofia Airport](project) include?
     - what facilities are there?
     - what was built exactly?
     - what is in the terminal?
@@ -2275,15 +2351,6 @@ nlu:
     - how do you reduce waste in construction
     - are your projects climate-friendly
     - do you design with the environment in mind
-    - tell me about a sustainable project
-    - can you show me a sustainable project example?
-    - what is a good example of 1PAX's sustainable design?
-    - tell me about a sustainable project 1PAX has done
-    - can you give me an example of a green project you've built?
-    - what are some examples of sustainable projects 1PAX has delivered?
-    - give me an example of an eco-friendly project 1PAX worked on
-    - what's a good sustainable project from 1PAX?
-    - do you have any examples of green design in your portfolio?
     - are you an environmentally responsible firm
     - does 1PAX build sustainably
     - what is 1PAX doing for sustainability?
@@ -2313,7 +2380,6 @@ nlu:
     - how innovative is 1PAX?
     - what innovations has 1PAX developed?
     - what proprietary innovations does 1PAX have?
-    - what patents does 1PAX hold?
     - how does 1PAX innovate?
     - tell me about innovation at 1PAX
     - what new technologies does 1PAX use?
@@ -2354,6 +2420,46 @@ nlu:
     - what new things are you working on
     - do you test new materials
     - what's innovative about your work
+
+# ── Company: patents ──────────────────────────────────────────────────────────
+
+- intent: ask_company_patents
+  examples: |
+    - what are your patents?
+    - what patents do you have?
+    - what patents does 1PAX hold?
+    - what patents does 1PAX own?
+    - does 1PAX have patents?
+    - does 1PAX hold any patents?
+    - tell me about 1PAX's patents
+    - tell me about your registered patents
+    - what are 1PAX's registered aviation patents?
+    - how many patents does 1PAX have?
+    - how many registered patents do you have?
+    - what are the four registered patents?
+    - tell me about your aviation design patents
+    - what are your patented products?
+    - which 1PAX innovations are patented?
+    - what innovations has 1PAX patented?
+    - what does 1PAX patent?
+    - I heard 1PAX holds patents — can you tell me about that?
+    - do you have any aviation design patents?
+    - list your patent portfolio
+    - what is protected by 1PAX?
+    - which patents cover PAX and Ecoport?
+    - what are the patent numbers for PAX Cart?
+    - what is the Ecoport utility model?
+    - is PAX Cart patented?
+    - is Ecoport patented?
+    - are PAX Cart and Ecoport patents?
+    - do you have patented airport products?
+    - what proprietary mobility products has 1PAX protected?
+    - explain 1PAX's patented innovations
+    - tell me about your patent portfolio
+    - what patent families does 1PAX highlight?
+    - do you commercialize patents?
+    - does 1PAX license its innovations?
+    - what patents are available for licensing?
 
 # ── Company: urbanism / regenerative design ───────────────────────────────────
 
@@ -2450,11 +2556,16 @@ nlu:
 - intent: ask_company_clients
   examples: |
     - who are 1PAX's clients?
+    - who are your clients and partners?
+    - clients and partners
+    - list your clients
+    - show me your client list
     - what kind of clients does 1PAX work with?
     - does 1PAX work with governments?
     - does 1PAX work with airports?
     - who does 1PAX work for?
     - what organizations does 1PAX serve?
+    - who trusts 1PAX?
     - who commissions 1PAX?
     - does 1PAX work with public or private clients?
     - who hires 1PAX?
@@ -2471,6 +2582,8 @@ nlu:
     - are your clients international?
     - who are your customers
     - have you worked with any famous airports
+    - what airports has 1PAX worked for?
+    - do airport operators trust 1PAX?
     - do you work with airlines
     - who contracts you
     - who do you typically build for
@@ -2485,7 +2598,9 @@ nlu:
     - can 1PAX act as a specialist sub-consultant?
     - who are your aviation clients
     - do you work with airport operators
+    - do you work with concessionaires?
     - any government ministry clients
+    - which public authorities has 1PAX worked with?
     - do you work with private airport concessionaires
     - have you worked with ACI members
     - do you have airline clients
@@ -2496,16 +2611,12 @@ nlu:
     - which countries do you work in most?
     - what geographies does 1PAX cover?
     - any major infrastructure clients
-    - do you have experience in the Middle East?
-    - have you worked in the Middle East?
     - do they work with cities or municipalities?
     - have you worked with city authorities?
     - does 1PAX collaborate with technology partners?
     - does 1PAX work with tech firms?
     - do you partner with technology companies?
     - do you work in the Gulf region?
-    - have you delivered projects in the Middle East?
-    - what is your experience in the Middle East?
     - what is your experience working with other firms?
     - what is your track record working with other architecture firms?
     - have you collaborated with other design firms?
@@ -2514,22 +2625,158 @@ nlu:
     - has 1PAX worked with government ministries?
     - does 1PAX work with national ministries?
     - do you work with national governments?
-    - what projects does 1PAX have in Latin America?
-    - what is 1PAX's experience in Latin America?
-    - what is 1PAX's experience in South America overall?
-    - what is 1PAX's experience in South America?
-    - which projects does 1PAX have in South America?
-    - has 1PAX worked in South America?
-    - does 1PAX work in South America?
-    - what work has 1PAX done in Latin America?
-    - what projects does 1PAX have in France?
-    - does 1PAX work in France?
-    - what work has 1PAX done in France?
-    - does 1PAX have experience in Europe?
-    - what European projects does 1PAX have?
-    - what projects does 1PAX have in Asia?
-    - does 1PAX work in China?
-    - what projects does 1PAX have in Africa?
+    - do you work with ministries and transport authorities?
+    - do you work with Groupe ADP?
+    - have you worked with VINCI Airports?
+    - have you worked with SOF Connect?
+    - have you worked with Lagardère Travel Retail?
+    - break down your clients by sector
+    - can you group your clients by industry?
+    - what client sectors does 1PAX cover?
+    - which client categories do you serve?
+    - show me airport clients only
+    - list airport operators you work with
+    - which airport authorities has 1PAX worked with?
+    - which concessionaires do you work for?
+    - what private concession clients do you have?
+    - do you work with airport concession companies?
+    - who are your public-sector clients?
+    - who are your public authority clients?
+    - which municipalities has 1PAX worked with?
+    - do you have city authority clients?
+    - list your transport authority clients
+    - who are your metro and rail clients?
+    - what future mobility clients do you have?
+    - do you have vertiport or eVTOL clients?
+    - who are your commercial retail clients?
+    - who are your banking or developer clients?
+    - do you have technology and engineering partners?
+    - which clients are linked to Siemens or SETEC?
+    - who are your clients in the Middle East?
+    - which Gulf clients has 1PAX worked with?
+    - do you have Qatar clients?
+    - which clients are in Doha?
+    - who are your clients in Latin America?
+    - which South America clients has 1PAX worked with?
+    - who are your clients in Peru?
+    - what clients do you have in Serbia?
+    - list French clients
+    - who are your France-based airport clients?
+    - which clients do you have in Africa?
+    - who are your Asian clients?
+    - tell me about [VINCI Airports](client)
+    - who is [VINCI Airports](client)?
+    - where is [VINCI Airports](client) from?
+    - what does [VINCI Airports](client) do?
+    - what projects did 1PAX do for [VINCI Airports](client)?
+    - show me all projects linked to [VINCI Airports](client)
+    - did 1PAX work with [Vinci Airports](client)?
+    - tell me about [SOF Connect](client)
+    - who is [SOF Connect](client) as a client?
+    - where is [SOF Connect](client) based?
+    - what did 1PAX do for [SOF Connect](client)?
+    - which project did 1PAX do for [SOF Connect](client)?
+    - tell me about [Belgrade Airport](client) as a client
+    - what did 1PAX do for [Belgrade Airport](client)?
+    - list the [Belgrade Airport](client) projects
+    - who is [Groupe ADP](client)?
+    - tell me about [Groupe ADP](client)
+    - what work did 1PAX do with [Groupe ADP](client)?
+    - where is [Groupe ADP](client) active in your portfolio?
+    - tell me about [Skyports](client)
+    - what future mobility work did 1PAX do for [Skyports](client)?
+    - what projects are linked to [Skyports Infrastructure](client)?
+    - who is [Qatar Railways](client)?
+    - tell me about [Qatar Railways](client) as a client
+    - what did 1PAX do for [Qatar Rail](client)?
+    - show the [Qatar Railways](client) projects
+    - what is the relationship with [SETEC](client)?
+    - have you worked with [Siemens](client)?
+    - what did 1PAX do with [SETEC BÂTIMENT / Siemens / BESIX / TSO](client)?
+    - tell me about [Lagardère Travel Retail](client)
+    - what did you design for [Lagardère Travel Retail](client)?
+    - where is the [Lagardere Travel Retail](client) project?
+    - tell me about [EDEIS COLAS](client)
+    - what projects did 1PAX do for [EDEIS](client)?
+    - list the [EDEIS COLAS](client) projects
+    - tell me about [City of Belgrade](client)
+    - what did 1PAX do for [City of Belgrade](client)?
+    - is [City of Belgrade](client) a public client?
+    - tell me about [ATU](client)
+    - what work did 1PAX do for [Autoridad de Transporte Urbano](client)?
+    - tell me about [AATE](client)
+    - what did 1PAX do for [Autonomous Authority for the Electric Train](client)?
+    - who is [MACL](client)?
+    - tell me about [Maldives Airport Company Limited](client)
+    - what did 1PAX do for [Maldives Airport Company](client)?
+    - tell me about [Cabo Verde Airports](client) as a client
+    - what Cabo Verde work is linked to [Cabo Verde Airports](client)?
+    - who is [Airport Authority of India](client)?
+    - what projects did 1PAX do for [Airport Authority of India](client)?
+    - tell me about [European Commission](client)
+    - what did 1PAX do for [European Commission](client)?
+    - tell me about [French Ministry of Foreign Affairs](client)
+    - which embassy project did 1PAX do for [French Ministry of Foreign Affairs](client)?
+    - tell me about [Lima Airport Partners](client)
+    - what did 1PAX do for [OSITRAN](client)?
+    - tell me about [Nuevo Pudahuel](client)
+    - what wayfinding work did 1PAX do for [Nuevo Pudahuel](client)?
+    - tell me about [AIK Bank](client) as a client
+    - what did 1PAX design for [AIK Bank](client)?
+    - tell me about [Unibail](client)
+    - what urban project did 1PAX do for [Unibail](client)?
+    - who is [Riga International Airport](client)?
+    - what did 1PAX do for [RIX](client)?
+    - tell me about [Fuzhou Airport Authority](client)
+    - tell me about [Lanzhou Airport Authority](client)
+    - what did 1PAX do with [Qatar Airways Investments](client)?
+    - tell me about [Vinci Construction](client) and [Qatar Airways Investments](client)
+
+# ── Company: contact details ──────────────────────────────────────────────────
+
+- intent: ask_company_contact
+  examples: |
+    - what is your phone number?
+    - what is 1PAX's phone number?
+    - what's your number?
+    - give me a phone number
+    - can I call 1PAX?
+    - how can I call your office?
+    - how do I contact 1PAX?
+    - how can I contact 1PAX?
+    - how can I contact you?
+    - how do I get in touch?
+    - how do I reach you?
+    - how do I reach 1PAX?
+    - what is 1PAX's email?
+    - what is your email address?
+    - give me your contact details
+    - can you share your contact information?
+    - where can I email 1PAX?
+    - what is the general inquiry email?
+    - what's the contact email for 1PAX?
+    - what is the HR email?
+    - where do I send a job application?
+    - what email should I use for careers?
+    - what is the press email?
+    - what is the communications email?
+    - who should journalists contact?
+    - what email should media use?
+    - where should media inquiries go?
+    - do you have a contact form?
+    - where is the contact form?
+    - can I use the Say Ciao form?
+    - can I upload my CV on the website?
+    - where are your office addresses?
+    - what cities are your offices in?
+    - where are your global offices?
+    - what is the Paris office phone number?
+    - what is the Belgrade office phone number?
+    - what is the Lima office phone number?
+    - what is the Shanghai office phone number?
+    - what is the Barcelona office phone number?
+    - how can I speak to someone at 1PAX?
+    - I need to contact your studio
 
 # ── Company: what makes 1PAX different ───────────────────────────────────────
 
@@ -2626,48 +2873,209 @@ nlu:
 
 - intent: ask_company_careers
   examples: |
-    - how do I apply to work at 1PAX?
     - does 1PAX have job openings?
     - is 1PAX hiring?
     - can I work at 1PAX?
     - how do I join 1PAX?
     - what jobs are available at 1PAX?
-    - where do I send my CV?
     - are there positions at 1PAX?
     - I want to work at 1PAX
-    - how do I apply for a job at 1PAX?
     - tell me about careers at 1PAX
     - I'd like to join the team
-    - does 1PAX have internships?
-    - does 1PAX offer graduate positions?
     - tell me about working at 1PAX
     - how do I get a job at 1PAX?
-    - what should I know about applying to 1PAX?
-    - what skills does 1PAX look for?
     - how do I start a career at 1PAX?
     - are you looking for architects?
     - does 1PAX hire interior designers?
-    - where can I apply?
-    - I want to apply to 1PAX
-    - how do you hire?
     - jobs at 1PAX
     - career opportunities at 1PAX
-    - do you need to be an architect to apply
-    - can non-architects work at 1PAX
-    - I studied urban planning, can I apply
-    - I'm an engineering student, is there a place for me
-    - is experience in airports required
-    - I'm just starting my career — can I apply
-    - I have 10 years of experience — is 1PAX right for me
     - I'm looking for work in architecture
     - I'm a recent grad looking for opportunities
-    - how do architects apply to 1PAX
     - is 1PAX taking applications
-    - can I submit a portfolio
-    - what's the hiring process
     - are you recruiting
-    - where should I apply
-    - can I send my resume
+    - I want to join your team
+    - can I join your team?
+    - I would like to be part of 1PAX
+    - I am interested in working with 1PAX
+    - do you have career opportunities?
+    - does 1PAX recruit internationally?
+    - what career prospects are there at 1PAX?
+    - I'm looking for a studio to join
+    - can I work with your studio?
+    - does 1PAX accept speculative applications?
+    - can I be considered for future roles?
+    - I'm interested in employment at 1PAX
+    - tell me about job prospects at 1PAX
+    - are you growing the team?
+
+- intent: ask_company_application
+  examples: |
+    - how do I apply to work at 1PAX?
+    - how do I apply for a job at 1PAX?
+    - where do I send my CV?
+    - where can I send my CV?
+    - can I send my CV?
+    - can I send you my CV?
+    - I want to send my CV
+    - I would like to send my CV
+    - where should I submit my CV?
+    - where do I upload my resume?
+    - can I send my resume?
+    - where should I send my resume?
+    - can I submit a resume?
+    - where can I apply?
+    - where should I apply?
+    - where do I apply for a position?
+    - I want to apply to 1PAX
+    - I would like to apply for a role
+    - what should I know about applying to 1PAX?
+    - can I submit a portfolio?
+    - should I include a portfolio?
+    - do you need a cover letter?
+    - what should I include in my application?
+    - how can I send my portfolio to 1PAX?
+    - can I apply through the website?
+    - where is the application form?
+    - do you have a careers application page?
+    - can I apply from the contact page?
+    - should I use the contact form for jobs?
+    - how can I contact 1PAX about a job?
+    - where can applicants reach 1PAX?
+    - how do architects apply to 1PAX?
+
+- intent: ask_company_hiring_process
+  examples: |
+    - what's the hiring process?
+    - what is the hiring process at 1PAX?
+    - how does hiring work at 1PAX?
+    - how do you hire?
+    - how does the recruitment process work?
+    - what happens after I apply?
+    - what are the next steps after applying?
+    - does 1PAX interview candidates?
+    - how do interviews work at 1PAX?
+    - how long does recruitment take?
+    - what is the application process?
+    - what is the selection process?
+    - how are candidates selected?
+    - who reviews job applications?
+    - will someone contact me after I apply?
+    - how do you decide who to hire?
+    - how does 1PAX review portfolios?
+    - what should I expect after sending my CV?
+    - can I apply even if no role is listed?
+    - do you keep applications for future openings?
+    - what are the hiring steps?
+    - is there a first interview?
+    - do applicants speak with the team?
+    - how formal is the recruitment process?
+    - when will I hear back after applying?
+    - when do applicants usually hear back?
+    - how can I check my application status?
+    - can I follow up on my application?
+    - who should I contact after applying?
+    - is there an application deadline?
+    - when is the deadline to apply?
+    - how long does the hiring process take?
+    - what is the recruitment timeline?
+    - can I apply if there is no deadline listed?
+
+- intent: ask_company_candidate_profile
+  examples: |
+    - what skills does 1PAX look for?
+    - what qualities does 1PAX value in candidates?
+    - what kind of person fits in at 1PAX?
+    - what profile does 1PAX look for?
+    - what makes a strong applicant?
+    - do you need to be an architect to apply?
+    - can non-architects work at 1PAX?
+    - who can apply to work at 1PAX?
+    - what backgrounds does 1PAX accept?
+    - what disciplines can apply?
+    - I studied urban planning, can I apply?
+    - I'm an engineering student, is there a place for me?
+    - is experience in airports required?
+    - do I need aviation experience?
+    - I have 10 years of experience — is 1PAX right for me?
+    - do you hire people from outside architecture?
+    - does 1PAX hire planners?
+    - does 1PAX hire engineers?
+    - does 1PAX hire designers?
+    - what candidate profile is best?
+    - what do you look for in applicants?
+    - what kind of portfolio is useful?
+    - what experience helps for 1PAX jobs?
+    - what should my background be?
+    - do you hire people from different countries?
+    - do you value sustainability experience?
+    - do you value BIM experience?
+    - do you value design research?
+    - what languages do I need to work at 1PAX?
+    - do I need to speak English?
+    - do I need to speak French?
+    - do I need Serbian to work in Belgrade?
+    - are language skills important?
+    - what software should applicants know?
+    - do I need Revit experience?
+    - do I need Rhino experience?
+    - are BIM skills required?
+    - what visualization skills are useful?
+    - what should my portfolio show?
+    - do you prefer technical or design profiles?
+    - can researchers apply?
+    - can digital specialists apply?
+
+- intent: ask_company_compensation
+  examples: |
+    - what salary does 1PAX offer?
+    - what is the salary range?
+    - how much do jobs at 1PAX pay?
+    - do you publish salaries?
+    - what compensation can I expect?
+    - what is the benefits package?
+    - what benefits does 1PAX offer?
+    - does 1PAX offer health insurance?
+    - does 1PAX offer paid leave?
+    - are internships paid?
+    - is the graduate fellowship paid?
+    - do you pay interns?
+    - what is the pay for junior architects?
+    - what is the salary for senior architects?
+    - does 1PAX offer bonuses?
+    - are there training benefits?
+    - are there relocation benefits?
+    - what are employee benefits like?
+    - does 1PAX offer vacation days?
+    - does 1PAX provide equipment?
+    - do you offer professional development benefits?
+    - can you tell me the salary before I apply?
+    - how do compensation packages work?
+
+- intent: ask_company_visa_relocation
+  examples: |
+    - does 1PAX sponsor visas?
+    - can 1PAX help with a work permit?
+    - do you provide visa sponsorship?
+    - can international applicants apply?
+    - can I apply from another country?
+    - do I need the right to work in France?
+    - do I need the right to work in Serbia?
+    - can I relocate for a 1PAX job?
+    - does 1PAX support relocation?
+    - can I move to Paris for a role?
+    - can I move to Belgrade for a role?
+    - can I work from outside Europe?
+    - can I work remotely from another country?
+    - do you hire people who are not in the same city?
+    - do you hire internationally?
+    - is relocation possible?
+    - are roles tied to a specific office?
+    - can I choose which office to work from?
+    - what office would I join?
+    - is visa support available for internships?
+    - can you sponsor a graduate fellowship visa?
+    - do I need work authorization before applying?
+    - should I mention visa needs in my application?
 
 # ── Company: culture / life at 1PAX ──────────────────────────────────────────
 
@@ -2678,12 +3086,7 @@ nlu:
     - describe the culture at 1PAX
     - what's life like at 1PAX?
     - is 1PAX a good place to work?
-    - what is the work environment at 1PAX?
     - is 1PAX collaborative?
-    - is there remote work at 1PAX?
-    - is 1PAX flexible?
-    - what are working conditions like at 1PAX?
-    - does 1PAX have work-life balance?
     - what's the vibe at 1PAX?
     - how does 1PAX support its employees?
     - is 1PAX a diverse workplace?
@@ -2713,12 +3116,41 @@ nlu:
     - is it competitive or collaborative
     - is there autonomy in the work
     - would I grow fast at 1PAX
-    - what's the day to day like at 1PAX
     - is it a good studio environment
-    - what does 1PAX look for in people?
-    - what qualities does 1PAX value in candidates?
-    - what kind of person fits in at 1PAX?
-    - what character traits does 1PAX seek in employees?
+
+# ── Company: work arrangements ───────────────────────────────────────────────
+
+- intent: ask_company_work_arrangements
+  examples: |
+    - what is the work environment at 1PAX?
+    - is there remote work at 1PAX?
+    - does 1PAX allow remote work?
+    - is 1PAX flexible?
+    - does 1PAX offer flexible work?
+    - are working hours flexible?
+    - what are working conditions like at 1PAX?
+    - does 1PAX have work-life balance?
+    - what's the day to day like at 1PAX?
+    - what is a typical day like at 1PAX?
+    - can people work from another country?
+    - is 1PAX hybrid?
+    - are roles remote or office based?
+    - which office would I work from?
+    - where would the job be located?
+    - are jobs tied to Paris or Belgrade?
+    - can I choose the office location?
+    - do employees work from the Paris office?
+    - can I work from Belgrade?
+    - how does the global team collaborate?
+    - how do remote teams work at 1PAX?
+    - are there flexible schedules?
+    - is the studio international day to day?
+    - what are the working arrangements?
+    - what is the office setup?
+    - do you support work from home?
+    - how much travel is involved?
+    - do people collaborate online?
+    - is the job fully in person?
 
 # ── Company: mentorship / development ────────────────────────────────────────
 
@@ -2727,26 +3159,18 @@ nlu:
     - does 1PAX offer mentorship?
     - what career development does 1PAX offer?
     - how does 1PAX develop its people?
-    - is there a graduate program at 1PAX?
     - does 1PAX support young architects?
-    - what is the fellowship program?
     - what support does 1PAX give to junior staff?
     - how does 1PAX help people grow?
     - does 1PAX mentor its employees?
     - what training does 1PAX provide?
-    - is there a grad fellowship at 1PAX?
-    - tell me about the graduate fellowship
     - does Mabel Miranda mentor people?
     - does 1PAX invest in its people?
     - professional development at 1PAX
     - does 1PAX grow junior talent?
-    - what opportunities are there for students?
     - career growth at 1PAX
     - how does 1PAX support young professionals?
     - is there mentoring for graduates?
-    - tell me about the 1PAX fellowship
-    - can students apply to 1PAX?
-    - does 1PAX have a program for recent graduates?
     - how does 1PAX invest in junior staff
     - is there coaching at 1PAX
     - can I grow professionally at 1PAX
@@ -2757,6 +3181,40 @@ nlu:
     - how do graduates develop at 1PAX
     - does 1PAX pay for training
     - what does 1PAX do to grow its people
+
+# ── Company: internships / graduate fellowship ───────────────────────────────
+
+- intent: ask_company_internships
+  examples: |
+    - does 1PAX have internships?
+    - does 1PAX offer internships?
+    - does 1PAX offer graduate positions?
+    - is there a graduate program at 1PAX?
+    - what is the fellowship program?
+    - is there a grad fellowship at 1PAX?
+    - tell me about the graduate fellowship
+    - what opportunities are there for students?
+    - tell me about the 1PAX fellowship
+    - can students apply to 1PAX?
+    - does 1PAX have a program for recent graduates?
+    - do you take interns?
+    - can I apply as an intern?
+    - can architecture students apply?
+    - can planning students apply?
+    - I'm just starting my career — can I apply?
+    - I'm a recent graduate, can I apply?
+    - are junior roles available?
+    - do you hire fresh graduates?
+    - does 1PAX accept entry-level candidates?
+    - do you have trainee roles?
+    - can I do a placement at 1PAX?
+    - can I apply while still studying?
+    - is there a pathway for young architects?
+    - how can graduates join 1PAX?
+    - does 1PAX mentor interns?
+    - do you have student opportunities?
+    - how do I apply for the fellowship?
+    - is the fellowship for underserved communities?
 
 # ── Company: open roles ────────────────────────────────────────────────────────
 
@@ -3176,7 +3634,6 @@ nlu:
     - how does 1PAX protect its designs?
     - does 1PAX own its creative work?
     - how does 1PAX credit its team's contributions?
-    - does 1PAX have patents?
     - how does 1PAX handle creative ownership?
     - what is 1PAX's policy on IP protection?
     - is 1PAX's work copyright protected?
@@ -3293,6 +3750,16 @@ nlu:
     - I want to talk about hiring 1PAX
     - can I book time with business development?
     - I want to schedule a call with the business development team
+    - can I book a call about an airport terminal project?
+    - I would like to book a call about an airport terminal
+    - can we schedule time to discuss an airport terminal project?
+    - I need a meeting about an airport terminal design
+    - book a consultation about an airport project
+    - can I arrange a consultation about a terminal project?
+    - I want to meet with your airport team about a project
+    - schedule a call to discuss terminal design
+    - set up a meeting about airport masterplanning
+    - can we talk to someone about terminal architecture?
     - arrange a meeting for next week
     - book a meeting tomorrow afternoon
     - schedule a call next Tuesday morning
@@ -3490,12 +3957,6 @@ nlu:
     - hablas español
     - do you speak Spanish
     - can you translate this
-    - give me a phone number
-    - how do I contact 1PAX
-    - what is 1PAX's email
-    - how do I get in touch?
-    - how do I reach you?
-    - how can I contact you?
     - how do I get to the airport
     - how do I travel to Sofia
     - what is the check-in time
@@ -3556,6 +4017,70 @@ nlu:
     - sofia project
     - Sofia project
     - the sofia project
+
+# ── Lookup table (helps DIETClassifier recognise client names as entities) ───
+
+- lookup: client
+  examples: |
+    - VINCI Airports
+    - Vinci Airports
+    - SOF Connect
+    - Belgrade Airport
+    - Groupe ADP
+    - ADP
+    - Skyports
+    - Skyports Infrastructure
+    - Qatar Railways
+    - Qatar Rail
+    - SETEC
+    - SETEC BÂTIMENT
+    - SETEC TPI
+    - Siemens
+    - BESIX
+    - TSO
+    - Lagardère Travel Retail
+    - Lagardere Travel Retail
+    - EDEIS COLAS
+    - EDEIS
+    - City of Belgrade
+    - ATU
+    - Autoridad de Transporte Urbano
+    - AATE
+    - Autonomous Authority for the Electric Train
+    - Maldives Airport Company Limited
+    - MACL
+    - Cabo Verde Airports
+    - Airport Authority of India
+    - European Commission
+    - French Ministry of Foreign Affairs
+    - Ministère des Affaires Étrangères
+    - Lima Airport Partners
+    - OSITRAN
+    - Nuevo Pudahuel
+    - AIK Bank
+    - Unibail
+    - DGAC
+    - Région Centre-Val de Loire
+    - Riga International Airport
+    - RIX
+    - Fuzhou Airport Authority
+    - Lanzhou Airport Authority
+    - Qatar Airways Investments
+    - Vinci Construction
+    - Saudi Binladin Group
+    - ANA Aeroportos
+    - Marseille Provence Airport
+    - Aéroport de Bordeaux Mérignac
+    - Aéroport de la Côte d'Azur
+    - Aéroport de Guadeloupe Pôle Caraïbes
+    - Aéroport de Nantes Atlantique
+    - Basel Mulhouse Airport Authority
+    - Conakry-Gbessia International Airport
+    - Eiffage Concession
+    - Lagardère
+    - Qatar Railways HQ
+    - Doha Metro
+    - Doha West Metro Depot
 
 # ── Entity synonyms (maps extracted values to canonical project key) ─────────
 
@@ -4186,6 +4711,197 @@ nlu:
     - Pudahuel airport signage
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CLIENT ENTITY SYNONYMS
+# Maps client aliases → canonical client keys for company-client detail answers.
+# ─────────────────────────────────────────────────────────────────────────────
+
+- synonym: vinci_airports
+  examples: |
+    - VINCI Airports
+    - Vinci Airports
+    - VINCI
+    - Vinci
+    - Vinci Airports Serbia
+    - VINCI Airports Serbia
+    - Vinci Airports concession
+    - VINCI Airports / ANA Aeroportos
+    - Vinci Airports / ANA Aeroportos
+    - Vinci Airports, Cabo Verde Airports
+    - Vinci Airports, VCGP
+    - Aéroport de Nantes Atlantique / Vinci Airports
+    - Nantes Atlantique / Vinci Airports
+
+- synonym: sof_connect
+  examples: |
+    - SOF Connect
+    - Sofia Airport concession
+    - Sofia concessionaire
+    - Sofia Airport concessionaire
+    - SOF concession
+
+- synonym: belgrade_airport
+  examples: |
+    - Belgrade Airport
+    - Nikola Tesla Airport
+    - Belgrade Nikola Tesla Airport
+    - Vinci Airports Serbia / Belgrade Airport
+    - Belgrade Airport concession
+    - BEG
+
+- synonym: groupe_adp
+  examples: |
+    - Groupe ADP
+    - ADP
+    - Paris ADP
+    - Aéroports de Paris
+    - Aeroports de Paris
+    - Skyports Infrastructure / Groupe ADP
+
+- synonym: skyports
+  examples: |
+    - Skyports
+    - Skyports Infrastructure
+
+- synonym: qatar_railways
+  examples: |
+    - Qatar Rail
+
+- synonym: setec_siemens_besix_tso
+  examples: |
+    - SETEC
+    - SETEC BÂTIMENT
+    - SETEC BATIMENT
+    - SETEC TPI
+    - Siemens
+    - BESIX
+    - TSO
+    - SETEC BÂTIMENT / Siemens / BESIX / TSO
+    - SETEC TPI / Siemens
+
+- synonym: lagardere_travel_retail
+  examples: |
+    - Lagardère Travel Retail
+    - Lagardere Travel Retail
+    - Lagardère
+    - Lagardere
+
+- synonym: edeis_colas
+  examples: |
+    - EDEIS COLAS
+    - EDEIS
+    - COLAS
+    - Félix Eboué Airport
+    - Felix Eboue Airport
+
+- synonym: city_of_belgrade
+  examples: |
+    - City of Belgrade
+    - Belgrade city
+    - Belgrade municipality
+    - Belgrade public authority
+
+- synonym: atu
+  examples: |
+    - ATU
+    - Autoridad de Transporte Urbano
+    - Lima transport authority
+    - Lima urban transport authority
+
+- synonym: aate
+  examples: |
+    - AATE
+    - Autonomous Authority for the Electric Train
+    - Electric Train Authority
+
+- synonym: macl
+  examples: |
+    - Maldives Airport Company Limited
+    - Maldives Airport Company
+    - MACL
+    - Saudi Binladin Group
+
+- synonym: cabo_verde_airports
+  examples: |
+    - Cabo Verde Airports
+    - Cape Verde Airports
+    - Cabo Verde airport network
+    - Cabo Verde Airports network
+
+- synonym: airport_authority_india
+  examples: |
+    - Airport Authority of India
+    - AAI
+    - India airport authority
+    - Jaipur airport authority
+
+- synonym: lima_airport_partners
+  examples: |
+    - Lima Airport Partners
+    - OSITRAN
+    - Jorge Chávez Airport
+    - Jorge Chavez Airport
+    - LAP
+
+- synonym: nuevo_pudahuel
+  examples: |
+    - Nuevo Pudahuel
+    - Pudahuel
+    - Santiago Airport concession
+    - Santiago airport operator
+
+- synonym: european_commission
+  examples: |
+    - European Commission
+    - EU Commission
+    - European Delegation
+    - EU Delegation
+
+- synonym: french_ministry_foreign_affairs
+  examples: |
+    - French Ministry of Foreign Affairs
+    - Ministère des Affaires Étrangères
+    - Ministere des Affaires Etrangeres
+    - French Embassy
+
+- synonym: aik_bank
+  examples: |
+    - AIK
+    - AIK Bank branch network
+
+- synonym: unibail
+  examples: |
+    - Unibail
+    - Espace Champerret
+
+- synonym: dgac_region_centre
+  examples: |
+    - DGAC
+    - Région Centre-Val de Loire
+    - Region Centre-Val de Loire
+
+- synonym: riga_airport
+  examples: |
+    - Riga International Airport
+    - Riga Airport
+    - RIX
+    - Latvia airport
+
+- synonym: fuzhou_airport_authority
+  examples: |
+    - Fuzhou Airport Authority
+
+- synonym: lanzhou_airport_authority
+  examples: |
+    - Lanzhou Airport Authority
+    - ECADI
+
+- synonym: qatar_airways_investments
+  examples: |
+    - Vinci Construction
+    - Qatar Airways Investments
+    - Qatar Airways
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SERVICES MODULE
 # Intents covering 1PAX's 8 service areas + meta list intent.
 # Intent boundary: services = "what can you do for me / what do you offer?"
@@ -4413,10 +5129,6 @@ nlu:
     - can you design airport retail furniture for us?
     - what innovation services does 1PAX provide?
     - do you do design research for new airport products?
-    - I heard 1PAX holds patents — can you tell me about that?
-    - does 1PAX hold any patents?
-    - what patents does 1PAX own?
-    - what innovations has 1PAX patented?
 
 # ── Services: Future Mobility ──────────────────────────────────────────────────
 
@@ -5321,3 +6033,40 @@ nlu:
     - what is 1PAX's answer to vertiport design?
     - how scalable is Ecoport?
     - can Ecoport be deployed on islands?
+
+# ── Innovation research: Skylo ───────────────────────────────────────────────
+
+- intent: ask_company_skylo
+  examples: |
+    - what is Skylo?
+    - tell me about Skylo
+    - what is SKYLO?
+    - explain SKYLO
+    - what is 1PAX's Skylo research?
+    - tell me about 1PAX's aerial logistics research
+    - what is 1PAX doing with aerial logistics?
+    - what is 1PAX's low-altitude economy research?
+    - how does Skylo work?
+    - what problem does Skylo solve?
+    - what applications does Skylo cover?
+    - what is Skylo used for?
+    - does Skylo use drones?
+    - does Skylo use eVTOL aircraft?
+    - what is the Skylo drone network?
+    - how can drones support medical logistics?
+    - does Skylo cover emergency response?
+    - does Skylo cover infrastructure inspection?
+    - can Skylo help remote communities?
+    - what are Skylo's performance indicators?
+    - what metrics does Skylo evaluate?
+    - is Skylo focused on France?
+    - can Skylo work in the Amazon Basin?
+    - can Skylo work in Patagonia?
+    - who can collaborate on Skylo?
+    - is Skylo a patent?
+    - is Skylo part of 1PAX's innovation portfolio?
+    - what is 1PAX's aerial logistics infrastructure?
+    - how does Skylo connect cities and rural areas?
+    - tell me about drones and eVTOL logistics at 1PAX
+    - what is the low altitude economy at 1PAX?
+    - what is 1PAX's research on drone logistics?
