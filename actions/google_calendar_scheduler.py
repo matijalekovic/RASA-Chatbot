@@ -887,7 +887,7 @@ def available_slots(
     range_start: datetime,
     range_end: datetime,
     visitor_timezone: str,
-    preferred_hour_window: Optional[Tuple[int, int]] = None,
+    preferred_time_window: Optional[Tuple[int, int]] = None,
     label_formatter,
 ) -> Tuple[List[CalendarSlot], bool]:
     if not cfg.is_connected:
@@ -930,9 +930,10 @@ def available_slots(
                     label=label,
                 )
                 all_candidates.append(slot)
-                if preferred_hour_window:
-                    local_hour = cursor.astimezone(visitor_tz).hour
-                    if preferred_hour_window[0] <= local_hour < preferred_hour_window[1]:
+                if preferred_time_window:
+                    local_dt = cursor.astimezone(visitor_tz)
+                    local_minute = local_dt.hour * 60 + local_dt.minute
+                    if preferred_time_window[0] <= local_minute < preferred_time_window[1]:
                         matched_candidates.append(slot)
                 else:
                     matched_candidates.append(slot)

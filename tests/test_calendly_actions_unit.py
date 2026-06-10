@@ -134,6 +134,54 @@ def test_available_slots_prefers_read_only_api_before_hosted_page():
     ]
 
 
+def test_translated_friday_morning_maps_to_requested_day_and_window():
+    original_datetime = calendly_actions.datetime
+
+    class FrozenDateTime(original_datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 6, 9, 17, 37, tzinfo=tz)
+
+    calendly_actions.datetime = FrozenDateTime
+    try:
+        tz = calendly_actions._zone("Europe/Belgrade")
+        start, end = calendly_actions._date_range_for_preference(
+            "I want Friday morning",
+            tz,
+        )
+    finally:
+        calendly_actions.datetime = original_datetime
+
+    assert calendly_actions._has_time_words("I want Friday morning")
+    assert calendly_actions._time_window("I want Friday morning") == (8 * 60, 12 * 60)
+    assert start.date().isoformat() == "2026-06-12"
+    assert end.date().isoformat() == "2026-06-13"
+
+
+def test_available_slots_filters_exact_local_time():
+    original = calendly_actions._api_available_slot_times
+
+    def fake_api(cfg, start, end):
+        return [
+            "2026-05-29T08:00:00Z",
+            "2026-05-29T08:30:00Z",
+            "2026-05-29T09:00:00Z",
+        ]
+
+    calendly_actions._api_available_slot_times = fake_api
+    try:
+        slots, matched = calendly_actions._available_slots(
+            _cfg(),
+            "Friday at 10:30",
+            "Europe/Belgrade",
+        )
+    finally:
+        calendly_actions._api_available_slot_times = original
+
+    assert matched is True
+    assert [slot["start_time"] for slot in slots] == ["2026-05-29T08:30:00Z"]
+
+
 def test_browser_booking_runs_as_subprocess_script():
     original_run = calendly_actions.subprocess.run
     captured = {}
@@ -244,6 +292,8 @@ if __name__ == "__main__":
     test_booking_api_runtime_is_removed_even_when_credentials_exist()
     test_api_available_slot_times_filters_and_normalizes()
     test_available_slots_prefers_read_only_api_before_hosted_page()
+    test_translated_friday_morning_maps_to_requested_day_and_window()
+    test_available_slots_filters_exact_local_time()
     test_browser_booking_runs_as_subprocess_script()
     test_confirm_redirects_to_prefilled_calendly_without_browser_submit()
     print("Calendly action unit checks passed.")

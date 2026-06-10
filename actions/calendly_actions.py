@@ -554,7 +554,7 @@ def _extract_name(text: str, stage: Optional[str]) -> Optional[str]:
 
 
 def _has_time_words(text: str) -> bool:
-    lowered = text.lower()
+    lowered = _ascii_norm(text)
     signals = {
         "today",
         "tomorrow",
@@ -563,9 +563,13 @@ def _has_time_words(text: str) -> bool:
         "afternoon",
         "evening",
         "noon",
+        "lunch",
         "night",
         "anytime",
         "any time",
+        "after",
+        "before",
+        "between",
     }
     if any(signal in lowered for signal in signals):
         return True
@@ -573,7 +577,7 @@ def _has_time_words(text: str) -> bool:
         return True
     if any(month in lowered for month in _MONTHS):
         return True
-    return bool(re.search(r"\b\d{1,2}(:\d{2})?\s*(am|pm)?\b", lowered))
+    return bool(_time_window(lowered))
 
 
 def _extract_time_preference(text: str, stage: Optional[str]) -> Optional[str]:
@@ -796,7 +800,7 @@ def _google_available_slots(
         range_start=start,
         range_end=end,
         visitor_timezone=timezone_name,
-        preferred_hour_window=_time_window(preference),
+        preferred_time_window=_time_window(preference),
         label_formatter=lambda start_time, display_tz: _slot_label(
             start_time,
             display_tz,
@@ -953,7 +957,7 @@ def schedule_topic_shift_events(tracker: Tracker) -> List[SlotSet]:
 
 
 def _parse_date_value(raw: str, today: date) -> Optional[date]:
-    text = raw.lower()
+    text = _ascii_norm(raw)
 
     iso_match = re.search(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", text)
     if iso_match:
@@ -967,13 +971,32 @@ def _parse_date_value(raw: str, today: date) -> Optional[date]:
         except ValueError:
             return None
 
+    dotted_match = re.search(
+        r"\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?\b",
+        text,
+    )
+    if dotted_match:
+        day = int(dotted_match.group(1))
+        month = int(dotted_match.group(2))
+        raw_year = dotted_match.group(3)
+        year = int(raw_year) if raw_year else today.year
+        if year < 100:
+            year += 2000
+        try:
+            parsed = date(year, month, day)
+            if parsed < today and raw_year is None:
+                parsed = date(year + 1, month, day)
+            return parsed if parsed >= today else None
+        except ValueError:
+            return None
+
     month_names = "|".join(sorted(_MONTHS, key=len, reverse=True))
     month_first = re.search(
-        rf"\b({month_names})\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:,\s*(\d{{4}}))?\b",
+        rf"\b({month_names})\s+(\d{{1,2}})(?:st|nd|rd|th|\.)?(?:,\s*(\d{{4}}))?\b",
         text,
     )
     day_first = re.search(
-        rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({month_names})(?:\s+(\d{{4}}))?\b",
+        rf"\b(\d{{1,2}})(?:st|nd|rd|th|\.)?\s+({month_names})(?:\s+(\d{{4}}))?\b",
         text,
     )
 
@@ -1004,7 +1027,7 @@ def _date_range_for_preference(
     tz: ZoneInfo,
 ) -> Tuple[datetime, datetime]:
     now = datetime.now(tz)
-    lowered = preference.lower()
+    lowered = _ascii_norm(preference)
 
     parsed_date = _parse_date_value(lowered, now.date())
     if parsed_date:
@@ -1029,14 +1052,29 @@ def _date_range_for_preference(
         start = datetime.combine(start_date, time.min, tzinfo=tz)
         return start, start + timedelta(days=_MAX_RANGE_DAYS)
 
+    if "this week" in lowered:
+        start = now + timedelta(minutes=10)
+        days_until_next_monday = 7 - now.weekday()
+        end_date = now.date() + timedelta(days=days_until_next_monday)
+        end = datetime.combine(end_date, time.min, tzinfo=tz)
+        return _ensure_future_range(start, end, now)
+
     for word, weekday in _WEEKDAYS.items():
         if re.search(rf"\b{re.escape(word)}\b", lowered):
+            has_next = bool(
+                re.search(rf"\bnext\s+{re.escape(word)}\b", lowered)
+                or re.search(rf"\b{re.escape(word)}\s+next\b", lowered)
+            )
+            has_this = bool(
+                re.search(rf"\bthis\s+{re.escape(word)}\b", lowered)
+                or re.search(rf"\b{re.escape(word)}\s+this\b", lowered)
+            )
             delta = (weekday - now.weekday()) % 7
-            if delta == 0 or f"next {word}" in lowered:
+            if has_next or (delta == 0 and not has_this):
                 delta = 7
             start_date = now.date() + timedelta(days=delta)
             start = datetime.combine(start_date, time.min, tzinfo=tz)
-            return start, start + timedelta(days=1)
+            return _ensure_future_range(start, start + timedelta(days=1), now)
 
     start = now + timedelta(minutes=10)
     end = start + timedelta(days=_MAX_RANGE_DAYS)
@@ -1057,16 +1095,130 @@ def _ensure_future_range(
     return start, end
 
 
+def _coerce_time_minutes(
+    hour: int,
+    minute: int,
+    meridiem: str,
+    preference: str,
+) -> Optional[int]:
+    if minute < 0 or minute > 59:
+        return None
+    meridiem = meridiem.lower().replace(".", "")
+    if meridiem in {"pm", "p"} and hour < 12:
+        hour += 12
+    elif meridiem in {"am", "a"} and hour == 12:
+        hour = 0
+    elif not meridiem and 1 <= hour <= 7 and "morning" not in preference:
+        hour += 12
+    if hour < 0 or hour > 23:
+        return None
+    return hour * 60 + minute
+
+
+def _bounded_window(start: int, end: int) -> Optional[Tuple[int, int]]:
+    start = max(0, min(start, 24 * 60))
+    end = max(0, min(end, 24 * 60))
+    if end <= start:
+        return None
+    return start, end
+
+
+def _exact_time_window(preference: str) -> Optional[Tuple[int, int]]:
+    range_match = re.search(
+        r"\b(?:between|from|od|entre|de)\s+"
+        r"(\d{1,2})(?::([0-5]\d))?\s*(am|pm|a\.m\.|p\.m\.)?\s+"
+        r"(?:and|to|do|a|e|y|et)\s+"
+        r"(\d{1,2})(?::([0-5]\d))?\s*(am|pm|a\.m\.|p\.m\.)?\b",
+        preference,
+    )
+    if range_match:
+        start_meridiem = range_match.group(3) or range_match.group(6) or ""
+        end_meridiem = range_match.group(6) or range_match.group(3) or ""
+        start = _coerce_time_minutes(
+            int(range_match.group(1)),
+            int(range_match.group(2) or 0),
+            start_meridiem,
+            preference,
+        )
+        end = _coerce_time_minutes(
+            int(range_match.group(4)),
+            int(range_match.group(5) or 0),
+            end_meridiem,
+            preference,
+        )
+        if start is not None and end is not None and end > start:
+            return _bounded_window(start, end)
+
+    h_match = re.search(
+        r"\b(?:(at|around|about|after|before|from|by|u|oko|posle|poslije|pre|"
+        r"prije|depois|antes|vers|apres|avant|a\s+las|as)\s+)?"
+        r"(\d{1,2})h([0-5]\d)?\b",
+        preference,
+    )
+    if h_match:
+        minute = _coerce_time_minutes(
+            int(h_match.group(2)),
+            int(h_match.group(3) or 0),
+            "",
+            preference,
+        )
+        if minute is not None:
+            marker = h_match.group(1) or ""
+            return _window_for_time_marker(marker, minute)
+
+    time_match = re.search(
+        r"\b(?:(at|around|about|after|before|from|by|u|oko|posle|poslije|pre|"
+        r"prije|depois|antes|vers|apres|avant|a\s+las|as)\s+)?"
+        r"(\d{1,2})(?::([0-5]\d))?\s*(am|pm|a\.m\.|p\.m\.)?\b",
+        preference,
+    )
+    if not time_match:
+        return None
+
+    marker = time_match.group(1) or ""
+    has_explicit_time = bool(marker or time_match.group(3) or time_match.group(4))
+    if not has_explicit_time:
+        return None
+
+    minute = _coerce_time_minutes(
+        int(time_match.group(2)),
+        int(time_match.group(3) or 0),
+        time_match.group(4) or "",
+        preference,
+    )
+    if minute is None:
+        return None
+    return _window_for_time_marker(marker, minute)
+
+
+def _window_for_time_marker(marker: str, minute: int) -> Optional[Tuple[int, int]]:
+    marker = (marker or "").strip()
+    if marker in {"after", "from", "posle", "poslije", "depois", "apres"}:
+        return _bounded_window(minute, 24 * 60)
+    if marker in {"before", "by", "pre", "prije", "antes", "avant"}:
+        return _bounded_window(0, minute)
+    if marker in {"around", "about", "oko", "vers"}:
+        return _bounded_window(minute - 30, minute + 31)
+    return _bounded_window(minute, minute + 1)
+
+
 def _time_window(preference: str) -> Optional[Tuple[int, int]]:
-    lowered = preference.lower()
+    lowered = _ascii_norm(preference)
+    exact = _exact_time_window(lowered)
+    if exact:
+        return exact
+    if "before noon" in lowered:
+        return 8 * 60, 12 * 60
+    if "after lunch" in lowered:
+        return 13 * 60, 17 * 60
     if "morning" in lowered:
-        return 8, 12
+        return 8 * 60, 12 * 60
     if "afternoon" in lowered:
-        return 12, 17
+        return 12 * 60, 17 * 60
     if "evening" in lowered:
-        return 17, 21
+        return 17 * 60, 21 * 60
     if "noon" in lowered:
-        return 11, 14
+        return 11 * 60, 14 * 60
     return None
 
 
@@ -1431,11 +1583,18 @@ def _available_slots(
     filtered = raw_slots
     used_preference_filter = False
     if window:
-        start_hour, end_hour = window
+        start_minute, end_minute = window
         filtered = [
             slot
             for slot in raw_slots
-            if start_hour <= _parse_calendly_dt(slot).astimezone(tz).hour < end_hour
+            if (
+                start_minute
+                <= (
+                    _parse_calendly_dt(slot).astimezone(tz).hour * 60
+                    + _parse_calendly_dt(slot).astimezone(tz).minute
+                )
+                < end_minute
+            )
         ]
         used_preference_filter = bool(filtered)
         if not filtered:
@@ -2029,9 +2188,13 @@ def run_google_calendar_scheduling(
 
         if _has_time_words(text) and not _looks_like_slot_choice_only(text):
             time_preference = text.strip()
+            offered_slots = []
+            selected_slot = None
+            selected_label = None
             events.extend(
                 [
                     SlotSet("schedule_time_preference", time_preference),
+                    SlotSet("schedule_offered_slots", None),
                     SlotSet("schedule_selected_slot", None),
                     SlotSet("schedule_selected_slot_label", None),
                 ]
@@ -2044,6 +2207,21 @@ def run_google_calendar_scheduling(
                 lang,
             )
             return events + _set_stage("select_slot")
+
+    if stage == "confirm" and _has_time_words(text) and not _looks_like_slot_choice_only(text):
+        time_preference = text.strip()
+        offered_slots = []
+        selected_slot = None
+        selected_label = None
+        stage = "collect_time"
+        events.extend(
+            [
+                SlotSet("schedule_time_preference", time_preference),
+                SlotSet("schedule_offered_slots", None),
+                SlotSet("schedule_selected_slot", None),
+                SlotSet("schedule_selected_slot_label", None),
+            ]
+        )
 
     if stage == "confirm":
         if _is_affirmation(text):
@@ -2316,9 +2494,13 @@ def _run_calendly_scheduling(
 
         if _has_time_words(text) and not _looks_like_slot_choice_only(text):
             time_preference = text.strip()
+            offered_slots = []
+            selected_slot = None
+            selected_label = None
             events.extend(
                 [
                     SlotSet("schedule_time_preference", time_preference),
+                    SlotSet("schedule_offered_slots", None),
                     SlotSet("schedule_selected_slot", None),
                     SlotSet("schedule_selected_slot_label", None),
                 ]
@@ -2331,6 +2513,21 @@ def _run_calendly_scheduling(
                 lang,
             )
             return events + _set_stage("select_slot")
+
+    if stage == "confirm" and _has_time_words(text) and not _looks_like_slot_choice_only(text):
+        time_preference = text.strip()
+        offered_slots = []
+        selected_slot = None
+        selected_label = None
+        stage = "collect_time"
+        events.extend(
+            [
+                SlotSet("schedule_time_preference", time_preference),
+                SlotSet("schedule_offered_slots", None),
+                SlotSet("schedule_selected_slot", None),
+                SlotSet("schedule_selected_slot_label", None),
+            ]
+        )
 
     if stage == "confirm":
         if _is_affirmation(text):

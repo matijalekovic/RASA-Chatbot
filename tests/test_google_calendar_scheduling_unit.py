@@ -189,6 +189,151 @@ def test_action_books_google_calendar_dry_run_inside_chat():
     _with_google_dry_run_env(run)
 
 
+def test_action_requeries_when_translated_user_changes_slot_day():
+    def run():
+        original_available_slots = schedule_actions._google_available_slots
+        captured = {}
+        friday_slot = {
+            "start_time": "2026-06-12T08:00:00Z",
+            "end_time": "2026-06-12T08:30:00Z",
+            "calendar_id": "dryrun:barcelona",
+            "colleague_id": "barcelona",
+            "colleague_label": "Barcelona office colleague",
+            "colleague_office": "Barcelona",
+            "colleague_timezone": "Europe/Madrid",
+            "label": "Friday, Jun 12 at 10:00",
+        }
+        old_slots = [
+            {
+                "start_time": "2026-06-10T08:00:00Z",
+                "end_time": "2026-06-10T08:30:00Z",
+                "calendar_id": "dryrun:barcelona",
+                "colleague_id": "barcelona",
+                "colleague_label": "Barcelona office colleague",
+                "colleague_office": "Barcelona",
+                "colleague_timezone": "Europe/Madrid",
+                "label": "Wednesday, Jun 10 at 10:00",
+            }
+        ]
+
+        def fake_available_slots(cfg, colleague, preference, timezone_name, lang):
+            captured["preference"] = preference
+            captured["timezone_name"] = timezone_name
+            captured["lang"] = lang
+            return [friday_slot], True
+
+        schedule_actions._google_available_slots = fake_available_slots
+        try:
+            tracker = _Tracker(
+                "I want Friday morning",
+                slots={
+                    "schedule_stage": "select_slot",
+                    "schedule_name": "Marko Simic",
+                    "schedule_email": "marko@example.com",
+                    "schedule_purpose": "Project consultation",
+                    "schedule_time_preference": "tomorrow morning",
+                    "schedule_timezone": "Europe/Belgrade",
+                    "schedule_offered_slots": json.dumps(old_slots),
+                    "schedule_colleague_id": "barcelona",
+                },
+                metadata={"lang": "SR", "timezone": "Europe/Belgrade"},
+                intent="provide_schedule_time_preference",
+            )
+            dispatcher = CollectingDispatcher()
+            events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+        finally:
+            schedule_actions._google_available_slots = original_available_slots
+
+        offered_values = [
+            event.get("value")
+            for event in events
+            if event.get("name") == "schedule_offered_slots"
+        ]
+        assert captured == {
+            "preference": "I want Friday morning",
+            "timezone_name": "Europe/Belgrade",
+            "lang": "SR",
+        }
+        assert offered_values[0] is None
+        assert "2026-06-12T08:00:00Z" in offered_values[-1]
+        assert "Petak, 12. jun u 10:00" in dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_stage"
+            and event.get("value") == "select_slot"
+            for event in events
+        )
+
+    _with_google_dry_run_env(run)
+
+
+def test_action_requeries_when_user_changes_time_at_confirmation():
+    def run():
+        original_available_slots = schedule_actions._google_available_slots
+        captured = {}
+        new_slot = {
+            "start_time": "2026-06-12T12:00:00Z",
+            "end_time": "2026-06-12T12:30:00Z",
+            "calendar_id": "dryrun:barcelona",
+            "colleague_id": "barcelona",
+            "colleague_label": "Barcelona office colleague",
+            "colleague_office": "Barcelona",
+            "colleague_timezone": "Europe/Madrid",
+            "label": "Friday, Jun 12 at 14:00",
+        }
+        old_slots = [
+            {
+                "start_time": "2026-06-10T08:00:00Z",
+                "end_time": "2026-06-10T08:30:00Z",
+                "calendar_id": "dryrun:barcelona",
+                "colleague_id": "barcelona",
+                "colleague_label": "Barcelona office colleague",
+                "colleague_office": "Barcelona",
+                "colleague_timezone": "Europe/Madrid",
+                "label": "Wednesday, Jun 10 at 10:00",
+            }
+        ]
+
+        def fake_available_slots(cfg, colleague, preference, timezone_name, lang):
+            captured["preference"] = preference
+            return [new_slot], True
+
+        schedule_actions._google_available_slots = fake_available_slots
+        try:
+            tracker = _Tracker(
+                "Friday at 2 pm instead",
+                slots={
+                    "schedule_stage": "confirm",
+                    "schedule_name": "Marko Simic",
+                    "schedule_email": "marko@example.com",
+                    "schedule_purpose": "Project consultation",
+                    "schedule_time_preference": "tomorrow morning",
+                    "schedule_timezone": "Europe/Belgrade",
+                    "schedule_offered_slots": json.dumps(old_slots),
+                    "schedule_selected_slot": "2026-06-10T08:00:00Z",
+                    "schedule_selected_slot_label": "Wednesday, Jun 10 at 10:00",
+                    "schedule_colleague_id": "barcelona",
+                },
+                metadata={"timezone": "Europe/Belgrade"},
+                intent="provide_schedule_time_preference",
+            )
+            dispatcher = CollectingDispatcher()
+            events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+        finally:
+            schedule_actions._google_available_slots = original_available_slots
+
+        offered_values = [
+            event.get("value")
+            for event in events
+            if event.get("name") == "schedule_offered_slots"
+        ]
+        assert captured["preference"] == "Friday at 2 pm instead"
+        assert offered_values[0] is None
+        assert "2026-06-12T12:00:00Z" in offered_values[-1]
+        assert dispatcher.messages[-1]["text"].startswith("I found these available times")
+
+    _with_google_dry_run_env(run)
+
+
 if __name__ == "__main__":
     test_context_routes_chinese_visitors_to_shanghai()
     test_context_routes_spanish_americas_to_lima()
@@ -196,4 +341,6 @@ if __name__ == "__main__":
     test_action_suggests_detected_colleague_before_time_collection()
     test_action_offers_other_colleagues_when_route_declined()
     test_action_books_google_calendar_dry_run_inside_chat()
+    test_action_requeries_when_translated_user_changes_slot_day()
+    test_action_requeries_when_user_changes_time_at_confirmation()
     print("Google Calendar scheduling unit checks passed.")
