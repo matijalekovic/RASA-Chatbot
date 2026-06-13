@@ -5,7 +5,7 @@
 10 new stories × 10 questions = 100 additional test cases.
 
 Covers: project deep dives (Kigali, Nice, Chateauroux, Latin America,
-interior design, Doha, Greyfoot, industrial buildings, Working & Living),
+interior design, Doha, industrial buildings, Working & Living),
 team deep dives (Ali, Bashan, Claudia), ethics/ESG, urban planning.
 
 Usage:
@@ -172,15 +172,15 @@ add(S27, "what is 1PAX's Grad Fellowship?", "S27-10: diversity / fellowship", ex
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# S28 — Urban Developer (Greyfoot Paris + urbanism)
+# S28 — Urban Developer (Doha Metro Depot + urbanism)
 # ══════════════════════════════════════════════════════════════════════════════
-S28 = "s28_greyfoot"
-add(S28, "tell me about the Greyfoot Paris project", "S28-01: Greyfoot Paris", expected=["Greyfoot", "Paris", "mixed-use", "urban"])
-add(S28, "what was the concept behind Greyfoot?", "S28-02: concept (slot)", expected=["concept", "Paris", "porte", "urban", "gateway", "catalyst"])
-add(S28, "how was Greyfoot awarded to 1PAX?", "S28-03: tender (slot)", expected=["competition", "1st Prize", "first prize", "winner"])
-add(S28, "what is the programme for Greyfoot?", "S28-04: program (slot)", expected=["offices", "co-working", "housing", "retail", "landscape", "refurbish"])
-add(S28, "what was the design approach?", "S28-05: approach (slot)", expected=["approach", "urban", "porosity", "pedestrian", "refurbish", "hierarchy", "landscape"])
-add(S28, "what are the fun facts about Greyfoot?", "S28-06: fun facts (slot)", expected=["Paris", "porte", "Périphérique", "Champerret", "refurbish", "competition"])
+S28 = "s28_doha_depot"
+add(S28, "tell me about the Doha West Metro Depot project", "S28-01: Doha Metro Depot", expected=["Doha", "Qatar", "metro", "depot"])
+add(S28, "what was the concept behind the Doha depot?", "S28-02: concept (slot)", expected=["oasis", "urban", "rail", "infrastructure", "Qatar"])
+add(S28, "how was the Doha depot awarded to 1PAX?", "S28-03: tender (slot)", expected=["Direct commission", "SETEC", "Siemens", "BESIX", "TSO"])
+add(S28, "what is the programme for the Doha depot?", "S28-04: program (slot)", expected=["depot", "maintenance", "stabling", "control", "training", "parking"])
+add(S28, "what was the design approach?", "S28-05: approach (slot)", expected=["approach", "zoning", "operational", "landscape", "courtyards", "masterplan"])
+add(S28, "what are the fun facts about the Doha depot?", "S28-06: fun facts (slot)", expected=["157,217", "oasis", "Qatar", "metro", "1M2"])
 add(S28, "what urbanism services does 1PAX offer?", "S28-07: urbanism service", expected=["urbanism", "masterplan", "planning", "service", "urban", "airport"])
 add(S28, "can 1PAX handle airport-city integration?", "S28-08: urbanism / airport-city", expected=["airport", "city", "urban", "connect", "transport", "masterplan", "integrat"])
 add(S28, "how does 1PAX approach public space design?", "S28-09: human-centered", expected=["human", "centered", "passenger", "people", "user", "design", "public"])

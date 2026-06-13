@@ -374,10 +374,10 @@ TESTS = [
      "any_contain": ["Belgrade Airport"]},
 
     {"session_id": "s_typo_09", "category": "Typos & Aliases",
-     "note": "TYPO-09: 'greyfoot' → greyfoot paris",
-     "message": "tell me about greyfoot",
-     "expect_project": "greyfoot_paris",
-     "any_contain": ["Greyfoot"]},
+     "note": "TYPO-09: 'Al Wakrah depot' → doha metro depot",
+     "message": "tell me about Al Wakrah metro depot",
+     "expect_project": "doha_metro_depot",
+     "any_contain": ["Doha", "Metro", "Depot"]},
 
     {"session_id": "s_typo_10", "category": "Typos & Aliases",
      "note": "TYPO-10: 'issy heliport' → paris heliport",

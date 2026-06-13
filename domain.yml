@@ -146,6 +146,11 @@ slots:
     influence_conversation: false
     mappings:
       - type: custom
+  schedule_purpose_screening:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
   schedule_time_preference:
     type: text
     influence_conversation: false
@@ -216,6 +221,11 @@ slots:
     influence_conversation: false
     mappings:
       - type: custom
+  schedule_pending_edit_field:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
   schedule_booking_event_id:
     type: text
     influence_conversation: false
@@ -229,7 +239,7 @@ slots:
 
 responses:
   utter_greet:
-    - text: "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — help you explore our 58 architectural projects, or help schedule a meeting. What would you like to know?"
+    - text: "Hello! I'm the 1PAX assistant. I can tell you about our studio — who we are, our mission, design approach, team, careers — help you explore our 57 architectural projects, or help schedule a meeting. What would you like to know?"
       buttons:
         - title: "Schedule a meeting"
           payload: "I would like to schedule a meeting."
@@ -237,7 +247,7 @@ responses:
       buttons:
         - title: "Schedule a meeting"
           payload: "I would like to schedule a meeting."
-    - text: "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — dive into any of our 58 projects, or help you schedule a meeting. What's on your mind?"
+    - text: "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — dive into any of our 57 projects, or help you schedule a meeting. What's on your mind?"
       buttons:
         - title: "Schedule a meeting"
           payload: "I would like to schedule a meeting."
@@ -255,16 +265,16 @@ responses:
   utter_iamabot:
     - text: "I'm the 1PAX virtual assistant, here to help you explore our architectural portfolio. I'm powered by Rasa."
     - text: "I'm a chatbot built to answer questions about 1PAX's projects — airports, mobility infrastructure, interior design, and more."
-    - text: "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 58 architectural projects."
+    - text: "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 57 architectural projects."
 
   utter_ask_which_project:
     - text: "Which project are you asking about? You can name a city, airport, or project — like **Sofia Airport**, **Belgrade Metro**, or **Lima Food Hall**."
     - text: "Sure! Which project did you have in mind? Try saying **Tahiti airport**, **Paris Heliport**, or type 'list projects' for the full catalogue."
-    - text: "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects."
+    - text: "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 57 projects."
     - text: "Which one are you asking about? Name a location or project — like **Almaty Airport**, **Cergy Vertiport**, or **AIK Bank**."
 
   utter_project_not_found:
-    - text: "I don't have data on that project yet. Try 'list projects' to see all 58 projects in our portfolio."
+    - text: "I don't have data on that project yet. Try 'list projects' to see all 57 projects in our portfolio."
     - text: "Hmm, I can't find that one. Ask 'what projects do you have?' to browse the full catalogue."
 
   utter_out_of_scope:
@@ -275,7 +285,7 @@ responses:
   utter_default_fallback:
     - text: "I didn't quite catch that. You can ask me about 1PAX as a studio, our design approach, team, offices, or explore our projects — try _'Tell me about 1PAX'_ or _'show me all projects'_."
     - text: "Hmm, I'm not sure what you mean. Try: _'Who founded 1PAX?'_, _'What does 1PAX specialize in?'_, or _'Tell me about Sofia Airport'_."
-    - text: "I couldn't understand that. I can help with questions about the 1PAX studio, our mission, values, careers, or any of our 58 architectural projects."
+    - text: "I couldn't understand that. I can help with questions about the 1PAX studio, our mission, values, careers, or any of our 57 architectural projects."
 
 actions:
   - action_greet

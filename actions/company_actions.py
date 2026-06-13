@@ -106,6 +106,19 @@ def _client_slug(text: str) -> str:
     return _client_norm(text).replace(" ", "_")
 
 
+_RETIRED_PROJECT_REFS = (
+    "greyfoot",
+    "grayfoot",
+    "espace champerret",
+    "unibail",
+)
+
+
+def _mentions_retired_project(raw_text: str) -> bool:
+    norm = _client_norm(raw_text)
+    return any(ref in norm for ref in _RETIRED_PROJECT_REFS)
+
+
 def _split_client_names(client_text: str) -> List[str]:
     """Split a project client field into likely organization names."""
     if not client_text or client_text.lower().startswith("not available"):
@@ -844,6 +857,16 @@ class ActionAnswerCompanyQuery(Action):
 
         raw_text = tracker.latest_message.get("text", "")
         from .actions import ActionListProjects, _looks_like_project_geo_query
+
+        if _mentions_retired_project(raw_text):
+            dispatcher.utter_message(
+                text=translate_response(
+                    "I can't find that one in the active 1PAX project catalogue. "
+                    "Ask 'what projects do you have?' to browse the current portfolio.",
+                    lang,
+                )
+            )
+            return schedule_reset_events + lang_event
 
         if _looks_like_project_geo_query(raw_text):
             return ActionListProjects().run(dispatcher, tracker, domain)

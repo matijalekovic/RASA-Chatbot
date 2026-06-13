@@ -118,7 +118,7 @@ _OUT_OF_SCOPE_NO_CONTEXT = [
 
 _PROJECT_LIST_TEXT = {
     "FR": {
-        "intro": "Voici les 58 projets de 1PAX dans notre portefeuille :\n",
+        "intro": "Voici les 57 projets de 1PAX dans notre portefeuille :\n",
         "suffix": "Posez-moi n'importe quelle question sur un projet — coût, défi de conception, équipe, et plus encore !",
         "cta": "Si ce projet est proche de ce que vous planifiez, je peux vous aider à planifier une réunion avec 1PAX.",
         "categories": {
@@ -131,7 +131,7 @@ _PROJECT_LIST_TEXT = {
         },
     },
     "ES": {
-        "intro": "Estos son los 58 proyectos de 1PAX en nuestro portafolio:\n",
+        "intro": "Estos son los 57 proyectos de 1PAX en nuestro portafolio:\n",
         "suffix": "Pregúnteme cualquier cosa sobre un proyecto: coste, desafío de diseño, equipo y más.",
         "cta": "Si este proyecto se parece a algo que está planificando, puedo ayudarle a programar una reunión con 1PAX.",
         "categories": {
@@ -144,7 +144,7 @@ _PROJECT_LIST_TEXT = {
         },
     },
     "PT": {
-        "intro": "Estes são os 58 projetos da 1PAX no nosso portefólio:\n",
+        "intro": "Estes são os 57 projetos da 1PAX no nosso portefólio:\n",
         "suffix": "Pergunte-me qualquer coisa sobre um projeto — custo, desafio de design, equipa e muito mais.",
         "cta": "Se este projeto for próximo de algo que está a planear, posso ajudar a agendar uma reunião com a 1PAX.",
         "categories": {
@@ -157,7 +157,7 @@ _PROJECT_LIST_TEXT = {
         },
     },
     "ZH": {
-        "intro": "以下是 1PAX 项目组合中的 58 个项目：\n",
+        "intro": "以下是 1PAX 项目组合中的 57 个项目：\n",
         "suffix": "您可以询问任何项目相关问题：成本、设计挑战、团队等。",
         "cta": "如果这个项目接近您正在规划的内容，我可以帮助您与 1PAX 安排会议。",
         "categories": {
@@ -170,7 +170,7 @@ _PROJECT_LIST_TEXT = {
         },
     },
     "SR": {
-        "intro": "Ovo je svih 58 projekata iz 1PAX portfolija:\n",
+        "intro": "Ovo je svih 57 projekata iz 1PAX portfolija:\n",
         "suffix": "Pitajte me bilo šta o projektu — troškovima, izazovu dizajna, timu i još mnogo toga.",
         "cta": "Ako je ovaj projekat sličan nečemu što planirate, mogu vam pomoći da zakažete sastanak sa 1PAX.",
         "categories": {
@@ -228,9 +228,9 @@ class ActionGreet(Action):
         lang = get_lang(tracker)
         dispatcher.utter_message(
             text=translate_response(random.choice([
-                "Hi! I can tell you about 1PAX — our studio, mission, design approach, team, or careers — help you explore our 58 architectural projects, or help schedule a meeting. What would you like to know?",
+                "Hi! I can tell you about 1PAX — our studio, mission, design approach, team, or careers — help you explore our 57 architectural projects, or help schedule a meeting. What would you like to know?",
                 "Hello! Ask about the studio, our founder, design philosophy, sustainability commitment, explore our project portfolio, or schedule a meeting with 1PAX. Where would you like to start?",
-                "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — dive into any of our 58 projects, or help you schedule a meeting. What's on your mind?",
+                "Welcome! I can answer questions about 1PAX as a studio — our mission, values, team, and approach — dive into any of our 57 projects, or help you schedule a meeting. What's on your mind?",
                 "Hello! Ask me about 1PAX — who we are, how we work, what we build, or where we're based. You can also say 'show me all projects' or schedule a meeting with the studio.",
             ]), lang),
             buttons=meeting_buttons(lang),
@@ -270,7 +270,7 @@ class ActionIAmABot(Action):
         dispatcher.utter_message(text=translate_response(random.choice([
             "I'm the 1PAX virtual assistant, here to help you explore our architectural portfolio. I'm powered by Rasa.",
             "I'm a chatbot built to answer questions about 1PAX's projects — airports, mobility infrastructure, interior design, and more.",
-            "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 58 architectural projects.",
+            "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 57 architectural projects.",
         ]), lang))
         return [SlotSet("language", lang)] if lang else []
 
@@ -549,9 +549,6 @@ _NAME_INDEX.update({
     "chateauroux airport":         "chateauroux_atct_mro",
     "chateauroux tower":           "chateauroux_atct_mro",
     "chateauroux mro":             "chateauroux_atct_mro",
-    # Greyfoot Paris
-    "greyfoot":                    "greyfoot_paris",
-    "greyfoot paris":              "greyfoot_paris",
     # Montijo Airport (Portugal)
     "montijo":                     "montijo_airport_commercial",
     "montijo airport":             "montijo_airport_commercial",
@@ -1799,7 +1796,7 @@ class ActionAnswerProjectQuery(Action):
             if entity_value:
                 dispatcher.utter_message(text=translate_response(
                     random.choice([
-                        "I don't have data on that project yet. Try 'list projects' to see all 58 projects in our portfolio.",
+                        "I don't have data on that project yet. Try 'list projects' to see all 57 projects in our portfolio.",
                         "Hmm, I can't find that one. Ask 'what projects do you have?' to browse the full catalogue.",
                     ]), lang
                 ))
@@ -1821,7 +1818,7 @@ class ActionAnswerProjectQuery(Action):
                         random.choice([
                             "Which project are you asking about? You can name a city, airport, or project — like **Sofia Airport**, **Belgrade Metro**, or **Lima Food Hall**.",
                             "Sure! Which project did you have in mind? Try saying **Tahiti airport**, **Paris Heliport**, or type 'list projects' for the full catalogue.",
-                            "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 58 projects.",
+                            "I'd love to help — which project are you interested in? Ask 'what projects do you have?' for the full list of 57 projects.",
                         ]), lang
                     ))
             return schedule_reset_events + lang_event
@@ -1831,11 +1828,11 @@ class ActionAnswerProjectQuery(Action):
                 (
                     "I don't have details on that project yet. Try asking about "
                     "**Sofia Airport**, **Belgrade Airport**, or type 'list projects' "
-                    "to browse all 58 projects."
+                    "to browse all 57 projects."
                 ),
                 (
                     "Hmm, I can't find that one. Ask 'what projects do you have?' "
-                    "to see the full list — there are 58 to explore!"
+                    "to see the full list — there are 57 to explore!"
                 ),
             ]), lang))
             return schedule_reset_events + lang_event
@@ -1941,7 +1938,7 @@ class ActionListProjects(Action):
         intro = random.choice([
             "Here are 1PAX's architectural projects:\n",
             "1PAX's portfolio spans 6 categories — here's the full list:\n",
-            "These are all 58 1PAX projects across our portfolio:\n",
+            "These are all 57 1PAX projects across our portfolio:\n",
         ])
         lines = [_localized_project_list_text(lang, "intro", intro)]
 
@@ -1971,6 +1968,47 @@ class ActionListProjects(Action):
             buttons=meeting_buttons(lang),
         )
         return schedule_reset_events + lang_event
+
+
+def _looks_like_language_capability_question(text: str) -> bool:
+    normalized = _ascii_norm(text)
+    if not normalized:
+        return False
+    return any(
+        phrase in normalized
+        for phrase in (
+            "do you speak",
+            "can you speak",
+            "are you able to speak",
+            "can i write in",
+            "can i talk to you in",
+            "can we speak",
+            "what languages do you speak",
+            "which languages do you speak",
+            "parlez vous",
+            "hablas",
+            "habla usted",
+            "falas",
+            "fala voce",
+            "govoris",
+            "govorite",
+            "sprichst du",
+            "sprechen sie",
+            "parli",
+            "parla",
+        )
+    )
+
+
+def _language_capability_text() -> str:
+    return (
+        "Yes. You can write to me in English or in another language, even if it "
+        "is not one of the visible language buttons. For the first few messages "
+        "I identify the language you are using, translate your question into "
+        "English for the 1PAX knowledge model, and translate my reply back to "
+        "that language. If you want to switch languages later, just send a "
+        "message in the new language."
+    )
 
 
 class ActionHandleOutOfScope(Action):
@@ -2033,6 +2071,13 @@ class ActionHandleOutOfScope(Action):
 
             return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
+        if _looks_like_language_capability_question(user_text):
+            dispatcher.utter_message(
+                text=translate_response(_language_capability_text(), lang),
+                buttons=meeting_buttons(lang),
+            )
+            return schedule_reset_events + [SlotSet("project_name", None)] + lang_event
+
         # ── Capability question: "what can you do", "what else can you do", etc. ─
         _CAP_SIGNALS = {"what can you do", "what else can you do", "what do you offer",
                         "what are you capable of", "what do you know", "what can you help",
@@ -2050,7 +2095,7 @@ class ActionHandleOutOfScope(Action):
                     "• Design approach and principles\n"
                     "• Sustainability, innovation, and urbanism\n"
                     "• Careers, applications, culture, and open roles\n\n"
-                    "**Our project portfolio (58 projects):**\n"
+                    "**Our project portfolio (57 projects):**\n"
                     "• Ask *'show me all projects'* to browse by category\n"
                     "• Ask about any project by name, city, or airport code\n"
                     "• For any project: location, year, client, budget, design concept, "
@@ -2288,7 +2333,7 @@ class ActionHandleOutOfScope(Action):
 
         # ── Safety net: try to fuzzy-match a project from the raw message ────────
         # This catches cases where NLU misfires on bare project names or typos
-        # (e.g. "fuzhou airport", "greyfoot paris", "aik bankk") before giving up.
+        # (e.g. "fuzhou airport", "aik bankk") before giving up.
         # Skip if the message looks like a genuine OOS query (weather, time, etc.)
         _OOS_SIGNALS = {"weather", "temperature", "forecast", "rain", "raining",
                         "sunny", "time", "joke", "taxi", "uber", "order", "pizza",

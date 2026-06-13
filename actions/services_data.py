@@ -90,7 +90,7 @@ SERVICES_INFO = {
             "- **Ancillary building coordination** — hotels, cargo facilities, maintenance zones"
         ),
         (
-            "Examples include the **Greyfoot Paris** urban innovation district and masterplanning "
+            "Examples include the **Doha West Metro Depot** masterplan and masterplanning "
             "components embedded across our larger airport projects.\n\n"
             "Interested in a specific urban challenge or project type? Let me know."
         ),

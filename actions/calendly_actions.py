@@ -34,6 +34,10 @@ from .translation import get_lang, translate_response
 
 logger = logging.getLogger(__name__)
 
+_GEMINI_MODEL = "gemini-3.1-flash-lite"
+_GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
+)
 _DEFAULT_TIMEZONE = "Europe/Belgrade"
 _MAX_RANGE_DAYS = 7
 
@@ -42,6 +46,7 @@ _SCHEDULE_SLOTS = [
     "schedule_name",
     "schedule_email",
     "schedule_purpose",
+    "schedule_purpose_screening",
     "schedule_time_preference",
     "schedule_timezone",
     "schedule_offered_slots",
@@ -56,6 +61,7 @@ _SCHEDULE_SLOTS = [
     "schedule_colleague_timezone",
     "schedule_colleague_calendar_id",
     "schedule_colleague_options",
+    "schedule_pending_edit_field",
     "schedule_booking_event_id",
     "schedule_booking_meet_link",
 ]
@@ -235,6 +241,27 @@ class CalendlyAutomationError(RuntimeError):
         super().__init__(message)
         self.status = status
         self.detail = detail
+
+
+@dataclass(frozen=True)
+class MeetingPurposeDecision:
+    allowed: bool
+    category: str
+    email: str
+    reason: str
+    needs_more_detail: bool = False
+
+    def to_json(self, purpose: str) -> str:
+        return json.dumps(
+            {
+                "purpose": purpose,
+                "allowed": self.allowed,
+                "category": self.category,
+                "email": self.email,
+                "reason": self.reason,
+                "needs_more_detail": self.needs_more_detail,
+            }
+        )
 
 
 def _config_from_env() -> CalendlyConfig:
@@ -454,17 +481,55 @@ def _utter(
     )
 
 
+_EMAIL_RE = r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"
+
+
 def _extract_email(text: str) -> Optional[str]:
-    match = re.search(
-        r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
-        text,
-        flags=re.IGNORECASE,
-    )
+    match = re.search(_EMAIL_RE, text, flags=re.IGNORECASE)
     return match.group(0).lower() if match else None
 
 
+def _extract_updated_email(text: str) -> Optional[str]:
+    matches = re.findall(_EMAIL_RE, text, flags=re.IGNORECASE)
+    return matches[-1].lower() if matches else None
+
+
+def _clean_update_value(raw: str) -> str:
+    value = re.sub(r"\s+", " ", raw or "").strip()
+    value = value.strip(" \t\r\n'\"`.,;:!?")
+    value = re.sub(
+        r"^(?:to|as|with|is|be|should be|should read)\s+",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+    value = re.sub(
+        r"\s+(?:instead|please|thanks|thank you)\.?$",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+    return value.strip(" \t\r\n'\"`.,;:!?")
+
+
+def _extract_field_update_value(text: str, field_terms: Tuple[str, ...]) -> Optional[str]:
+    field_pattern = "|".join(re.escape(term) for term in field_terms)
+    patterns = [
+        rf"^\s*(?:{field_pattern})\s*[:=]\s*(.+)$",
+        rf"\b(?:change|update|correct|edit|set)\s+(?:my\s+|the\s+)?(?:{field_pattern})\s+(?:to|as|with)\s+(.+)",
+        rf"\b(?:{field_pattern})\s+(?:should be|should read|is actually|is)\s+(.+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            value = _clean_update_value(match.group(1))
+            if value:
+                return value
+    return None
+
+
 def _clean_purpose(raw: str) -> Optional[str]:
-    value = re.sub(r"\s+", " ", raw).strip(" .,;:!?")
+    value = _clean_update_value(raw)
     if not value or len(value) < 3:
         return None
     if len(value) > 500:
@@ -503,6 +568,304 @@ def _extract_purpose(text: str, stage: Optional[str]) -> Optional[str]:
         if match:
             return _clean_purpose(match.group(1))
     return None
+
+
+def _gemini_api_key() -> str:
+    return (
+        os.environ.get("GEMINI_API_KEY", "").strip()
+        or os.environ.get("GOOGLE_API_KEY", "").strip()
+    )
+
+
+def _parse_meeting_decision(payload: Dict[str, Any]) -> Optional[MeetingPurposeDecision]:
+    category = str(payload.get("category") or "").strip().lower()
+    if not category:
+        return None
+
+    allowed = bool(payload.get("allowed"))
+    email = str(payload.get("email") or "").strip().lower()
+    reason = str(payload.get("reason") or "").strip()
+    needs_more_detail = bool(payload.get("needs_more_detail"))
+
+    if allowed:
+        return MeetingPurposeDecision(
+            allowed=True,
+            category=category,
+            email="",
+            reason=reason or "Business development or project-related request.",
+            needs_more_detail=False,
+        )
+
+    if not email and needs_more_detail:
+        email = ""
+    elif not email:
+        email = "contact@1pax.com"
+
+    return MeetingPurposeDecision(
+        allowed=False,
+        category=category,
+        email=email,
+        reason=reason or "This request is better handled by email.",
+        needs_more_detail=needs_more_detail,
+    )
+
+
+def _gemini_meeting_purpose_decision(purpose: str) -> Optional[MeetingPurposeDecision]:
+    api_key = _gemini_api_key()
+    if not api_key or not _env_bool("MEETING_PURPOSE_GEMINI_SCREENING", True):
+        return None
+
+    body = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": (
+                            "Classify this requested meeting purpose for 1PAX, an "
+                            "architecture and airport development studio:\n\n"
+                            f"{purpose}"
+                        )
+                    }
+                ]
+            }
+        ],
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": (
+                        "Return ONLY compact JSON with keys: allowed, category, "
+                        "email, reason, needs_more_detail. Allow calendar booking "
+                        "only for business clients or partners discussing real "
+                        "development, airport, architecture, urbanism, transport, "
+                        "mobility, real-estate, infrastructure, design, or project "
+                        "consultation work. Block press/media and route to "
+                        "communications@1pax.com. Block job interviews, recruiting, "
+                        "CVs, internships, and applications and route to hr@1pax.com. "
+                        "Block sales pitches, vendors, suppliers, software/tools, "
+                        "lead generation, marketing/PR/advertising services, and "
+                        "other solicitations. Marketing/PR/media sales route to "
+                        "communications@1pax.com; all other sales/vendor requests "
+                        "route to contact@1pax.com. If the purpose is too vague to "
+                        "show business-development fit, set allowed false, category "
+                        "needs_more_detail, email empty, needs_more_detail true."
+                    )
+                }
+            ]
+        },
+        "generationConfig": {
+            "temperature": 0.0,
+            "responseMimeType": "application/json",
+        },
+    }
+    req = urllib.request.Request(
+        f"{_GEMINI_URL}?key={api_key}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=6.0) as resp:
+            result = json.loads(resp.read())
+        raw = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return _parse_meeting_decision(json.loads(raw))
+    except (
+        TimeoutError,
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        OSError,
+        KeyError,
+        IndexError,
+        ValueError,
+        TypeError,
+    ) as exc:
+        logger.warning("Gemini meeting-purpose screening failed: %s", exc)
+        return None
+
+
+def _heuristic_meeting_purpose_decision(purpose: str) -> MeetingPurposeDecision:
+    text = _ascii_norm(purpose)
+
+    press_terms = (
+        "press",
+        "media",
+        "journalist",
+        "journalism",
+        "interview for article",
+        "podcast",
+        "publication",
+        "news",
+        "magazine",
+        "editorial",
+        "pr inquiry",
+    )
+    career_terms = (
+        "job",
+        "career",
+        "careers",
+        "cv",
+        "resume",
+        "interview for a job",
+        "job interview",
+        "application",
+        "apply",
+        "internship",
+        "fellowship",
+        "hiring",
+        "recruit",
+        "recruitment",
+        "candidate",
+        "portfolio review",
+    )
+    marketing_sales_terms = (
+        "marketing",
+        "advertising",
+        "seo",
+        "lead generation",
+        "public relations",
+        "pr services",
+        "media buying",
+        "branding agency",
+        "social media",
+        "campaign",
+        "content services",
+    )
+    sales_terms = (
+        "sell",
+        "sales",
+        "pitch",
+        "vendor",
+        "supplier",
+        "software",
+        "platform",
+        "tool",
+        "saas",
+        "outsourcing",
+        "agency",
+        "procurement",
+        "partnership proposal",
+        "offer you",
+        "present our services",
+        "demo",
+    )
+    business_terms = (
+        "airport",
+        "terminal",
+        "architecture",
+        "architectural",
+        "design",
+        "masterplan",
+        "urban",
+        "urbanism",
+        "development",
+        "developer",
+        "real estate",
+        "infrastructure",
+        "transport",
+        "mobility",
+        "aviation",
+        "building",
+        "project",
+        "construction",
+        "feasibility",
+        "consultation",
+        "concession",
+        "renovation",
+        "refurbishment",
+        "hire 1pax",
+        "work with 1pax",
+        "client",
+    )
+
+    if any(term in text for term in press_terms):
+        return MeetingPurposeDecision(
+            False,
+            "press",
+            "communications@1pax.com",
+            "Press and media requests are handled by communications.",
+        )
+    if any(term in text for term in career_terms):
+        return MeetingPurposeDecision(
+            False,
+            "careers",
+            "hr@1pax.com",
+            "Careers, applications, and job interviews are handled by HR.",
+        )
+    if any(term in text for term in marketing_sales_terms):
+        return MeetingPurposeDecision(
+            False,
+            "sales_marketing",
+            "communications@1pax.com",
+            "Marketing, PR, advertising, and media-service pitches are handled by communications.",
+        )
+    if any(term in text for term in sales_terms) and not any(
+        term in text for term in business_terms
+    ):
+        return MeetingPurposeDecision(
+            False,
+            "sales_vendor",
+            "contact@1pax.com",
+            "Sales and vendor pitches should be sent by email.",
+        )
+    if any(term in text for term in business_terms):
+        return MeetingPurposeDecision(
+            True,
+            "business_development",
+            "",
+            "Business development or project-related request.",
+        )
+    return MeetingPurposeDecision(
+        False,
+        "needs_more_detail",
+        "",
+        "The purpose is too broad to confirm that it is a project or development discussion.",
+        needs_more_detail=True,
+    )
+
+
+def _screen_meeting_purpose(purpose: str) -> MeetingPurposeDecision:
+    heuristic = _heuristic_meeting_purpose_decision(purpose)
+    if not heuristic.allowed and not heuristic.needs_more_detail:
+        return heuristic
+    return _gemini_meeting_purpose_decision(purpose) or heuristic
+
+
+def _screening_from_slot(value: Any, purpose: str) -> Optional[MeetingPurposeDecision]:
+    payload = _json_slot(value, {})
+    if not isinstance(payload, dict) or payload.get("purpose") != purpose:
+        return None
+    return _parse_meeting_decision(payload)
+
+
+def _meeting_redirect_message(decision: MeetingPurposeDecision) -> str:
+    if decision.needs_more_detail:
+        return (
+            "Before I offer calendar times, please share a little more about "
+            "the project or development context. For example: the asset type, "
+            "location, client/developer role, and what you would like 1PAX to "
+            "help design or evaluate."
+        )
+
+    if decision.category == "careers":
+        return (
+            "Thanks for the context. I cannot book job interviews or recruiting "
+            "calls through this calendar flow. Please send careers and application "
+            f"questions to **{decision.email}**."
+        )
+    if decision.category == "press":
+        return (
+            "Thanks for the context. Press and media requests are handled by "
+            f"1PAX communications, so please contact **{decision.email}**."
+        )
+    if decision.category == "sales_marketing":
+        return (
+            "Thanks for the context. Marketing, PR, advertising, and media-service "
+            f"pitches should go to **{decision.email}** rather than the meeting calendar."
+        )
+    return (
+        "Thanks for the context. This does not look like a project or development "
+        "meeting for the studio calendar, so please send the details to "
+        f"**{decision.email}** and the right team can route it."
+    )
 
 
 def _clean_name(raw: str) -> Optional[str]:
@@ -634,6 +997,92 @@ def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
         return True
 
     return stage in {"select_slot", "confirm"} and lowered in {"no", "ne"}
+
+
+def _is_edit_request(text: str) -> bool:
+    lowered = _ascii_norm(text)
+    if not lowered:
+        return False
+    if re.search(
+        r"^\s*(?:name|full name|email|e-mail|mail|purpose|reason|topic|agenda|time|date|office|colleague|host)\s*[:=]",
+        lowered,
+    ):
+        return True
+    return any(
+        phrase in lowered
+        for phrase in (
+            "change",
+            "update",
+            "correct",
+            "edit",
+            "wrong",
+            "mistake",
+            "typo",
+            "instead",
+            "actually",
+            "not correct",
+            "not right",
+            "different",
+        )
+    )
+
+
+def _requested_edit_field(text: str) -> Optional[str]:
+    lowered = _ascii_norm(text)
+    if any(term in lowered for term in ("email", "e mail", "mail", "@")):
+        return "email"
+    if "name" in lowered:
+        return "name"
+    if any(term in lowered for term in ("purpose", "reason", "topic", "agenda")):
+        return "purpose"
+    if any(term in lowered for term in ("time", "slot", "date", "day", "hour", "when")):
+        return "time"
+    if any(term in lowered for term in ("office", "colleague", "host", "person")):
+        return "office"
+    return None
+
+
+def _extract_updated_name(text: str) -> Optional[str]:
+    labeled = _extract_field_update_value(text, ("name", "full name"))
+    if labeled:
+        return _clean_name(labeled)
+
+    patterns = [
+        r"\b(?:change|update|correct|edit)\s+(?:my\s+|the\s+)?(?:name|full name)\s+(?:to|as)\s+(.+)",
+        r"\b(?:name should be|name is actually|correct name is)\s+(.+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return _clean_name(_clean_update_value(match.group(1)))
+    return None
+
+
+def _extract_updated_purpose(text: str) -> Optional[str]:
+    labeled = _extract_field_update_value(
+        text,
+        ("purpose", "reason", "topic", "agenda"),
+    )
+    if labeled:
+        return _clean_purpose(labeled)
+
+    patterns = [
+        r"\b(?:change|update|correct|edit)\s+(?:the\s+)?(?:purpose|reason|topic|agenda)\s+(?:to|as)\s+(.+)",
+        r"\b(?:purpose|reason|topic|agenda)\s+(?:should be|is actually|is)\s+(.+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return _clean_purpose(_clean_update_value(match.group(1)))
+    return None
+
+
+def _edit_help_message() -> str:
+    return (
+        "Tell me what to update: name, email, purpose, time, or office. "
+        "For example: *change email to name@example.com* or "
+        "*change the time to Friday afternoon*."
+    )
 
 
 def _scheduling_provider() -> str:
@@ -1811,11 +2260,19 @@ def _booking_confirmation_prompt(
     )
     lines.append("")
     if _is_sr(lang):
-        lines.append("Odgovorite **da** i odmah ću završiti rezervaciju.")
-        lines.append("Odgovorite **ne** za otkazivanje.")
+        lines.append(
+            "Ako su podaci tačni, odgovorite **da** i odmah ću završiti rezervaciju."
+        )
+        lines.append(
+            "Ako nešto nije tačno, napišite šta želite da promenite — ime, email, "
+            "povod, vreme ili kancelariju. Odgovorite **ne** za otkazivanje."
+        )
         return "\n".join(lines)
-    lines.append("Reply **yes** and I will finalize this booking now.")
-    lines.append("Reply **no** to cancel.")
+    lines.append("If everything is correct, reply **yes** and I will finalize this booking now.")
+    lines.append(
+        "If anything is incorrect, tell me what to change — name, email, "
+        "purpose, time, or office. Reply **no** to cancel."
+    )
     return "\n".join(lines)
 
 
@@ -1943,6 +2400,33 @@ def _utter_calendly_redirect(
     )
 
 
+def _screen_purpose_or_respond(
+    dispatcher: CollectingDispatcher,
+    tracker: Tracker,
+    events: List[SlotSet],
+    purpose: str,
+    lang: Optional[str],
+) -> Optional[List[SlotSet]]:
+    decision = _screening_from_slot(
+        tracker.get_slot("schedule_purpose_screening"),
+        purpose,
+    )
+    if decision is None:
+        decision = _screen_meeting_purpose(purpose)
+        events.append(SlotSet("schedule_purpose_screening", decision.to_json(purpose)))
+
+    if decision.allowed:
+        return None
+
+    _utter(dispatcher, _meeting_redirect_message(decision), lang)
+    if decision.needs_more_detail:
+        return events + [
+            SlotSet("schedule_purpose", None),
+            SlotSet("schedule_purpose_screening", None),
+        ] + _set_stage("collect_purpose")
+    return events + _clear_schedule_events()
+
+
 def run_calendly_scheduling(
     dispatcher: CollectingDispatcher,
     tracker: Tracker,
@@ -2000,6 +2484,7 @@ def run_google_calendar_scheduling(
     selected_slot = tracker.get_slot("schedule_selected_slot")
     selected_label = tracker.get_slot("schedule_selected_slot_label")
     offered_slots = _json_slot(tracker.get_slot("schedule_offered_slots"), [])
+    pending_edit_field = tracker.get_slot("schedule_pending_edit_field")
 
     extracted_name = _extract_name(text, stage)
     if extracted_name:
@@ -2014,7 +2499,28 @@ def run_google_calendar_scheduling(
     extracted_purpose = _extract_purpose(text, stage)
     if extracted_purpose:
         purpose = extracted_purpose
-        events.append(SlotSet("schedule_purpose", purpose))
+        events.extend(
+            [
+                SlotSet("schedule_purpose", purpose),
+                SlotSet("schedule_purpose_screening", None),
+            ]
+        )
+
+    if stage in {"collect_time", "select_slot"} and _is_route_rejection(text):
+        _utter(
+            dispatcher,
+            _route_options_text(ranked_options),
+            lang,
+            buttons=_colleague_option_buttons(ranked_options),
+        )
+        return events + [
+            SlotSet("schedule_offered_slots", None),
+            SlotSet("schedule_selected_slot", None),
+            SlotSet("schedule_selected_slot_label", None),
+        ] + _google_context_events(
+            context,
+            options=ranked_options,
+        ) + _set_stage("choose_route")
 
     extracted_time_preference = (
         None if stage == "collect_purpose" else _extract_time_preference(text, stage)
@@ -2061,11 +2567,30 @@ def run_google_calendar_scheduling(
         )
         return events + _set_stage("collect_purpose")
 
+    purpose_screening_events = _screen_purpose_or_respond(
+        dispatcher,
+        tracker,
+        events,
+        purpose,
+        lang,
+    )
+    if purpose_screening_events is not None:
+        return purpose_screening_events
+
     if stage == "confirm_route":
         parsed_choice = gcal.parse_colleague_choice(text, ranked_options)
         if parsed_choice:
             selected_colleague = parsed_choice
             offered_slots = []
+            selected_slot = None
+            selected_label = None
+            events.extend(
+                [
+                    SlotSet("schedule_offered_slots", None),
+                    SlotSet("schedule_selected_slot", None),
+                    SlotSet("schedule_selected_slot_label", None),
+                ]
+            )
             events.extend(
                 _google_context_events(context, selected_colleague, ranked_options)
             )
@@ -2110,6 +2635,15 @@ def run_google_calendar_scheduling(
                 options=ranked_options,
             ) + _set_stage("choose_route")
         offered_slots = []
+        selected_slot = None
+        selected_label = None
+        events.extend(
+            [
+                SlotSet("schedule_offered_slots", None),
+                SlotSet("schedule_selected_slot", None),
+                SlotSet("schedule_selected_slot_label", None),
+            ]
+        )
         events.extend(_google_context_events(context, selected_colleague, ranked_options))
 
     if not selected_colleague:
@@ -2207,6 +2741,337 @@ def run_google_calendar_scheduling(
                 lang,
             )
             return events + _set_stage("select_slot")
+
+    if stage == "confirm" and _is_route_rejection(text):
+        _utter(
+            dispatcher,
+            _route_options_text(ranked_options),
+            lang,
+            buttons=_colleague_option_buttons(ranked_options),
+        )
+        return events + [
+            SlotSet("schedule_offered_slots", None),
+            SlotSet("schedule_selected_slot", None),
+            SlotSet("schedule_selected_slot_label", None),
+        ] + _google_context_events(
+            context,
+            options=ranked_options,
+        ) + _set_stage("choose_route")
+
+    if stage == "confirm":
+        pending_edit_field = (pending_edit_field or "").strip().lower()
+        if pending_edit_field:
+            if pending_edit_field == "email":
+                updated_email = _extract_updated_email(text)
+                if updated_email:
+                    email = updated_email
+                    events.extend(
+                        [
+                            SlotSet("schedule_email", email),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                    _utter(
+                        dispatcher,
+                        _booking_confirmation_prompt(
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            selected_label=selected_label,
+                            lang=lang,
+                            colleague_label=selected_colleague.display_name,
+                        ),
+                        lang,
+                        already_localized=_is_sr(lang),
+                    )
+                    return events + _set_stage("confirm")
+                _utter(dispatcher, "Please send the corrected email address.", lang)
+                return events + [SlotSet("schedule_pending_edit_field", "email")] + _set_stage("confirm")
+
+            if pending_edit_field == "name":
+                updated_name = _extract_updated_name(text) or _clean_name(
+                    _clean_update_value(text)
+                )
+                if updated_name:
+                    name = updated_name
+                    events.extend(
+                        [
+                            SlotSet("schedule_name", name),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                    _utter(
+                        dispatcher,
+                        _booking_confirmation_prompt(
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            selected_label=selected_label,
+                            lang=lang,
+                            colleague_label=selected_colleague.display_name,
+                        ),
+                        lang,
+                        already_localized=_is_sr(lang),
+                    )
+                    return events + _set_stage("confirm")
+                _utter(dispatcher, "Please send the corrected name.", lang)
+                return events + [SlotSet("schedule_pending_edit_field", "name")] + _set_stage("confirm")
+
+            if pending_edit_field == "purpose":
+                updated_purpose = _extract_updated_purpose(text) or _clean_purpose(
+                    _clean_update_value(text)
+                )
+                if updated_purpose:
+                    purpose = updated_purpose
+                    events.extend(
+                        [
+                            SlotSet("schedule_purpose", purpose),
+                            SlotSet("schedule_purpose_screening", None),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                    purpose_screening_events = _screen_purpose_or_respond(
+                        dispatcher,
+                        tracker,
+                        events,
+                        purpose,
+                        lang,
+                    )
+                    if purpose_screening_events is not None:
+                        return purpose_screening_events
+                    _utter(
+                        dispatcher,
+                        _booking_confirmation_prompt(
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            selected_label=selected_label,
+                            lang=lang,
+                            colleague_label=selected_colleague.display_name,
+                        ),
+                        lang,
+                        already_localized=_is_sr(lang),
+                    )
+                    return events + _set_stage("confirm")
+                _utter(dispatcher, "Please send the corrected meeting purpose.", lang)
+                return events + [SlotSet("schedule_pending_edit_field", "purpose")] + _set_stage("confirm")
+
+            if pending_edit_field == "office":
+                requested_colleague = gcal.parse_colleague_choice(text, ranked_options)
+                if requested_colleague:
+                    selected_colleague = requested_colleague
+                    offered_slots = []
+                    selected_slot = None
+                    selected_label = None
+                    time_preference = None
+                    _utter(
+                        dispatcher,
+                        f"Got it. I will use {selected_colleague.display_name}. "
+                        "When would you like to meet?",
+                        lang,
+                    )
+                    return events + [
+                        SlotSet("schedule_time_preference", None),
+                        SlotSet("schedule_offered_slots", None),
+                        SlotSet("schedule_selected_slot", None),
+                        SlotSet("schedule_selected_slot_label", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ] + _google_context_events(
+                        context,
+                        selected_colleague,
+                        ranked_options,
+                    ) + _set_stage("collect_time")
+                _utter(
+                    dispatcher,
+                    _route_options_text(ranked_options),
+                    lang,
+                    buttons=_colleague_option_buttons(ranked_options),
+                )
+                return events + [
+                    SlotSet("schedule_offered_slots", None),
+                    SlotSet("schedule_selected_slot", None),
+                    SlotSet("schedule_selected_slot_label", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _google_context_events(
+                    context,
+                    options=ranked_options,
+                ) + _set_stage("choose_route")
+
+            if pending_edit_field == "time":
+                updated_time = _clean_update_value(text)
+                if updated_time:
+                    time_preference = updated_time
+                    offered_slots = []
+                    selected_slot = None
+                    selected_label = None
+                    stage = "collect_time"
+                    events.extend(
+                        [
+                            SlotSet("schedule_time_preference", time_preference),
+                            SlotSet("schedule_offered_slots", None),
+                            SlotSet("schedule_selected_slot", None),
+                            SlotSet("schedule_selected_slot_label", None),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                else:
+                    _utter(dispatcher, "What day or time would you prefer instead?", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "time")] + _set_stage("confirm")
+
+        if stage == "confirm":
+            updated_email = _extract_updated_email(text)
+            if updated_email:
+                email = updated_email
+                events.extend(
+                    [
+                        SlotSet("schedule_email", email),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(
+                    dispatcher,
+                    _booking_confirmation_prompt(
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        selected_label=selected_label,
+                        lang=lang,
+                        colleague_label=selected_colleague.display_name,
+                    ),
+                    lang,
+                    already_localized=_is_sr(lang),
+                )
+                return events + _set_stage("confirm")
+
+            if _is_edit_request(text):
+                edit_field = _requested_edit_field(text)
+                if edit_field == "email":
+                    _utter(dispatcher, "Please send the corrected email address.", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "email")] + _set_stage("confirm")
+                if edit_field == "name":
+                    updated_name = _extract_updated_name(text)
+                    if updated_name:
+                        name = updated_name
+                        events.extend(
+                            [
+                                SlotSet("schedule_name", name),
+                                SlotSet("schedule_pending_edit_field", None),
+                            ]
+                        )
+                        _utter(
+                            dispatcher,
+                            _booking_confirmation_prompt(
+                                name=name,
+                                email=email,
+                                purpose=purpose,
+                                selected_label=selected_label,
+                                lang=lang,
+                                colleague_label=selected_colleague.display_name,
+                            ),
+                            lang,
+                            already_localized=_is_sr(lang),
+                        )
+                        return events + _set_stage("confirm")
+                    _utter(dispatcher, "Please send the corrected name.", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "name")] + _set_stage("confirm")
+                if edit_field == "purpose":
+                    updated_purpose = _extract_updated_purpose(text)
+                    if updated_purpose:
+                        purpose = updated_purpose
+                        events.extend(
+                            [
+                                SlotSet("schedule_purpose", purpose),
+                                SlotSet("schedule_purpose_screening", None),
+                                SlotSet("schedule_pending_edit_field", None),
+                            ]
+                        )
+                        purpose_screening_events = _screen_purpose_or_respond(
+                            dispatcher,
+                            tracker,
+                            events,
+                            purpose,
+                            lang,
+                        )
+                        if purpose_screening_events is not None:
+                            return purpose_screening_events
+                        _utter(
+                            dispatcher,
+                            _booking_confirmation_prompt(
+                                name=name,
+                                email=email,
+                                purpose=purpose,
+                                selected_label=selected_label,
+                                lang=lang,
+                                colleague_label=selected_colleague.display_name,
+                            ),
+                            lang,
+                            already_localized=_is_sr(lang),
+                        )
+                        return events + _set_stage("confirm")
+                    _utter(dispatcher, "Please send the corrected meeting purpose.", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "purpose")] + _set_stage("confirm")
+                if edit_field == "time":
+                    updated_time = _extract_field_update_value(
+                        text,
+                        ("time", "date", "day", "slot"),
+                    )
+                    if updated_time or _has_time_words(text):
+                        time_preference = updated_time or _clean_update_value(text)
+                        offered_slots = []
+                        selected_slot = None
+                        selected_label = None
+                        stage = "collect_time"
+                        events.extend(
+                            [
+                                SlotSet("schedule_time_preference", time_preference),
+                                SlotSet("schedule_offered_slots", None),
+                                SlotSet("schedule_selected_slot", None),
+                                SlotSet("schedule_selected_slot_label", None),
+                                SlotSet("schedule_pending_edit_field", None),
+                            ]
+                        )
+                    else:
+                        _utter(dispatcher, "What day or time would you prefer instead?", lang)
+                        return events + [SlotSet("schedule_pending_edit_field", "time")] + _set_stage("confirm")
+                elif edit_field == "office":
+                    requested_colleague = gcal.parse_colleague_choice(text, ranked_options)
+                    if requested_colleague:
+                        selected_colleague = requested_colleague
+                        _utter(
+                            dispatcher,
+                            f"Got it. I will use {selected_colleague.display_name}. "
+                            "When would you like to meet?",
+                            lang,
+                        )
+                        return events + [
+                            SlotSet("schedule_time_preference", None),
+                            SlotSet("schedule_offered_slots", None),
+                            SlotSet("schedule_selected_slot", None),
+                            SlotSet("schedule_selected_slot_label", None),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ] + _google_context_events(
+                            context,
+                            selected_colleague,
+                            ranked_options,
+                        ) + _set_stage("collect_time")
+                    _utter(
+                        dispatcher,
+                        _route_options_text(ranked_options),
+                        lang,
+                        buttons=_colleague_option_buttons(ranked_options),
+                    )
+                    return events + [
+                        SlotSet("schedule_offered_slots", None),
+                        SlotSet("schedule_selected_slot", None),
+                        SlotSet("schedule_selected_slot_label", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ] + _google_context_events(
+                        context,
+                        options=ranked_options,
+                    ) + _set_stage("choose_route")
+                elif not _has_time_words(text):
+                    _utter(dispatcher, _edit_help_message(), lang)
+                    return events + _set_stage("confirm")
 
     if stage == "confirm" and _has_time_words(text) and not _looks_like_slot_choice_only(text):
         time_preference = text.strip()
@@ -2394,6 +3259,7 @@ def _run_calendly_scheduling(
     selected_slot = tracker.get_slot("schedule_selected_slot")
     selected_label = tracker.get_slot("schedule_selected_slot_label")
     offered_slots = _json_slot(tracker.get_slot("schedule_offered_slots"), [])
+    pending_edit_field = tracker.get_slot("schedule_pending_edit_field")
 
     extracted_name = _extract_name(text, stage)
     if extracted_name:
@@ -2408,7 +3274,24 @@ def _run_calendly_scheduling(
     extracted_purpose = _extract_purpose(text, stage)
     if extracted_purpose:
         purpose = extracted_purpose
-        events.append(SlotSet("schedule_purpose", purpose))
+        events.extend(
+            [
+                SlotSet("schedule_purpose", purpose),
+                SlotSet("schedule_purpose_screening", None),
+            ]
+        )
+
+    if stage in {"collect_time", "select_slot"} and _is_route_rejection(text):
+        _utter(
+            dispatcher,
+            "Sure. Tell me another day or time window and I will look again.",
+            lang,
+        )
+        return events + [
+            SlotSet("schedule_offered_slots", None),
+            SlotSet("schedule_selected_slot", None),
+            SlotSet("schedule_selected_slot_label", None),
+        ] + _set_stage("collect_time")
 
     extracted_time_preference = (
         None if stage == "collect_purpose" else _extract_time_preference(text, stage)
@@ -2454,6 +3337,16 @@ def _run_calendly_scheduling(
             lang,
         )
         return events + _set_stage("collect_purpose")
+
+    purpose_screening_events = _screen_purpose_or_respond(
+        dispatcher,
+        tracker,
+        events,
+        purpose,
+        lang,
+    )
+    if purpose_screening_events is not None:
+        return purpose_screening_events
 
     if not time_preference:
         _utter(
@@ -2513,6 +3406,246 @@ def _run_calendly_scheduling(
                 lang,
             )
             return events + _set_stage("select_slot")
+
+    if stage == "confirm":
+        pending_edit_field = (pending_edit_field or "").strip().lower()
+        if pending_edit_field:
+            if pending_edit_field == "email":
+                updated_email = _extract_updated_email(text)
+                if updated_email:
+                    email = updated_email
+                    events.extend(
+                        [
+                            SlotSet("schedule_email", email),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                    _utter(
+                        dispatcher,
+                        _booking_confirmation_prompt(
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            selected_label=selected_label,
+                            lang=lang,
+                        ),
+                        lang,
+                        already_localized=_is_sr(lang),
+                    )
+                    return events + _set_stage("confirm")
+                _utter(dispatcher, "Please send the corrected email address.", lang)
+                return events + [SlotSet("schedule_pending_edit_field", "email")] + _set_stage("confirm")
+
+            if pending_edit_field == "name":
+                updated_name = _extract_updated_name(text) or _clean_name(
+                    _clean_update_value(text)
+                )
+                if updated_name:
+                    name = updated_name
+                    events.extend(
+                        [
+                            SlotSet("schedule_name", name),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                    _utter(
+                        dispatcher,
+                        _booking_confirmation_prompt(
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            selected_label=selected_label,
+                            lang=lang,
+                        ),
+                        lang,
+                        already_localized=_is_sr(lang),
+                    )
+                    return events + _set_stage("confirm")
+                _utter(dispatcher, "Please send the corrected name.", lang)
+                return events + [SlotSet("schedule_pending_edit_field", "name")] + _set_stage("confirm")
+
+            if pending_edit_field == "purpose":
+                updated_purpose = _extract_updated_purpose(text) or _clean_purpose(
+                    _clean_update_value(text)
+                )
+                if updated_purpose:
+                    purpose = updated_purpose
+                    events.extend(
+                        [
+                            SlotSet("schedule_purpose", purpose),
+                            SlotSet("schedule_purpose_screening", None),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                    purpose_screening_events = _screen_purpose_or_respond(
+                        dispatcher,
+                        tracker,
+                        events,
+                        purpose,
+                        lang,
+                    )
+                    if purpose_screening_events is not None:
+                        return purpose_screening_events
+                    _utter(
+                        dispatcher,
+                        _booking_confirmation_prompt(
+                            name=name,
+                            email=email,
+                            purpose=purpose,
+                            selected_label=selected_label,
+                            lang=lang,
+                        ),
+                        lang,
+                        already_localized=_is_sr(lang),
+                    )
+                    return events + _set_stage("confirm")
+                _utter(dispatcher, "Please send the corrected meeting purpose.", lang)
+                return events + [SlotSet("schedule_pending_edit_field", "purpose")] + _set_stage("confirm")
+
+            if pending_edit_field == "time":
+                updated_time = _clean_update_value(text)
+                if updated_time:
+                    time_preference = updated_time
+                    offered_slots = []
+                    selected_slot = None
+                    selected_label = None
+                    stage = "collect_time"
+                    events.extend(
+                        [
+                            SlotSet("schedule_time_preference", time_preference),
+                            SlotSet("schedule_offered_slots", None),
+                            SlotSet("schedule_selected_slot", None),
+                            SlotSet("schedule_selected_slot_label", None),
+                            SlotSet("schedule_pending_edit_field", None),
+                        ]
+                    )
+                else:
+                    _utter(dispatcher, "What day or time would you prefer instead?", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "time")] + _set_stage("confirm")
+
+        if stage == "confirm":
+            updated_email = _extract_updated_email(text)
+            if updated_email:
+                email = updated_email
+                events.extend(
+                    [
+                        SlotSet("schedule_email", email),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(
+                    dispatcher,
+                    _booking_confirmation_prompt(
+                        name=name,
+                        email=email,
+                        purpose=purpose,
+                        selected_label=selected_label,
+                        lang=lang,
+                    ),
+                    lang,
+                    already_localized=_is_sr(lang),
+                )
+                return events + _set_stage("confirm")
+
+            if _is_edit_request(text):
+                edit_field = _requested_edit_field(text)
+                if edit_field == "email":
+                    _utter(dispatcher, "Please send the corrected email address.", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "email")] + _set_stage("confirm")
+                if edit_field == "name":
+                    updated_name = _extract_updated_name(text)
+                    if updated_name:
+                        name = updated_name
+                        events.extend(
+                            [
+                                SlotSet("schedule_name", name),
+                                SlotSet("schedule_pending_edit_field", None),
+                            ]
+                        )
+                        _utter(
+                            dispatcher,
+                            _booking_confirmation_prompt(
+                                name=name,
+                                email=email,
+                                purpose=purpose,
+                                selected_label=selected_label,
+                                lang=lang,
+                            ),
+                            lang,
+                            already_localized=_is_sr(lang),
+                        )
+                        return events + _set_stage("confirm")
+                    _utter(dispatcher, "Please send the corrected name.", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "name")] + _set_stage("confirm")
+                if edit_field == "purpose":
+                    updated_purpose = _extract_updated_purpose(text)
+                    if updated_purpose:
+                        purpose = updated_purpose
+                        events.extend(
+                            [
+                                SlotSet("schedule_purpose", purpose),
+                                SlotSet("schedule_purpose_screening", None),
+                                SlotSet("schedule_pending_edit_field", None),
+                            ]
+                        )
+                        purpose_screening_events = _screen_purpose_or_respond(
+                            dispatcher,
+                            tracker,
+                            events,
+                            purpose,
+                            lang,
+                        )
+                        if purpose_screening_events is not None:
+                            return purpose_screening_events
+                        _utter(
+                            dispatcher,
+                            _booking_confirmation_prompt(
+                                name=name,
+                                email=email,
+                                purpose=purpose,
+                                selected_label=selected_label,
+                                lang=lang,
+                            ),
+                            lang,
+                            already_localized=_is_sr(lang),
+                        )
+                        return events + _set_stage("confirm")
+                    _utter(dispatcher, "Please send the corrected meeting purpose.", lang)
+                    return events + [SlotSet("schedule_pending_edit_field", "purpose")] + _set_stage("confirm")
+                if edit_field == "time":
+                    updated_time = _extract_field_update_value(
+                        text,
+                        ("time", "date", "day", "slot"),
+                    )
+                    if updated_time or _has_time_words(text):
+                        time_preference = updated_time or _clean_update_value(text)
+                        offered_slots = []
+                        selected_slot = None
+                        selected_label = None
+                        stage = "collect_time"
+                        events.extend(
+                            [
+                                SlotSet("schedule_time_preference", time_preference),
+                                SlotSet("schedule_offered_slots", None),
+                                SlotSet("schedule_selected_slot", None),
+                                SlotSet("schedule_selected_slot_label", None),
+                                SlotSet("schedule_pending_edit_field", None),
+                            ]
+                        )
+                    else:
+                        _utter(dispatcher, "What day or time would you prefer instead?", lang)
+                        return events + [SlotSet("schedule_pending_edit_field", "time")] + _set_stage("confirm")
+                elif edit_field == "office":
+                    _utter(
+                        dispatcher,
+                        "This scheduling link does not route by office. Tell me a "
+                        "different day or time and I will look again.",
+                        lang,
+                    )
+                    return events + _set_stage("confirm")
+                elif not _has_time_words(text):
+                    _utter(dispatcher, _edit_help_message(), lang)
+                    return events + _set_stage("confirm")
 
     if stage == "confirm" and _has_time_words(text) and not _looks_like_slot_choice_only(text):
         time_preference = text.strip()

@@ -52,6 +52,7 @@ except ImportError:
     )
 
 _LANG_MAP: Dict[str, str] = {
+    "en":    "",
     "es":    "ES",
     "fr":    "FR",
     "zh-cn": "ZH-HANS",
@@ -227,7 +228,7 @@ class TranslationComponent(GraphComponent):
         except Exception:
             raw_lang = "en"
 
-        lang_code = _LANG_MAP.get(raw_lang)
+        lang_code = _normalize_lang_code(raw_lang)
         if not lang_code:
             return
 
@@ -307,9 +308,15 @@ def _looks_like_english(text: str) -> bool:
 
 
 def _normalize_lang_code(lang: Optional[str]) -> Optional[str]:
-    normalized = (lang or "").strip().upper()
-    if not normalized or normalized.startswith("EN"):
+    raw = (lang or "").strip().replace("_", "-")
+    if not raw:
         return None
+    lowered = raw.lower()
+    if lowered.startswith("en"):
+        return None
+    if lowered in _LANG_MAP:
+        return _LANG_MAP[lowered] or None
+    normalized = raw.upper()
     if normalized == "PT":
         return "PT-PT"
     if normalized == "ZH":

@@ -100,6 +100,7 @@ _LANG_ENTITY = "__lang__"
 
 # Fallback: langdetect code → our language code
 _LANGDETECT_MAP: dict = {
+    "en":    None,
     "es":    "ES",
     "fr":    "FR",
     "zh-cn": "ZH-HANS",
@@ -110,6 +111,26 @@ _LANGDETECT_MAP: dict = {
     "hr":    "SR",
     "bs":    "SR",
 }
+
+
+def _normalize_detected_lang(raw: Optional[str]) -> Optional[str]:
+    """Convert langdetect/metadata codes to the response-language code we store."""
+    if not raw:
+        return None
+    value = str(raw).strip().replace("_", "-")
+    if not value:
+        return None
+    lowered = value.lower()
+    if lowered.startswith("en"):
+        return None
+    mapped = _LANGDETECT_MAP.get(lowered)
+    if mapped is not None or lowered in _LANGDETECT_MAP:
+        return mapped
+    if lowered == "pt":
+        return "PT-PT"
+    if lowered == "zh":
+        return "ZH-HANS"
+    return lowered.upper()
 
 
 _ENGLISH_HINT_WORDS = {
@@ -228,15 +249,18 @@ def get_lang(tracker) -> Optional[str]:
       3. language slot    — persisted from a previous turn
       4. langdetect       — last-resort fallback
     """
-    lang = (tracker.latest_message.get("metadata") or {}).get("lang")
-    if lang:
-        return lang
+    metadata = tracker.latest_message.get("metadata") or {}
+    metadata_lang = metadata.get("lang")
+    if isinstance(metadata_lang, str) and metadata_lang.strip():
+        return _normalize_detected_lang(metadata_lang)
 
     for entity in tracker.latest_message.get("entities", []):
         if entity.get("entity") == _LANG_ENTITY:
-            return entity["value"]
+            lang = _normalize_detected_lang(entity.get("value"))
+            if lang:
+                return lang
 
-    slot = tracker.get_slot("language")
+    slot = _normalize_detected_lang(tracker.get_slot("language"))
     if slot:
         return slot
 
@@ -247,7 +271,7 @@ def get_lang(tracker) -> Optional[str]:
                 return None
             try:
                 raw = detect(text)
-                return _LANGDETECT_MAP.get(raw)
+                return _normalize_detected_lang(raw)
             except Exception:
                 pass
 
@@ -347,11 +371,7 @@ def _proxy_translate_texts(
 
 
 def _normalize_lang(lang: Optional[str]) -> Optional[str]:
-    if not lang:
-        return None
-    normalized = lang.upper()
-    if normalized.startswith("EN"):
-        return None
+    normalized = _normalize_detected_lang(lang)
     return normalized
 
 

@@ -20,6 +20,12 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+try:
+    from langdetect import detect
+    _LANGDETECT_OK = True
+except ImportError:
+    _LANGDETECT_OK = False
+
 _GEMINI_MODEL = "gemini-3.1-flash-lite"
 _GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{_GEMINI_MODEL}:generateContent"
@@ -41,6 +47,19 @@ _LANG_NAMES = {
     "JA": "Japanese",
     "KO": "Korean",
     "AR": "Arabic",
+}
+
+_LANG_MAP = {
+    "en": "",
+    "es": "ES",
+    "fr": "FR",
+    "zh-cn": "ZH-HANS",
+    "zh-tw": "ZH-HANT",
+    "zh": "ZH-HANS",
+    "pt": "PT-PT",
+    "sr": "SR",
+    "hr": "SR",
+    "bs": "SR",
 }
 
 def _read_api_key() -> str:
@@ -80,6 +99,91 @@ def _normalize_target_lang(lang: str) -> str:
     if normalized == "ZH":
         return "ZH-HANS"
     return normalized
+
+
+def _normalize_detected_lang(lang: str) -> str:
+    raw = (lang or "").strip().replace("_", "-")
+    if not raw:
+        return ""
+    lowered = raw.lower()
+    if lowered in {"und", "unknown", "un", "none", "null"}:
+        return ""
+    if lowered.startswith("en"):
+        return ""
+    if lowered in _LANG_MAP:
+        return _LANG_MAP[lowered]
+    if lowered == "pt":
+        return "PT-PT"
+    if lowered == "zh":
+        return "ZH-HANS"
+    return lowered.upper()
+
+
+def _detect_source_lang(text: str) -> str:
+    if not _LANGDETECT_OK or len(text.strip()) < 4:
+        return ""
+    try:
+        return _normalize_detected_lang(detect(text))
+    except Exception:
+        return ""
+
+
+def _extract_json_object(raw_text: str) -> dict:
+    payload = (raw_text or "").strip()
+    if payload.startswith("```"):
+        payload = payload.split("\n", 1)[1] if "\n" in payload else payload
+        if payload.endswith("```"):
+            payload = payload.rsplit("```", 1)[0]
+        payload = payload.strip()
+    try:
+        return json.loads(payload)
+    except ValueError:
+        start = payload.find("{")
+        end = payload.rfind("}")
+        if start == -1 or end <= start:
+            return {}
+        try:
+            return json.loads(payload[start : end + 1])
+        except ValueError:
+            return {}
+
+
+def _identify_source_lang_with_gemini(text: str, source_hint: str = "") -> tuple[str, bool]:
+    if not _READY or not text.strip():
+        return "", False
+
+    hint = _source_lang_name(source_hint) or source_hint or "none"
+    try:
+        raw = _gemini_call(
+            prompt=(
+                "Identify the primary language the user actually wrote in. "
+                "Do not identify languages merely mentioned inside the text. "
+                "If the text is a name, email, number, URL, or too short to identify, "
+                "use the hint only if it is available; otherwise return UNKNOWN.\n\n"
+                f"Hint: {hint}\n"
+                f"Text: {text}\n\n"
+                "Return JSON only: {\"language_code\":\"<ISO 639-1 or BCP-47 or UNKNOWN>\","
+                "\"language_name\":\"<English name or UNKNOWN>\"}"
+            ),
+            system_instruction=(
+                "You are a precise language identifier. Return only compact JSON. "
+                "Use EN for English, SR for Serbian/Croatian/Bosnian Latin if appropriate, "
+                "PT for Portuguese, ZH for Chinese, and UNKNOWN when uncertain."
+            ),
+            timeout=6.0,
+        )
+    except Exception as exc:
+        print(f"[translate] Gemini language identification error: {exc}")
+        return "", False
+
+    payload = _extract_json_object(raw)
+    lang = _normalize_detected_lang(
+        str(payload.get("language_code") or payload.get("lang") or "")
+    )
+    raw_code = str(payload.get("language_code") or "").strip().lower()
+    if lang or raw_code in {"en", "eng", "english"}:
+        return lang, True
+    return "", False
 
 
 def _gemini_call(prompt: str, system_instruction: str, timeout: float = 10.0) -> str:
@@ -294,25 +398,61 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         text = _normalize((data.get("text") or "").strip())
-        source_lang = (data.get("source_lang") or data.get("source") or "").strip()
+        source_hint = _normalize_detected_lang(
+            data.get("source_lang") or data.get("source") or ""
+        )
+        identified_lang = ""
+        language_identified = False
+        if data.get("identify_language"):
+            identified_lang, language_identified = _identify_source_lang_with_gemini(
+                text,
+                source_hint,
+            )
+        detected_lang = _detect_source_lang(text)
+        source_lang = identified_lang or detected_lang or source_hint
 
         if not text:
-            self._send({"text": text, "translation_enabled": _READY})
+            self._send({
+                "text": text,
+                "translation_enabled": _READY,
+                "identified_lang": identified_lang,
+                "language_identified": language_identified,
+                "detected_lang": detected_lang,
+                "source_lang": source_lang,
+            })
             return
 
         if not _READY:
-            self._send({"text": text, "translation_enabled": False})
+            self._send({
+                "text": text,
+                "translation_enabled": False,
+                "identified_lang": identified_lang,
+                "language_identified": language_identified,
+                "detected_lang": detected_lang,
+                "source_lang": source_lang,
+            })
             return
 
         try:
             translated = _translate_to_english(text, source_lang)
-            self._send({"text": translated, "translation_enabled": True})
+            self._send({
+                "text": translated,
+                "translation_enabled": True,
+                "identified_lang": identified_lang,
+                "language_identified": language_identified,
+                "detected_lang": detected_lang,
+                "source_lang": source_lang,
+            })
         except Exception as exc:
             print(f"[translate] Gemini error: {exc}")
             self._send({
                 "text": text,
                 "translation_enabled": True,
                 "translation_error": True,
+                "identified_lang": identified_lang,
+                "language_identified": language_identified,
+                "detected_lang": detected_lang,
+                "source_lang": source_lang,
             })
 
     def log_message(self, *args):

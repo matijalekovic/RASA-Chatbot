@@ -189,6 +189,288 @@ def test_action_books_google_calendar_dry_run_inside_chat():
     _with_google_dry_run_env(run)
 
 
+def test_action_blocks_press_meeting_purpose():
+    def run():
+        tracker = _Tracker(
+            "I need a press interview with 1PAX",
+            slots={
+                "schedule_stage": "collect_purpose",
+                "schedule_name": "Lisa Martin",
+                "schedule_email": "lisa@example.com",
+            },
+            metadata={"timezone": "Europe/Paris"},
+        )
+        dispatcher = CollectingDispatcher()
+        events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+
+        assert "communications@1pax.com" in dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_stage" and event.get("value") is None
+            for event in events
+        )
+
+    _with_google_dry_run_env(run)
+
+
+def test_action_blocks_job_interview_meeting_purpose():
+    def run():
+        tracker = _Tracker(
+            "I want to schedule a job interview",
+            slots={
+                "schedule_stage": "collect_purpose",
+                "schedule_name": "Alex Candidate",
+                "schedule_email": "alex@example.com",
+            },
+            metadata={"timezone": "Europe/Belgrade"},
+        )
+        dispatcher = CollectingDispatcher()
+        events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+
+        assert "hr@1pax.com" in dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_stage" and event.get("value") is None
+            for event in events
+        )
+
+    _with_google_dry_run_env(run)
+
+
+def test_action_updates_email_at_confirmation_before_booking():
+    def run():
+        offered_slots = [
+            {
+                "start_time": "2099-06-01T04:00:00Z",
+                "end_time": "2099-06-01T04:30:00Z",
+                "calendar_id": "dryrun:shanghai",
+                "colleague_id": "shanghai",
+                "colleague_label": "Shanghai office colleague",
+                "colleague_office": "Shanghai",
+                "colleague_timezone": "Asia/Shanghai",
+                "label": "Mon, Jun 1 at 12:00 PM",
+            }
+        ]
+        tracker = _Tracker(
+            "change my email to corrected@example.com",
+            slots={
+                "schedule_stage": "confirm",
+                "schedule_name": "Li Chen",
+                "schedule_email": "wrong@example.com",
+                "schedule_purpose": "Airport strategy consultation",
+                "schedule_time_preference": "2099-06-01 afternoon",
+                "schedule_timezone": "Asia/Shanghai",
+                "schedule_offered_slots": json.dumps(offered_slots),
+                "schedule_selected_slot": "2099-06-01T04:00:00Z",
+                "schedule_selected_slot_label": "Mon, Jun 1 at 12:00 PM",
+                "schedule_colleague_id": "shanghai",
+            },
+            metadata={"timezone": "Asia/Shanghai"},
+        )
+        dispatcher = CollectingDispatcher()
+        events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+
+        assert "corrected@example.com" in dispatcher.messages[-1]["text"]
+        assert "If everything is correct" in dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_email"
+            and event.get("value") == "corrected@example.com"
+            for event in events
+        )
+        assert not any(event.get("name") == "schedule_booking_event_id" for event in events)
+
+    _with_google_dry_run_env(run)
+
+
+def test_confirmation_edit_extractors_keep_values_clean():
+    assert (
+        schedule_actions._extract_updated_email(
+            "change email from old@example.com to new@example.com"
+        )
+        == "new@example.com"
+    )
+    assert (
+        schedule_actions._extract_updated_name("change the name to Jordan Updated")
+        == "Jordan Updated"
+    )
+    assert (
+        schedule_actions._extract_updated_name("name: Jordan Updated")
+        == "Jordan Updated"
+    )
+    assert (
+        schedule_actions._extract_updated_purpose(
+            "purpose: Airport terminal redevelopment consultation"
+        )
+        == "Airport terminal redevelopment consultation"
+    )
+
+
+def test_action_updates_name_at_confirmation_before_booking():
+    def run():
+        offered_slots = [
+            {
+                "start_time": "2099-06-01T04:00:00Z",
+                "end_time": "2099-06-01T04:30:00Z",
+                "calendar_id": "dryrun:shanghai",
+                "colleague_id": "shanghai",
+                "colleague_label": "Shanghai office colleague",
+                "colleague_office": "Shanghai",
+                "colleague_timezone": "Asia/Shanghai",
+                "label": "Mon, Jun 1 at 12:00 PM",
+            }
+        ]
+        tracker = _Tracker(
+            "change the name to Jordan Updated",
+            slots={
+                "schedule_stage": "confirm",
+                "schedule_name": "Jordan Old",
+                "schedule_email": "jordan@example.com",
+                "schedule_purpose": "Airport strategy consultation",
+                "schedule_time_preference": "2099-06-01 afternoon",
+                "schedule_timezone": "Asia/Shanghai",
+                "schedule_offered_slots": json.dumps(offered_slots),
+                "schedule_selected_slot": "2099-06-01T04:00:00Z",
+                "schedule_selected_slot_label": "Mon, Jun 1 at 12:00 PM",
+                "schedule_colleague_id": "shanghai",
+            },
+            metadata={"timezone": "Asia/Shanghai"},
+        )
+        dispatcher = CollectingDispatcher()
+        events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+
+        assert "Name: **Jordan Updated**" in dispatcher.messages[-1]["text"]
+        assert "change the name" not in dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_name"
+            and event.get("value") == "Jordan Updated"
+            for event in events
+        )
+        assert not any(event.get("name") == "schedule_booking_event_id" for event in events)
+
+    _with_google_dry_run_env(run)
+
+
+def test_action_handles_two_turn_name_update_at_confirmation():
+    def run():
+        offered_slots = [
+            {
+                "start_time": "2099-06-01T04:00:00Z",
+                "end_time": "2099-06-01T04:30:00Z",
+                "calendar_id": "dryrun:shanghai",
+                "colleague_id": "shanghai",
+                "colleague_label": "Shanghai office colleague",
+                "colleague_office": "Shanghai",
+                "colleague_timezone": "Asia/Shanghai",
+                "label": "Mon, Jun 1 at 12:00 PM",
+            }
+        ]
+        base_slots = {
+            "schedule_stage": "confirm",
+            "schedule_name": "Jordan Old",
+            "schedule_email": "jordan@example.com",
+            "schedule_purpose": "Airport strategy consultation",
+            "schedule_time_preference": "2099-06-01 afternoon",
+            "schedule_timezone": "Asia/Shanghai",
+            "schedule_offered_slots": json.dumps(offered_slots),
+            "schedule_selected_slot": "2099-06-01T04:00:00Z",
+            "schedule_selected_slot_label": "Mon, Jun 1 at 12:00 PM",
+            "schedule_colleague_id": "shanghai",
+        }
+
+        first_tracker = _Tracker(
+            "change the name",
+            slots=base_slots,
+            metadata={"timezone": "Asia/Shanghai"},
+        )
+        first_dispatcher = CollectingDispatcher()
+        first_events = schedule_actions.run_calendly_scheduling(
+            first_dispatcher,
+            first_tracker,
+            {},
+        )
+        assert first_dispatcher.messages[-1]["text"] == "Please send the corrected name."
+        assert any(
+            event.get("name") == "schedule_pending_edit_field"
+            and event.get("value") == "name"
+            for event in first_events
+        )
+
+        second_slots = dict(base_slots)
+        second_slots["schedule_pending_edit_field"] = "name"
+        second_tracker = _Tracker(
+            "Jordan Updated",
+            slots=second_slots,
+            metadata={"timezone": "Asia/Shanghai"},
+        )
+        second_dispatcher = CollectingDispatcher()
+        second_events = schedule_actions.run_calendly_scheduling(
+            second_dispatcher,
+            second_tracker,
+            {},
+        )
+        assert "Name: **Jordan Updated**" in second_dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_pending_edit_field"
+            and event.get("value") is None
+            for event in second_events
+        )
+
+    _with_google_dry_run_env(run)
+
+
+def test_action_reopens_office_options_from_slot_selection():
+    def run():
+        cfg = gcal.config_from_env()
+        context = gcal.detect_scheduling_context(
+            lang=None,
+            metadata={"timezone": "America/Lima", "browser_locale": "es-PE"},
+            text="schedule",
+            timezone_name="America/Lima",
+        )
+        ranked = gcal.rank_colleagues(cfg.roster, context)
+        offered_slots = [
+            {
+                "start_time": "2099-06-01T14:00:00Z",
+                "end_time": "2099-06-01T14:30:00Z",
+                "calendar_id": "dryrun:lima",
+                "colleague_id": "lima",
+                "colleague_label": "Lima office colleague",
+                "colleague_office": "Lima",
+                "colleague_timezone": "America/Lima",
+                "label": "Mon, Jun 1 at 9:00 AM",
+            }
+        ]
+        tracker = _Tracker(
+            "another office",
+            slots={
+                "schedule_stage": "select_slot",
+                "schedule_name": "Priya Shah",
+                "schedule_email": "priya@example.com",
+                "schedule_purpose": "Airport terminal consultation",
+                "schedule_time_preference": "next week",
+                "schedule_timezone": "America/Lima",
+                "schedule_offered_slots": json.dumps(offered_slots),
+                "schedule_colleague_id": ranked[0].id,
+                "schedule_colleague_options": gcal.colleague_options_payload(ranked),
+            },
+            metadata={"timezone": "America/Lima", "browser_locale": "es-PE"},
+        )
+        dispatcher = CollectingDispatcher()
+        events = schedule_actions.run_calendly_scheduling(dispatcher, tracker, {})
+
+        assert "Please choose" in dispatcher.messages[-1]["text"]
+        assert any(
+            event.get("name") == "schedule_stage"
+            and event.get("value") == "choose_route"
+            for event in events
+        )
+        assert any(
+            event.get("name") == "schedule_offered_slots"
+            and event.get("value") is None
+            for event in events
+        )
+
+    _with_google_dry_run_env(run)
+
+
 def test_action_requeries_when_translated_user_changes_slot_day():
     def run():
         original_available_slots = schedule_actions._google_available_slots
@@ -326,7 +608,7 @@ def test_action_requeries_when_user_changes_time_at_confirmation():
             for event in events
             if event.get("name") == "schedule_offered_slots"
         ]
-        assert captured["preference"] == "Friday at 2 pm instead"
+        assert captured["preference"] == "Friday at 2 pm"
         assert offered_values[0] is None
         assert "2026-06-12T12:00:00Z" in offered_values[-1]
         assert dispatcher.messages[-1]["text"].startswith("I found these available times")
@@ -341,6 +623,13 @@ if __name__ == "__main__":
     test_action_suggests_detected_colleague_before_time_collection()
     test_action_offers_other_colleagues_when_route_declined()
     test_action_books_google_calendar_dry_run_inside_chat()
+    test_action_blocks_press_meeting_purpose()
+    test_action_blocks_job_interview_meeting_purpose()
+    test_action_updates_email_at_confirmation_before_booking()
+    test_confirmation_edit_extractors_keep_values_clean()
+    test_action_updates_name_at_confirmation_before_booking()
+    test_action_handles_two_turn_name_update_at_confirmation()
+    test_action_reopens_office_options_from_slot_selection()
     test_action_requeries_when_translated_user_changes_slot_day()
     test_action_requeries_when_user_changes_time_at_confirmation()
     print("Google Calendar scheduling unit checks passed.")

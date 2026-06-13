@@ -396,20 +396,6 @@ CLIENT_PROFILES = {
         "aliases": ("AIK Bank", "AIK", "AIK Bank branches"),
         "project_keys": ("aik_bank_design",),
     },
-    "unibail": {
-        "display_name": "Unibail",
-        "kind": "urban development and real-estate client",
-        "geography": "Paris, France.",
-        "does": "Unibail appears in the portfolio in a mixed-use urban development context.",
-        "relationship": (
-            "1PAX designed Greyfoot, a 17,400 m² mixed-use urban development near Espace Champerret in Paris."
-        ),
-        "client_type": "Private urban developer",
-        "sectors": ("private", "urban", "masterplan", "commercial", "working and living"),
-        "regions": ("Europe", "France"),
-        "aliases": ("Unibail", "Greyfoot", "Espace Champerret"),
-        "project_keys": ("greyfoot_paris",),
-    },
     "dgac_region_centre": {
         "display_name": "DGAC / Région Centre-Val de Loire",
         "kind": "public aviation and regional authority context",
@@ -937,7 +923,7 @@ COMPANY_INFO = {
             "OSITRAN.\n"
             "• **Mobility, engineering, and private-sector partners** — Groupe ADP, EGIS, EDEIS COLAS, "
             "SETEC BÂTIMENT, SETEC TPI, Siemens, BESIX, TSO, VINCI Construction, Qatar Airways "
-            "Investments, Skyports Infrastructure, Lagardère Travel Retail, AIK Bank, Unibail, Eiffage "
+            "Investments, Skyports Infrastructure, Lagardère Travel Retail, AIK Bank, Eiffage "
             "Concession, ECADI, Saudi Binladin Group, and VCGP."
         ),
         (

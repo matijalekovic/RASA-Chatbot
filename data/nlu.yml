@@ -535,9 +535,6 @@ nlu:
     - [european delegation tokyo](project)
     - tell me about [French Embassy Bangkok](project)
     - [French Embassy Bangkok](project)
-    - tell me about [Greyfoot Paris](project)
-    - [Greyfoot Paris](project)
-    - [greyfoot](project)
     - tell me about [Montijo Airport](project)
     - [Montijo Airport](project)
     - tell me about [Jorge Chavez Food Hall](project)
@@ -572,8 +569,6 @@ nlu:
     - what is [AIK Bank](project)?
     - info on [AIK Bank](project)
     - [aik](project) bank project
-    - tell me about [Greyfoot](project)
-    - [Greyfoot Paris](project)
     - tell me about [Amilcar Cabral Airport](project)
     - [amilcar cabral](project)
     - [sal airport](project)
@@ -621,7 +616,6 @@ nlu:
     - I found [Cergy Vertiport](project) interesting
     - tell me about the [Almaty Airport](project) project
     - what happened with [Lima Metro Line 1](project)
-    - I'm curious about [Greyfoot Paris](project)
     - what is [Pachacamac Metro](project)?
     - I want to know more about [Kigali Airport](project)
     - what's the deal with [Nice Airport](project)
@@ -1720,6 +1714,11 @@ nlu:
     - what did [Sofia Airport](project) include?
     - what facilities are there?
     - what was built exactly?
+    - what exactly was built?
+    - what did you build exactly?
+    - what did 1PAX build exactly?
+    - what spaces did you build?
+    - what was included in what got built?
     - what is in the terminal?
     - what does the project contain?
     - what spaces are included?
@@ -2723,8 +2722,6 @@ nlu:
     - what wayfinding work did 1PAX do for [Nuevo Pudahuel](client)?
     - tell me about [AIK Bank](client) as a client
     - what did 1PAX design for [AIK Bank](client)?
-    - tell me about [Unibail](client)
-    - what urban project did 1PAX do for [Unibail](client)?
     - who is [Riga International Airport](client)?
     - what did 1PAX do for [RIX](client)?
     - tell me about [Fuzhou Airport Authority](client)
@@ -3768,6 +3765,12 @@ nlu:
     - set up a meeting with 1PAX
     - I need to contact 1PAX about a project
     - how can I get in touch with 1PAX?
+    - can I schedule a meeting to sell you marketing services?
+    - book a call so I can present our software platform
+    - I want to schedule a job interview
+    - can I arrange a meeting about my CV?
+    - I need a press interview with 1PAX
+    - schedule a call to pitch our services to 1PAX
 
 - intent: provide_schedule_name
   examples: |
@@ -3786,6 +3789,9 @@ nlu:
     - Thomas Nguyen
     - Sarah Thompson
     - Ahmed Khan
+    - change my name to Julia Novak
+    - correct the name to Marco Silva
+    - the name should be Elena Costa
 
 - intent: provide_schedule_email
   examples: |
@@ -3801,6 +3807,10 @@ nlu:
     - use michael.brown@example.co.uk
     - ana.lopez@developer.com
     - marko.simic@example.com
+    - change my email to julia@example.com
+    - update the email to marco@airportco.com
+    - correct email is elena@developer.com
+    - that email is wrong, use ana@studio.com
 
 - intent: provide_schedule_time_preference
   examples: |
@@ -3825,6 +3835,12 @@ nlu:
     - do you have anything next Friday?
     - show me times for next week
     - I can do Tuesday or Wednesday
+    - change the time to Friday afternoon
+    - update the meeting to next Tuesday morning
+    - can we choose another time?
+    - show me another option
+    - I would like another office
+    - can I use a different office?
 
 - intent: select_schedule_slot
   examples: |
@@ -4058,7 +4074,6 @@ nlu:
     - OSITRAN
     - Nuevo Pudahuel
     - AIK Bank
-    - Unibail
     - DGAC
     - Région Centre-Val de Loire
     - Riga International Airport
@@ -4603,16 +4618,6 @@ nlu:
     - Qatar rail HQ
     - Qatar Railways offices
 
-- synonym: greyfoot_paris
-  examples: |
-    - Greyfoot
-    - greyfoot
-    - Greyfoot Paris
-    - Champerret mixed use
-    - Espace Champerret development
-    - Paris mixed use Greyfoot
-    - Unibail Paris project
-
 - synonym: montijo_airport_commercial
   examples: |
     - Montijo Airport commercial
@@ -4867,11 +4872,6 @@ nlu:
   examples: |
     - AIK
     - AIK Bank branch network
-
-- synonym: unibail
-  examples: |
-    - Unibail
-    - Espace Champerret
 
 - synonym: dgac_region_centre
   examples: |

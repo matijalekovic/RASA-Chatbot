@@ -579,17 +579,73 @@
   let currentLang = storedLang && storedLang.toUpperCase().startsWith("EN")
     ? ""
     : (storedLang ?? "");
+  const LANG_ID_LIMIT = 3;
+  const LANG_ID_COUNT_KEY = "pax_lang_ident_count";
+  const LANG_ID_LAST_KEY = "pax_lang_ident_last";
+  const LANG_ID_LOCKED_KEY = "pax_lang_locked";
+  let languageIdentificationCount = Math.max(
+    0,
+    Number(localStorage.getItem(LANG_ID_COUNT_KEY) || 0) || 0
+  );
+  let lastIdentifiedLang = normalizeLangCode(
+    localStorage.getItem(LANG_ID_LAST_KEY) ?? currentLang
+  );
+  let languageLocked = localStorage.getItem(LANG_ID_LOCKED_KEY) === "1";
 
   function setLang(code) {
-    currentLang = code;
-    localStorage.setItem("pax_lang", code);
+    currentLang = normalizeLangCode(code);
+    localStorage.setItem("pax_lang", currentLang);
     document.querySelectorAll(".lang-btn").forEach(b =>
-      b.classList.toggle("active", b.dataset.lang === code)
+      b.classList.toggle("active", b.dataset.lang === currentLang)
     );
   }
 
   function responseLang() {
     return currentLang || "EN";
+  }
+
+  function lockLanguage(code) {
+    setLang(code);
+    lastIdentifiedLang = currentLang;
+    languageLocked = true;
+    languageIdentificationCount = LANG_ID_LIMIT;
+    localStorage.setItem(LANG_ID_LAST_KEY, lastIdentifiedLang);
+    localStorage.setItem(LANG_ID_COUNT_KEY, String(languageIdentificationCount));
+    localStorage.setItem(LANG_ID_LOCKED_KEY, "1");
+  }
+
+  function shouldIdentifyLanguage() {
+    return !languageLocked && languageIdentificationCount < LANG_ID_LIMIT;
+  }
+
+  function recordLanguageIdentification(lang, attempted, identified) {
+    if (!attempted) return;
+
+    languageIdentificationCount = Math.min(
+      LANG_ID_LIMIT,
+      languageIdentificationCount + 1
+    );
+    localStorage.setItem(LANG_ID_COUNT_KEY, String(languageIdentificationCount));
+
+    if (identified) {
+      lastIdentifiedLang = normalizeLangCode(lang);
+      localStorage.setItem(LANG_ID_LAST_KEY, lastIdentifiedLang);
+      setLang(lastIdentifiedLang);
+    }
+
+    if (languageIdentificationCount >= LANG_ID_LIMIT) {
+      languageLocked = true;
+      localStorage.setItem(LANG_ID_LOCKED_KEY, "1");
+      setLang(lastIdentifiedLang);
+    }
+  }
+
+  function normalizeLangCode(code) {
+    const normalized = String(code || "").trim().replace(/_/g, "-").toUpperCase();
+    if (!normalized || normalized.startsWith("EN")) return "";
+    if (normalized === "PT") return "PT-PT";
+    if (normalized === "ZH") return "ZH-HANS";
+    return normalized;
   }
 
   function requestMetadata() {
@@ -605,7 +661,7 @@
   setLang(currentLang);
 
   document.querySelectorAll(".lang-btn").forEach(b =>
-    b.addEventListener("click", () => setLang(b.dataset.lang))
+    b.addEventListener("click", () => lockLanguage(b.dataset.lang))
   );
 
   // Pre-select from IP geolocation (only if user hasn't chosen before)
@@ -891,19 +947,29 @@
   // DeepL target codes use regional variants (PT-PT, ZH-HANS); source codes use base language
   const TARGET_TO_SOURCE = { "PT-PT": "PT", "PT-BR": "PT", "ZH-HANS": "ZH", "ZH-HANT": "ZH" };
 
-  async function translateToEnglish(text, lang) {
-    const selectedLang = lang || "EN";
+  async function translateToEnglish(text, lang, identifyLanguage = false) {
+    const selectedLang = normalizeLangCode(lang);
     const sourceLang = TARGET_TO_SOURCE[selectedLang] || selectedLang;
+    const payload = { text };
+    if (sourceLang) payload.source_lang = sourceLang;
+    if (identifyLanguage) payload.identify_language = true;
     try {
       const r = await fetch(TRANSLATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, source_lang: sourceLang }),
+        body: JSON.stringify(payload),
       });
       const d = await r.json();
-      return d.text || text;
+      const detectedLang = normalizeLangCode(
+        d.identified_lang || d.detected_lang || d.source_lang || ""
+      );
+      return {
+        text: d.text || text,
+        lang: detectedLang,
+        identified: Boolean(d.language_identified),
+      };
     } catch {
-      return text;  // translation server unavailable — send as-is
+      return { text, lang: "", identified: false };  // translation server unavailable — send as-is
     }
   }
 
@@ -1007,7 +1073,21 @@
     setLoading(true);
 
     // Translate input to English once; reuse on retries to avoid redundant API calls
-    const englishMsg = _cachedEnglish ?? await translateToEnglish(msg, currentLang);
+    let englishMsg = _cachedEnglish;
+    if (englishMsg === null) {
+      const identifyLanguage = shouldIdentifyLanguage();
+      const translated = await translateToEnglish(msg, currentLang, identifyLanguage);
+      englishMsg = translated.text;
+      if (identifyLanguage) {
+        recordLanguageIdentification(
+          translated.lang,
+          true,
+          translated.identified
+        );
+      } else if (translated.lang && !languageLocked) {
+        setLang(translated.lang);
+      }
+    }
 
     try {
       const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
