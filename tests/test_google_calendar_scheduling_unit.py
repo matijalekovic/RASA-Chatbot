@@ -66,6 +66,19 @@ def test_context_routes_spanish_americas_to_lima():
     assert ranked[0].id == "lima"
 
 
+def test_belgrade_scheduling_host_is_jelena_even_with_stale_env_label():
+    original = dict(os.environ)
+    os.environ["GOOGLE_CALENDAR_BELGRADE_LABEL"] = "Marija Stevanovic"
+    try:
+        cfg = gcal.config_from_env()
+        belgrade = next(item for item in cfg.roster if item.id == "belgrade")
+        assert belgrade.label == "Jelena"
+        assert belgrade.display_name == "Jelena (Belgrade)"
+    finally:
+        os.environ.clear()
+        os.environ.update(original)
+
+
 def test_keyless_impersonation_counts_as_google_credentials():
     original = dict(os.environ)
     os.environ["SCHEDULING_PROVIDER"] = "google"

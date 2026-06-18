@@ -386,6 +386,12 @@ def detect_scheduling_context(
 
 
 def _default_roster() -> Tuple[CalendarColleague, ...]:
+    def _belgrade_label() -> str:
+        label = os.environ.get("GOOGLE_CALENDAR_BELGRADE_LABEL", "Jelena").strip() or "Jelena"
+        if "marija" in label.lower():
+            return "Jelena"
+        return label
+
     entries = [
         {
             "id": "shanghai",
@@ -433,7 +439,7 @@ def _default_roster() -> Tuple[CalendarColleague, ...]:
         },
         {
             "id": "belgrade",
-            "label": os.environ.get("GOOGLE_CALENDAR_BELGRADE_LABEL", "Belgrade office colleague"),
+            "label": _belgrade_label(),
             "office": "Belgrade",
             "calendar_id": os.environ.get("GOOGLE_CALENDAR_BELGRADE_CALENDAR_ID", ""),
             "timezone": "Europe/Belgrade",
