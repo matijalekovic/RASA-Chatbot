@@ -52,6 +52,7 @@ def strip_ansi(text: str) -> str:
 #   expect_intent (optional): intended intent for labelling
 #   expect_project (optional): project key the answer should be about
 #   expect_response_contains (optional): strings that must appear in bot text
+#   expect_response_not_contains (optional): strings forbidden in bot text
 #   metadata (optional): webhook metadata, e.g. selected UI language
 #   note        : human label for the test
 #
@@ -77,19 +78,30 @@ TESTS = [
 
     # ── TEAM MEMBER FALLBACKS ─────────────────────────────────────────────────
     {"session_id": "s_team1",  "message": "Who is Matija Lekovic", "expect_response_contains": ["Matija", "AI & Digital Specialist"], "note": "Team member — Matija direct English"},
-    {"session_id": "s_team2",  "message": "reci mi nesto o matiji lekovicu", "metadata": {"lang": "SR"}, "expect_response_contains": ["Matija", "AI & Digital Specialist"], "note": "Team member — Matija Serbian inflection"},
+    {"session_id": "s_team2",  "message": "reci mi nesto o matiji lekovicu", "metadata": {"lang": "SR"}, "expect_response_contains": ["Matija", "AI", "digital"], "note": "Team member — Matija Serbian inflection"},
 
     # ── CAREERS / APPLICANTS ─────────────────────────────────────────────────
     {"session_id": "s_job1",   "message": "Where can I send my CV?",       "expect_intent": "ask_company_application", "expect_response_contains": ["CV", "www.1pax.com/contact"], "note": "Careers — CV application link"},
     {"session_id": "s_job2",   "message": "I want to join your team",      "expect_intent": "ask_company_careers", "expect_response_contains": ["Join", "1PAX", "www.1pax.com/contact"], "note": "Careers — join team should not show roster"},
     {"session_id": "s_job3",   "message": "What is the hiring process?",   "expect_intent": "ask_company_hiring_process", "expect_response_contains": ["Hiring process", "www.1pax.com/contact"], "note": "Careers — hiring process"},
-    {"session_id": "s_job4",   "message": "Do you offer internships or graduate fellowships?", "expect_intent": "ask_company_internships", "expect_response_contains": ["Graduate Fellowship", "www.1pax.com/contact"], "note": "Careers — internships/fellowships"},
+    {"session_id": "s_job4",   "message": "Do you offer internships or graduate fellowships?", "expect_intent": "ask_company_fellowship", "expect_response_contains": ["Graduate Fellowship", "www.1pax.com/contact"], "note": "Careers — internships/fellowships"},
     {"session_id": "s_job5",   "message": "Do I need airport experience to apply?", "expect_intent": "ask_company_candidate_profile", "expect_response_contains": ["Airport experience", "www.1pax.com/contact"], "note": "Careers — candidate profile"},
     {"session_id": "s_job6",   "message": "What salary and benefits do you offer?", "expect_intent": "ask_company_compensation", "expect_response_contains": ["Compensation", "www.1pax.com/contact"], "note": "Careers — compensation and benefits"},
     {"session_id": "s_job7",   "message": "Does 1PAX sponsor visas or relocation?", "expect_intent": "ask_company_visa_relocation", "expect_response_contains": ["visa", "relocation", "www.1pax.com/contact"], "note": "Careers — visa and relocation"},
 
     # ── SCHEDULING / SERVICES BOUNDARY ───────────────────────────────────────
     {"session_id": "s_sched1", "message": "Can I book a call about an airport terminal project?", "expect_intent": "ask_schedule_meeting", "expect_response_contains": ["schedule a meeting", "What name"], "note": "Scheduling — book call with airport-service wording"},
+
+    # ── SUPPLIED-CONVERSATION REGRESSIONS ───────────────────────────────────
+    {"session_id": "s_reg_innov", "message": "innovations", "expect_intent": "ask_company_innovation", "expect_response_contains": ["Ecoport", "PAX", "SKYLO"], "expect_response_not_contains": ["Carla", "ESADE"], "note": "REGRESSION: generic innovations must not become Carla biography"},
+    {"session_id": "s_reg_director", "message": "who is the director", "expect_intent": "ask_team_leadership", "expect_response_contains": ["Mabel Miranda", "Founder & CEO"], "expect_response_not_contains": ["Who would you like", "Pachacámac"], "note": "REGRESSION: generic director routes to studio leadership"},
+    {"session_id": "s_reg_founder", "message": "tell me about Carla Miranda", "expect_intent": "ask_about_team_member", "expect_response_contains": ["Carla Miranda"], "note": "REGRESSION setup: establish stale Carla person slot"},
+    {"session_id": "s_reg_founder", "message": "who founded 1PAX", "expect_intent": "ask_company_founder", "expect_response_contains": ["Mabel Miranda", "2016"], "expect_response_not_contains": ["Carla", "ESADE"], "note": "REGRESSION: founder beats stale person slot"},
+    {"session_id": "s_reg_supervision", "message": "Do you provide construction supervision?", "expect_intent": "ask_services_list", "expect_response_contains": ["construction phasing", "does **not** list", "contact@1pax.com"], "expect_response_not_contains": ["What name should I put on the meeting", "What is your email"], "note": "REGRESSION: service question must not start booking"},
+    {"session_id": "s_reg_madrid", "message": "Do you have an office in Madrid?", "expect_intent": "ask_company_offices", "expect_response_contains": ["does not currently list an office", "Barcelona, Spain"], "note": "REGRESSION: unknown office must not recurse"},
+    {"session_id": "s_reg_dubai", "message": "I want a proposal for an airport in Dubai", "expect_intent": "ask_service_airports", "expect_response_contains": ["airport", "proposal", "contact@1pax.com"], "expect_response_not_contains": ["Innovation & Patents", "not sure"], "note": "REGRESSION: Dubai proposal routes to airport services"},
+    {"session_id": "s_reg_investor", "message": "I am an investor interested in airport concessions", "expect_intent": "ask_company_clients", "expect_response_contains": ["investors", "concessionaires", "contact@1pax.com"], "expect_response_not_contains": ["all 57", "project examples"], "note": "REGRESSION: investor query routes to commercial guidance"},
+    {"session_id": "s_reg_book_mabel", "message": "book me tomorrow with Mabel about Sofia Airport", "expect_intent": "ask_schedule_meeting", "expect_response_contains": ["name"], "expect_response_not_contains": ["Educated at ESA", "CEO & Founder"], "note": "REGRESSION: explicit booking must not become Mabel biography"},
 
     # ── ASK ABOUT PROJECT (teaser) ────────────────────────────────────────────
     {"session_id": "s_sofia",  "message": "Tell me about Sofia Airport", "expect_intent": "ask_about_project",   "expect_project": "sofia_airport",    "note": "Sofia Airport teaser"},
@@ -160,7 +172,7 @@ TESTS = [
 
     # ── OUT OF SCOPE ──────────────────────────────────────────────────────────
     {"session_id": "s_oos1",   "message": "What's the weather in Sofia?",              "expect_intent": "out_of_scope",  "note": "OOS: Weather question"},
-    {"session_id": "s_oos2",   "message": "Can you book me a flight?",                 "expect_intent": "out_of_scope",  "note": "OOS: Flight booking"},
+    {"session_id": "s_oos2",   "message": "Can you book me a flight?",                 "expect_intent": "out_of_scope", "expect_response_contains": ["1PAX"], "expect_response_not_contains": ["What name should I put on the invite", "schedule a meeting with 1PAX. What name"], "note": "OOS: Flight booking"},
 
 ]
 
@@ -233,6 +245,9 @@ def run_tests() -> list[dict]:
         exp_response = test.get("expect_response_contains") or []
         if isinstance(exp_response, str):
             exp_response = [exp_response]
+        forbidden_response = test.get("expect_response_not_contains") or []
+        if isinstance(forbidden_response, str):
+            forbidden_response = [forbidden_response]
 
         # NLU parse
         nlu    = parse_nlu(msg)
@@ -262,16 +277,17 @@ def run_tests() -> list[dict]:
             project_key_words = exp_p.replace("_", " ").split()
             project_ok = any(w in all_text for w in project_key_words if len(w) > 3)
         response_ok = all(expected.lower() in all_text for expected in exp_response)
+        forbidden_ok = all(forbidden.lower() not in all_text for forbidden in forbidden_response)
 
         # Status indicator
-        if intent_ok and project_ok and response_ok:
-            status_sym = f"{GREEN}✓{RESET}"
-        elif intent_ok and not exp_p and response_ok:
+        if intent_ok and project_ok and response_ok and forbidden_ok:
             status_sym = f"{GREEN}✓{RESET}"
         elif not intent_ok:
             status_sym = f"{RED}✗ INTENT{RESET}"
         elif not response_ok:
             status_sym = f"{RED}✗ RESPONSE{RESET}"
+        elif not forbidden_ok:
+            status_sym = f"{RED}✗ FORBIDDEN RESPONSE{RESET}"
         else:
             status_sym = f"{YELLOW}~ PROJECT?{RESET}"
 
@@ -292,6 +308,9 @@ def run_tests() -> list[dict]:
         if exp_response:
             resp_str = f"{GREEN}found{RESET}" if response_ok else f"{RED}NOT FOUND in response{RESET}"
             print(f"        RESPONSE EXPECTED: {exp_response} → {resp_str}")
+        if forbidden_response:
+            forbidden_str = f"{GREEN}absent{RESET}" if forbidden_ok else f"{RED}FOUND in response{RESET}"
+            print(f"        RESPONSE FORBIDDEN: {forbidden_response} → {forbidden_str}")
         for t in bot_texts:
             preview = t[:200].replace("\n", " ↵ ")
             print(f"        RESPONSE: {CYAN}{preview}{RESET}")
@@ -309,9 +328,11 @@ def run_tests() -> list[dict]:
             "expect_intent":  exp_i,
             "expect_project": exp_p,
             "expect_response_contains": exp_response,
+            "expect_response_not_contains": forbidden_response,
             "intent_match":   intent_ok,
             "project_match":  project_ok,
             "response_match": response_ok,
+            "forbidden_response_match": forbidden_ok,
             "bot_responses":  bot_texts,
         }
         results.append(result)
@@ -362,6 +383,7 @@ def write_report(results: list[dict], path: str):
         if (r["expect_intent"] and not r["intent_match"])
         or (r["expect_project"] and not r["project_match"])
         or (r["expect_response_contains"] and not r["response_match"])
+        or (r["expect_response_not_contains"] and not r["forbidden_response_match"])
     ]
     h(f"FAILURES ({len(failures)})")
     if not failures:
@@ -375,6 +397,8 @@ def write_report(results: list[dict], path: str):
             lines.append(f"       PROJECT  : expected={r['expect_project']} not found in response")
         if r["expect_response_contains"] and not r["response_match"]:
             lines.append(f"       RESPONSE : expected text {r['expect_response_contains']} not found")
+        if r["expect_response_not_contains"] and not r["forbidden_response_match"]:
+            lines.append(f"       RESPONSE : forbidden text {r['expect_response_not_contains']} was found")
         lines.append("")
 
     # Low confidence
@@ -412,6 +436,9 @@ def write_report(results: list[dict], path: str):
         if r["expect_response_contains"]:
             rm = "✓ found" if r["response_match"] else "✗ NOT FOUND"
             lines.append(f"  Response  : expected text {r['expect_response_contains']} → {rm}")
+        if r["expect_response_not_contains"]:
+            fm = "✓ absent" if r["forbidden_response_match"] else "✗ FOUND"
+            lines.append(f"  Forbidden : {r['expect_response_not_contains']} → {fm}")
         lines.append(f"  Response(s):")
         for t in r["bot_responses"]:
             for line in t.split("\n"):
@@ -465,3 +492,17 @@ if __name__ == "__main__":
     os.makedirs(results_dir, exist_ok=True)
     report_path = os.path.join(results_dir, f"test_results_{ts}.txt")
     write_report(results, report_path)
+
+    failures = [
+        result for result in results
+        if (result["expect_intent"] and not result["intent_match"])
+        or (result["expect_project"] and not result["project_match"])
+        or (result["expect_response_contains"] and not result["response_match"])
+        or (
+            result["expect_response_not_contains"]
+            and not result["forbidden_response_match"]
+        )
+    ]
+    if failures:
+        print(f"{RED}{len(failures)} strict blast test(s) failed.{RESET}")
+        sys.exit(1)

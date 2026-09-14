@@ -149,6 +149,7 @@ _ENGLISH_HINT_WORDS = {
     "build",
     "buildings",
     "budget",
+    "bye",
     "can",
     "capacity",
     "client",
@@ -156,6 +157,9 @@ _ENGLISH_HINT_WORDS = {
     "concept",
     "contact",
     "cost",
+    "construction",
+    "consultation",
+    "day",
     "design",
     "designer",
     "designers",
@@ -167,34 +171,52 @@ _ENGLISH_HINT_WORDS = {
     "for",
     "founded",
     "from",
+    "feasibility",
+    "goodbye",
+    "great",
     "have",
     "help",
     "hello",
     "hi",
     "how",
     "in",
+    "innovation",
+    "innovations",
     "is",
     "kind",
     "list",
     "location",
     "me",
+    "meeting",
     "mission",
+    "next",
     "of",
+    "office",
     "offer",
     "offers",
     "overview",
     "passenger",
     "passengers",
     "pax",
+    "project",
     "projects",
+    "proposal",
+    "renovation",
+    "residential",
+    "resort",
     "schedule",
+    "scope",
     "services",
     "show",
     "sofia",
     "status",
+    "study",
     "studio",
+    "supervision",
     "team",
     "tell",
+    "thank",
+    "thanks",
     "the",
     "there",
     "what",
@@ -221,12 +243,12 @@ for _project_key, _project_data in _PROJECTS_FOR_LANG_HINTS.items():
 
 
 def _looks_like_english(text: str) -> bool:
-    """Protect short English/domain phrases from langdetect false positives."""
+    """Protect clear English/domain phrases from langdetect false positives."""
     tokens = re.findall(r"[a-zA-Z]+", text.lower())
     if not tokens:
         return False
-    if len(tokens) > 8:
-        return False
+    if len(tokens) <= 4 and "airport" in tokens:
+        return True
     hits = sum(token in _ENGLISH_HINT_WORDS for token in tokens)
     if hits == len(tokens):
         return True
@@ -236,7 +258,52 @@ def _looks_like_english(text: str) -> bool:
     }
     if tokens[0] in starters and hits >= max(2, len(tokens) // 2):
         return True
+    if len(tokens) > 8:
+        return hits >= max(4, int(len(tokens) * 0.35))
     return hits >= max(3, int(len(tokens) * 0.6))
+
+
+def _looks_like_low_information_booking_turn(text: str) -> bool:
+    """Avoid langdetect on names, emails, terse dates, and booking controls."""
+    stripped = (text or "").strip()
+    if not stripped:
+        return False
+    lowered = stripped.lower().strip(" .!?,;:")
+    if re.search(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", stripped, re.I):
+        return True
+    if lowered in {
+        "yes",
+        "y",
+        "yeah",
+        "yep",
+        "sure",
+        "ok",
+        "okay",
+        "no",
+        "no thanks",
+        "cancel",
+        "stop",
+        "confirm",
+        "book it",
+        "go ahead",
+        "next week",
+        "this week",
+        "today",
+        "tomorrow",
+        "tomorrow morning",
+        "tomorrow afternoon",
+        "tomorrow evening",
+    }:
+        return True
+    if re.fullmatch(r"(?:option|slot)?\s*\d{1,2}[.)]?", lowered):
+        return True
+
+    tokens = re.findall(r"[^\W\d_][^\W\d_'\-]*", stripped, flags=re.UNICODE)
+    if 1 <= len(tokens) <= 4 and "?" not in stripped:
+        if all(token[:1].isupper() for token in tokens):
+            return True
+
+    return False
 
 
 def get_lang(tracker) -> Optional[str]:
@@ -244,15 +311,25 @@ def get_lang(tracker) -> Optional[str]:
     Return the language code for the current user turn, or None for English.
 
     Priority:
-      1. UI metadata      — lang code sent by the frontend with every message
-      2. __lang__ entity  — set by TranslationComponent during NLU
-      3. language slot    — persisted from a previous turn
-      4. langdetect       — last-resort fallback
+      1. Confident current-input language from the UI
+      2. Current response language from the UI
+      3. __lang__ entity set by TranslationComponent
+      4. Strong current-English evidence
+      5. Persisted slot for ambiguous/low-information turns
+      6. langdetect as a last-resort fallback
     """
     metadata = tracker.latest_message.get("metadata") or {}
-    metadata_lang = metadata.get("lang")
-    if isinstance(metadata_lang, str) and metadata_lang.strip():
-        return _normalize_detected_lang(metadata_lang)
+    if metadata.get("input_lang_confident") is True and "input_lang" in metadata:
+        return _normalize_detected_lang(metadata.get("input_lang"))
+
+    for metadata_key in ("response_lang", "lang"):
+        if metadata_key not in metadata:
+            continue
+        metadata_lang = metadata.get(metadata_key)
+        if isinstance(metadata_lang, str) and metadata_lang.strip():
+            return _normalize_detected_lang(metadata_lang)
+
+    text = (tracker.latest_message.get("text") or "").strip()
 
     for entity in tracker.latest_message.get("entities", []):
         if entity.get("entity") == _LANG_ENTITY:
@@ -260,15 +337,18 @@ def get_lang(tracker) -> Optional[str]:
             if lang:
                 return lang
 
+    if text and _looks_like_english(text):
+        return None
+
     slot = _normalize_detected_lang(tracker.get_slot("language"))
+    if text and _looks_like_low_information_booking_turn(text):
+        return slot
+
     if slot:
         return slot
 
     if _LANGDETECT_OK:
-        text = (tracker.latest_message.get("text") or "").strip()
         if len(text) >= 4:
-            if _looks_like_english(text):
-                return None
             try:
                 raw = detect(text)
                 return _normalize_detected_lang(raw)

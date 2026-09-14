@@ -18,6 +18,9 @@ from .company_data import CLIENT_PROFILES, CLIENT_SEGMENTS, COMPANY_INFO
 from .meeting_prompts import meeting_buttons, meeting_cta_text
 from .projects_data import PROJECTS
 from .translation import get_lang, translate_response, translate_responses
+from .company_inquiries import INQUIRY_TYPES, build_inquiry_answer, infer_inquiry_type
+from .fellowship_data import looks_like_fellowship_question
+from .portfolio_insights import looks_like_portfolio_query
 
 
 # ── Intent suffix → COMPANY_INFO key ─────────────────────────────────────────
@@ -472,9 +475,359 @@ def _build_client_answer(tracker: Tracker, raw_text: str) -> Optional[List[str]]
     return None
 
 
+_OFFICE_PROFILES: Dict[str, Dict[str, str]] = {
+    "paris": {
+        "city": "Paris",
+        "country": "France",
+        "role": "headquarters and European / international project routing",
+    },
+    "belgrade": {
+        "city": "Belgrade",
+        "country": "Serbia",
+        "role": "Balkans, European delivery, and project support",
+    },
+    "shanghai": {
+        "city": "Shanghai",
+        "country": "China",
+        "role": "China and Asia-facing collaboration",
+    },
+    "barcelona": {
+        "city": "Barcelona",
+        "country": "Spain",
+        "role": "Spain, Iberia, and European client collaboration",
+    },
+    "lima": {
+        "city": "Lima",
+        "country": "Peru",
+        "role": "Peru, Latin America, and Americas-facing collaboration",
+    },
+}
+
+_OFFICE_TARGETS: Dict[str, Tuple[str, str]] = {
+    # Current offices.
+    "paris": ("paris", "Paris"),
+    "france": ("paris", "France"),
+    "belgrade": ("belgrade", "Belgrade"),
+    "beograd": ("belgrade", "Belgrade"),
+    "serbia": ("belgrade", "Serbia"),
+    "shanghai": ("shanghai", "Shanghai"),
+    "china": ("shanghai", "China"),
+    "barcelona": ("barcelona", "Barcelona"),
+    "catalonia": ("barcelona", "Catalonia"),
+    "spain": ("barcelona", "Spain"),
+    "lima": ("lima", "Lima"),
+    "peru": ("lima", "Peru"),
+    # Common nearby / regional queries without a listed office.
+    "madrid": ("barcelona", "Madrid"),
+    "valencia": ("barcelona", "Valencia"),
+    "lisbon": ("barcelona", "Lisbon"),
+    "portugal": ("barcelona", "Portugal"),
+    "london": ("paris", "London"),
+    "united kingdom": ("paris", "United Kingdom"),
+    "uk": ("paris", "UK"),
+    "germany": ("paris", "Germany"),
+    "berlin": ("paris", "Berlin"),
+    "italy": ("paris", "Italy"),
+    "milan": ("paris", "Milan"),
+    "rome": ("paris", "Rome"),
+    "switzerland": ("paris", "Switzerland"),
+    "geneva": ("paris", "Geneva"),
+    "zurich": ("paris", "Zurich"),
+    "austria": ("paris", "Austria"),
+    "vienna": ("paris", "Vienna"),
+    "balkans": ("belgrade", "the Balkans"),
+    "croatia": ("belgrade", "Croatia"),
+    "bosnia": ("belgrade", "Bosnia and Herzegovina"),
+    "montenegro": ("belgrade", "Montenegro"),
+    "north macedonia": ("belgrade", "North Macedonia"),
+    "hong kong": ("shanghai", "Hong Kong"),
+    "singapore": ("shanghai", "Singapore"),
+    "japan": ("shanghai", "Japan"),
+    "tokyo": ("shanghai", "Tokyo"),
+    "india": ("shanghai", "India"),
+    "maldives": ("shanghai", "Maldives"),
+    "mexico": ("lima", "Mexico"),
+    "united states": ("lima", "United States"),
+    "usa": ("lima", "USA"),
+    "u s": ("lima", "US"),
+    "new york": ("lima", "New York"),
+    "miami": ("lima", "Miami"),
+    "canada": ("lima", "Canada"),
+    "brazil": ("lima", "Brazil"),
+    "argentina": ("lima", "Argentina"),
+    "colombia": ("lima", "Colombia"),
+    "chile": ("lima", "Chile"),
+    "bolivia": ("lima", "Bolivia"),
+}
+
+_SORTED_OFFICE_TARGETS = sorted(
+    _OFFICE_TARGETS.items(),
+    key=lambda item: (len(item[0].split()), len(item[0])),
+    reverse=True,
+)
+
+
+def _find_office_target(raw_text: str) -> Optional[Tuple[str, str]]:
+    norm = _client_norm(raw_text)
+    if not norm:
+        return None
+    padded = f" {norm} "
+    for alias, target in _SORTED_OFFICE_TARGETS:
+        if f" {alias} " in padded:
+            return target
+    return None
+
+
+def _format_office_answer(raw_text: str) -> Optional[List[str]]:
+    target = _find_office_target(raw_text)
+    if not target:
+        return None
+
+    office_key, requested_place = target
+    office = _OFFICE_PROFILES[office_key]
+    office_label = f"{office['city']}, {office['country']}"
+
+    if _client_norm(requested_place) in {
+        _client_norm(office["city"]),
+        _client_norm(office["country"]),
+    }:
+        return [
+            (
+                f"Yes — 1PAX has an office in **{office_label}**.\n\n"
+                f"That office supports **{office['role']}**. For routing, use "
+                "**contact@1pax.com** or the contact form on 1pax.com."
+            )
+        ]
+
+    return [
+        (
+            f"1PAX does not currently list an office in **{requested_place}**.\n\n"
+            f"The nearest current office for that query is **{office_label}**, "
+            f"which supports **{office['role']}**. You can still contact the studio "
+            "through **contact@1pax.com** or the 1pax.com contact form, and the team "
+            "can route the request to the right office."
+        )
+    ]
+
+
+def _looks_like_office_location_query(raw_text: str) -> bool:
+    normalized = _client_norm(raw_text)
+    if not normalized:
+        return False
+    if not _find_office_target(raw_text):
+        return False
+    return any(
+        token in normalized
+        for token in (
+            "office",
+            "offices",
+            "studio",
+            "located",
+            "location",
+            "based",
+            "presence",
+            "find",
+            "visit",
+        )
+    )
+
+
+def looks_like_company_level_question(raw_text: str) -> bool:
+    normalized = _client_norm(raw_text)
+    if not normalized:
+        return False
+
+    explicit_company = _has_any(normalized, (
+        "1pax",
+        "company",
+        "studio",
+        "firm",
+        "practice",
+        "your",
+        "you",
+        "they",
+    ))
+    if not explicit_company:
+        return False
+
+    return _has_any(normalized, (
+        "where are they based",
+        "where are you based",
+        "where is 1pax based",
+        "where is the company based",
+        "where is 1pax located",
+        "where is the company located",
+        "where is your company located",
+        "where is the studio located",
+        "where are your offices",
+        "approach to urban design",
+        "urban design",
+        "public space design",
+        "approach to public space",
+        "governance approach",
+        "ethics approach",
+        "sustainability approach",
+        "security requirements in embassies",
+        "security requirements for embassies",
+        "diplomatic mission",
+        "embassy design",
+    ))
+
+
+def _custom_company_answer(raw_text: str) -> Optional[List[str]]:
+    norm = _client_norm(raw_text)
+    if not norm:
+        return None
+
+    if _has_any(norm, (
+        "work outside serbia",
+        "projects outside serbia",
+        "operate outside serbia",
+        "work internationally",
+        "international work",
+        "global projects",
+        "outside europe",
+        "outside france",
+    )):
+        return [
+            (
+                "Yes. 1PAX works internationally from offices in **Paris, Belgrade, "
+                "Shanghai, Barcelona, and Lima**, with project experience across "
+                "Europe, Asia, Africa, Latin America, the Middle East, and Oceania.\n\n"
+                "The portfolio includes airports, mobility infrastructure, interiors, "
+                "BIM, masterplanning, and working/living projects across multiple regions."
+            )
+        ]
+
+    if _has_any(norm, (
+        "public space design",
+        "approach to public space",
+        "public spaces",
+        "civic space",
+        "civic spaces",
+    )):
+        return [
+            (
+                "1PAX approaches **public space design** through human-centered "
+                "urbanism: clear movement, intuitive wayfinding, civic identity, "
+                "comfort, accessibility, and long-term public value. The goal is "
+                "to shape spaces people can understand, use, and enjoy, not only "
+                "spaces that look good in plan."
+            )
+        ]
+
+    if _has_any(norm, (
+        "calendar invite",
+        "calendar invitation",
+        "google calendar",
+        "calendar event",
+        "meeting invite",
+        "will this invite",
+        "invite appear",
+        "appear on my calendar",
+        "appear on google calendar",
+    )):
+        return [
+            (
+                "When a meeting is finalized through the booking flow, the invite "
+                "is sent to the email address you provide. If you already have a "
+                "1PAX calendar invitation, use the controls in that invite to "
+                "reschedule or cancel, or email **contact@1pax.com** with the "
+                "meeting details."
+            )
+        ]
+
+    if _has_any(norm, (
+        "nda",
+        "non disclosure",
+        "non-disclosure",
+        "confidential",
+        "privacy",
+        "personal data",
+        "data protection",
+        "gdpr",
+        "upload documents",
+        "share files",
+    )):
+        return [
+            (
+                "For confidential project material, NDA requests, or personal-data "
+                "questions, please contact **contact@1pax.com** or use the 1pax.com "
+                "contact form so the studio can route the request properly. Do not "
+                "send sensitive files through this chatbot."
+            )
+        ]
+
+    if _has_any(norm, (
+        "press images",
+        "press photos",
+        "media kit",
+        "image rights",
+        "publication images",
+        "journalist images",
+        "project photos for press",
+    )):
+        return [
+            (
+                "For press images, publication permissions, interviews, or media-kit "
+                "requests, contact **communications@1pax.com**. Public project pages "
+                "on 1pax.com are useful for browsing, but press use should be cleared "
+                "with the communications team."
+            )
+        ]
+
+    if _has_any(norm, (
+        "partnership",
+        "partner with 1pax",
+        "strategic partner",
+        "investor",
+        "investment",
+        "joint venture",
+        "jv",
+        "commercial partnership",
+    )):
+        return [
+            (
+                "1PAX collaborates with airport operators, concessionaires, public "
+                "authorities, investors, developers, engineering partners, and other "
+                "design firms. For a partnership, JV, or investor conversation, share "
+                "the project context through **contact@1pax.com** or ask me to "
+                "schedule a meeting with the studio."
+            )
+        ]
+
+    return None
+
+
 def _infer_company_info_type(text: str) -> str:
     """Best-effort router for fallback paths when NLU confidence collapses."""
     normalized = text.lower()
+    if any(token in normalized for token in (
+        "diversity",
+        "inclusion",
+        "inclusive",
+        "equity",
+        "equal",
+        "gender",
+    )):
+        return "diversity"
+    if any(token in normalized for token in (
+        "governance",
+        "transparency",
+        "transparent",
+        "anti corruption",
+        "anti-corruption",
+    )):
+        return "governance"
+    if any(token in normalized for token in (
+        "ethics",
+        "ethical",
+        "integrity",
+        "compliance",
+    )):
+        return "ethics"
+    if any(token in normalized for token in ("sustainability", "sustainable", "green")):
+        return "sustainability"
     if any(
         token in normalized
         for token in (
@@ -662,7 +1015,6 @@ def _infer_company_info_type(text: str) -> str:
         "candidate profile",
         "candidate qualities",
         "candidate",
-        "requirements",
         "experience required",
         "airport experience",
         "do i need to be an architect",
@@ -777,12 +1129,20 @@ def _infer_company_info_type(text: str) -> str:
         return "offices"
     if any(token in normalized for token in ("mission", "purpose")):
         return "mission"
+    if any(token in normalized for token in (
+        "values",
+        "value",
+        "believe in",
+        "principles",
+        "stand for",
+        "about us page",
+        "about us",
+    )):
+        return "values"
     if any(token in normalized for token in ("history", "heritage", "story")):
         return "history"
     if any(token in normalized for token in ("approach", "method", "process", "work")):
         return "approach"
-    if any(token in normalized for token in ("sustainability", "sustainable", "green")):
-        return "sustainability"
     if any(
         token in normalized
         for token in (
@@ -799,6 +1159,11 @@ def _infer_company_info_type(text: str) -> str:
         )
     ):
         return "patents"
+    if any(token in normalized for token in (
+        "innovation", "innovations", "innovative", "invent", "inventions",
+        "new technology", "new technologies", "research and development",
+    )):
+        return "innovation"
     if any(token in normalized for token in ("team", "people", "staff")):
         return "team"
     if any(
@@ -853,10 +1218,90 @@ class ActionAnswerCompanyQuery(Action):
         schedule_reset_events = schedule_topic_shift_events(tracker)
 
         lang = get_lang(tracker)
-        lang_event = [SlotSet("language", lang)] if lang else []
-
+        lang_event = [SlotSet("language", lang)]
         raw_text = tracker.latest_message.get("text", "")
-        from .actions import ActionListProjects, _looks_like_project_geo_query
+        company_context_events = [
+            SlotSet("project_name", None),
+            SlotSet("person_name", None),
+        ]
+
+        custom_answer_parts = _custom_company_answer(raw_text)
+        if custom_answer_parts:
+            for msg in translate_responses(custom_answer_parts, lang):
+                dispatcher.utter_message(text=msg)
+            return schedule_reset_events + company_context_events + lang_event
+
+        from .calendly_actions import looks_like_new_schedule_request, run_calendly_scheduling
+
+        if looks_like_new_schedule_request(tracker.latest_message.get("text") or ""):
+            return schedule_reset_events + run_calendly_scheduling(dispatcher, tracker, domain)
+
+        intent = tracker.latest_message.get("intent", {}).get("name", "")
+
+        # ── Portfolio ranking / filtering / statistics ───────────────────────
+        from .actions import ActionListProjects as _ActionListProjects, _portfolio_request
+
+        if intent in {"ask_projects_ranking", "ask_projects_filter"} or (
+            looks_like_portfolio_query(raw_text)
+            and infer_inquiry_type(raw_text) != "project_size"
+            and _portfolio_request(tracker) is not None
+        ):
+            return _ActionListProjects().run(dispatcher, tracker, domain)
+
+        # ── Client / contractor due-diligence inquiries + fellowship ─────────
+        inquiry_type = ""
+        intent_suffix = intent[len("ask_company_"):] if intent.startswith("ask_company_") else ""
+        if intent_suffix in INQUIRY_TYPES:
+            inquiry_type = intent_suffix
+        from .actions import _previous_user_texts
+        from .fellowship_data import fellowship_topic
+
+        fellowship_followup = (
+            len(raw_text.split()) <= 9
+            and fellowship_topic(raw_text) in {
+                "eligibility", "dates", "pay", "apply", "selection", "jury", "research",
+                "visa", "mentorship", "after", "vs_internship",
+            }
+            and any(looks_like_fellowship_question(t) for t in _previous_user_texts(tracker))
+        )
+        mentions_internships = _has_any(_client_norm(raw_text), ("intern", "interns", "internship", "internships"))
+        if mentions_internships and looks_like_fellowship_question(raw_text):
+            inquiry_type = ""  # "internships or fellowships?" → static internships answer covers both
+            intent = "ask_company_internships"
+        elif looks_like_fellowship_question(raw_text) or fellowship_followup:
+            inquiry_type = "fellowship"
+        elif not inquiry_type and not looks_like_career_question(raw_text):
+            inquiry_type = infer_inquiry_type(raw_text)
+
+        inquiry_parts = build_inquiry_answer(inquiry_type, raw_text) if inquiry_type else None
+        if inquiry_parts:
+            with_cta = inquiry_type not in {"fellowship", "languages", "awards"}
+            translated = translate_responses(inquiry_parts, lang)
+            for index, msg in enumerate(translated):
+                if with_cta and index == len(translated) - 1:
+                    dispatcher.utter_message(text=msg, buttons=meeting_buttons(lang))
+                else:
+                    dispatcher.utter_message(text=msg)
+            return schedule_reset_events + company_context_events + lang_event
+
+        from .actions import (
+            ActionAnswerProjectQuery,
+            ActionListProjects,
+            _looks_like_project_detail_followup,
+            _looks_like_project_geo_query,
+            _resolve_project,
+        )
+
+        active_project_key, _ = _resolve_project(tracker)
+        if (
+            active_project_key
+            and not looks_like_company_level_question(raw_text)
+            and _looks_like_project_detail_followup(
+                raw_text,
+                has_project_context=True,
+            )
+        ):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         if _mentions_retired_project(raw_text):
             dispatcher.utter_message(
@@ -871,13 +1316,45 @@ class ActionAnswerCompanyQuery(Action):
         if _looks_like_project_geo_query(raw_text):
             return ActionListProjects().run(dispatcher, tracker, domain)
 
-        intent = tracker.latest_message.get("intent", {}).get("name", "")
+        norm_text = _client_norm(raw_text)
+        office_location_query = _looks_like_office_location_query(raw_text)
+        if (
+            not looks_like_career_question(raw_text)
+            and not office_location_query
+            and intent != "ask_company_offices"
+        ):
+            from .services_actions import _infer_service_info_type
+
+            service_info_type = _infer_service_info_type(raw_text)
+            if (
+                service_info_type in {"urbanism", "working_living"}
+                or "bim" in norm_text
+            ):
+                from .services_actions import ActionAnswerServicesQuery
+
+                return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
+
+        if (
+            "bim" in norm_text
+            and not looks_like_career_question(raw_text)
+            and not office_location_query
+        ):
+            from .services_actions import ActionAnswerServicesQuery
+
+            return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
 
         # Strip prefix: "ask_company_overview" → "overview"
         if intent.startswith("ask_company_"):
             info_type = intent.replace("ask_company_", "")
         else:
             info_type = _infer_company_info_type(raw_text)
+
+        raw_info_type = _infer_company_info_type(raw_text)
+        if raw_info_type in {"diversity", "governance", "ethics"}:
+            info_type = raw_info_type
+
+        if info_type != "offices" and _looks_like_office_location_query(raw_text):
+            info_type = "offices"
 
         data_key = COMPANY_DISPATCH.get(info_type)
 
@@ -897,15 +1374,26 @@ class ActionAnswerCompanyQuery(Action):
         if data_key == "clients":
             client_answer_parts = _build_client_answer(tracker, raw_text)
 
+        office_answer_parts = None
+        if data_key == "offices":
+            office_answer_parts = _format_office_answer(raw_text)
+
         output_parts = (
             client_answer_parts
             if client_answer_parts is not None
+            else office_answer_parts
+            if office_answer_parts is not None
             else list(COMPANY_INFO[data_key])
         )
 
         # Append a randomised follow-up prompt (not always — empty string weighted in)
         follow_up_pool = COMPANY_INFO.get("follow_up", [])
-        if follow_up_pool and not lang and client_answer_parts is None:
+        if (
+            follow_up_pool
+            and not lang
+            and client_answer_parts is None
+            and office_answer_parts is None
+        ):
             suffix = random.choice(follow_up_pool + ["", ""])   # 2-in-4 chance of no suffix
             if suffix:
                 output_parts.append(suffix)
@@ -922,4 +1410,9 @@ class ActionAnswerCompanyQuery(Action):
             else:
                 dispatcher.utter_message(text=msg)
 
-        return schedule_reset_events + lang_event
+        if data_key == "founder":
+            company_context_events = [
+                SlotSet("project_name", None),
+                SlotSet("person_name", "mabel_miranda"),
+            ]
+        return schedule_reset_events + company_context_events + lang_event

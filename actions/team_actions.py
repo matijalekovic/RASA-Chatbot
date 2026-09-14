@@ -58,7 +58,10 @@ def _team_page_link(lang: Optional[str]) -> str:
 def _infer_team_info_type(text: str) -> str:
     """Best-effort router for fallback paths when NLU confidence collapses."""
     normalized = text.lower()
-    if any(token in normalized for token in ("leader", "leadership", "management", "founder", "ceo", "cfo")):
+    if any(token in normalized for token in (
+        "leader", "leadership", "management", "founder", "ceo", "cfo",
+        "director", "who runs", "who leads", "in charge", "at the helm", "boss",
+    )):
         return "leadership"
     if any(token in normalized for token in ("architect", "architecture", "design team", "designer")):
         return "architects"
@@ -95,6 +98,46 @@ def _infer_team_info_type(text: str) -> str:
     ):
         return "overview"
     return ""
+
+
+def _looks_like_company_founder_question(text: str) -> bool:
+    normalized = _ascii_norm(text or "")
+    return any(phrase in normalized for phrase in (
+        "who founded", "who started 1pax", "who started the company",
+        "who started the studio", "who created 1pax", "who created the company",
+        "who established 1pax", "founder of 1pax", "how was 1pax founded",
+    ))
+
+
+def _looks_like_generic_innovation_question(text: str) -> bool:
+    normalized = _ascii_norm(text or "").strip(" .!?,;:")
+    if any(marker in normalized for marker in (
+        "who leads innovation", "who handles innovation", "innovation officer",
+        "innovation director", "communications and innovation",
+    )):
+        return False
+    return normalized in {
+        "innovation", "innovations", "your innovation", "your innovations",
+        "tell me about innovation", "tell me about innovations",
+        "tell me about your innovation", "tell me about your innovations",
+        "what are your innovations", "show me your innovations",
+    }
+
+
+def _looks_like_studio_director_question(text: str) -> bool:
+    normalized = _ascii_norm(text or "")
+    if "director" not in normalized:
+        return False
+    if any(specific in normalized for specific in (
+        "project director", "airport director", "airport project", "creative director",
+        "design director", "communications director", "innovation director",
+    )):
+        return False
+    return any(marker in normalized for marker in (
+        "who is director", "who is the director", "who is your director",
+        "who is 1pax director", "director of 1pax", "studio director",
+        "company director", "who directs 1pax",
+    ))
 
 
 # ── Name lookup helpers ────────────────────────────────────────────────────────
@@ -136,12 +179,14 @@ _ROLE_ALIASES = {
     "business development": "fabiola_espinoza",
     "communications officer": "carla_miranda",
     "chief communications": "carla_miranda",
-    "communications": "carla_miranda",
     "communications lead": "carla_miranda",
     "ccio": "carla_miranda",
     "innovation officer": "carla_miranda",
-    "innovation": "carla_miranda",
-    "patents": "carla_miranda",
+    "who leads innovation": "carla_miranda",
+    "leads innovation": "carla_miranda",
+    "who handles innovation": "carla_miranda",
+    "patents lead": "carla_miranda",
+    "who handles patents": "carla_miranda",
     "barcelona lead": "carla_miranda",
     "barcelona office": "carla_miranda",
     "shanghai representative": "bashan_yang",
@@ -159,14 +204,13 @@ _ROLE_ALIASES = {
     "construction phasing": "boris_stojnic",
     "construction phasing expert": "boris_stojnic",
     "phasing expert": "boris_stojnic",
-    "finance": "ali_fawaz",
-    "finances": "ali_fawaz",
+    "finance manager": "ali_fawaz",
+    "who manages finances": "ali_fawaz",
     "financial officer": "ali_fawaz",
     "business development contact": "fabiola_espinoza",
     "bd contact": "fabiola_espinoza",
     "airport planner": "helene_henriot",
     "visualization": "christos_panagos",
-    "bim": "marko_soskic",
     "bim lead": "marko_soskic",
     "bim coordinator": "marko_soskic",
     "jv contact": "fabiola_espinoza",
@@ -191,6 +235,13 @@ _PERSON_INDEX.update(_ROLE_ALIASES)
 def _lookup_person(value: str) -> Optional[str]:
     """Return canonical person key for a given entity value."""
     norm = _ascii_norm(value.strip())
+
+    if norm in {
+        "innovation", "innovations", "patent", "patents", "communications",
+        "finance", "finances", "bim", "director", "leader", "leadership",
+        "management", "project", "projects",
+    }:
+        return None
 
     # Direct match
     if norm in _PERSON_INDEX:
@@ -235,6 +286,27 @@ def _lookup_person_from_text(text: str) -> Optional[str]:
     return None
 
 
+def _lookup_explicit_role_owner_from_text(text: str) -> Optional[str]:
+    """Resolve a topic owner only when the user explicitly asks *who* owns it.
+
+    Bare topic words such as ``BIM`` and ``innovation`` deliberately stay out of
+    the general person index: otherwise ordinary service/company questions can
+    be hijacked by a team biography.  A guarded owner question is different and
+    should take precedence over any noisy or stale ``person`` entity.
+    """
+    norm = _ascii_norm(text or "")
+    if not re.search(r"\bwho\b", norm):
+        return None
+
+    if re.search(r"\b(?:patents?|innovation|communications?)\b", norm):
+        return "carla_miranda"
+    if re.search(r"\bbim\b", norm):
+        return "marko_soskic"
+    if re.search(r"\bai\b", norm) and re.search(r"\bdigital\b", norm):
+        return "matija_lekovic"
+    return None
+
+
 def _token_matches_alias(alias_token: str, token: str) -> bool:
     """Match names with light inflection, e.g. matija→matiji or lekovic→lekovicu."""
     if alias_token == token:
@@ -249,6 +321,77 @@ def _token_matches_alias(alias_token: str, token: str) -> bool:
 def has_known_person_reference(text: str) -> bool:
     """Public fallback hook for routing known team-member questions."""
     return _lookup_person_from_text(text) is not None
+
+
+def looks_like_person_detail_followup(text: str) -> bool:
+    detail_type = _infer_person_detail_type(text)
+    if detail_type is None:
+        return False
+
+    norm = _ascii_norm(text or "")
+    tokens = set(re.findall(r"[a-z0-9]+", norm))
+    pronoun_markers = {
+        "her",
+        "hers",
+        "she",
+        "him",
+        "his",
+        "he",
+        "their",
+        "theirs",
+        "they",
+        "them",
+    }
+    phrase_markers = (
+        "that person",
+        "this person",
+        "team member",
+        "person profile",
+    )
+    if tokens & pronoun_markers or any(phrase in norm for phrase in phrase_markers):
+        return True
+
+    if detail_type in {"email", "role"} and len(tokens) <= 4:
+        return True
+
+    return False
+
+
+def _infer_person_detail_type(text: str) -> Optional[str]:
+    norm = _ascii_norm(text or "")
+    if not norm:
+        return None
+    if any(term in norm for term in ("email", "e mail", "contact", "reach her", "reach him", "reach them")):
+        return "email"
+    if any(term in norm for term in ("role", "title", "job", "position", "what does she do", "what does he do", "what do they do")):
+        return "role"
+    if any(term in norm for term in ("projects", "project", "worked on", "works on", "portfolio")):
+        return "projects"
+    return None
+
+
+def _person_detail_answer(person_key: str, detail_type: str) -> str:
+    person = PERSONS[person_key]
+    name = person.get("display_name", "This team member")
+    title = person.get("title", "Team member")
+    group = person.get("group", "Team")
+
+    if detail_type == "email":
+        return (
+            f"I do not have a public direct email for **{name}** in the team profile. "
+            "For a routed message, use **contact@1pax.com** or the contact form on "
+            "1pax.com and mention the person or topic."
+        )
+    if detail_type == "role":
+        return f"**{name}** is **{title}** in the 1PAX **{group}** group."
+    if detail_type == "projects":
+        return (
+            f"**{name}**'s public profile lists the role as **{title}**. "
+            "The chatbot does not have a named project-assignment list for each "
+            "person yet, but I can answer project-specific team, scope, and role "
+            "questions if you name the project."
+        )
+    return f"**{name}** — **{title}**."
 
 
 # ── Action ─────────────────────────────────────────────────────────────────────
@@ -268,6 +411,8 @@ class ActionAnswerTeamQuery(Action):
 
         from .calendly_actions import (
             continue_active_calendly_scheduling,
+            looks_like_new_schedule_request,
+            run_calendly_scheduling,
             schedule_topic_shift_events,
         )
 
@@ -275,9 +420,16 @@ class ActionAnswerTeamQuery(Action):
         if schedule_events is not None:
             return schedule_events
         schedule_reset_events = schedule_topic_shift_events(tracker)
+        if looks_like_new_schedule_request(tracker.latest_message.get("text") or ""):
+            return schedule_reset_events + run_calendly_scheduling(
+                dispatcher,
+                tracker,
+                domain,
+            )
 
         lang = get_lang(tracker)
-        lang_event = [SlotSet("language", lang)] if lang else []
+        lang_event = [SlotSet("language", lang)]
+        team_context_events = [SlotSet("project_name", None)]
 
         intent = tracker.latest_message.get("intent", {}).get("name", "")
         raw_text = tracker.latest_message.get("text", "")
@@ -289,9 +441,49 @@ class ActionAnswerTeamQuery(Action):
         if looks_like_career_question(raw_text):
             return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
+        # "what projects have they done?" is about the studio's portfolio, not a person.
+        raw_words = set(re.sub(r"[^a-z0-9 ]+", " ", raw_text.lower()).split())
+        if raw_words & {"projects", "portfolio"} and not has_known_person_reference(raw_text):
+            from .actions import ActionListProjects
+
+            return ActionListProjects().run(dispatcher, tracker, domain)
+
+        if _looks_like_company_founder_question(raw_text):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
+        if _looks_like_generic_innovation_question(raw_text):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
+        if _looks_like_studio_director_question(raw_text):
+            dispatcher.utter_message(
+                text=translate_response(
+                    "1PAX does not list a single generic **Director** title. The studio is led by "
+                    "**Mabel Miranda, Founder & CEO**. If you meant project delivery, "
+                    "**Marija Stevanovic** is the Airport Project Director.",
+                    lang,
+                )
+            )
+            dispatcher.utter_message(text=_team_page_link(lang))
+            return schedule_reset_events + [
+                SlotSet("person_name", "mabel_miranda"),
+                SlotSet("project_name", None),
+            ] + lang_event
+
+        slot_person = tracker.get_slot("person_name")
+        if slot_person and looks_like_person_detail_followup(raw_text):
+            return (
+                schedule_reset_events
+                + team_context_events
+                + self._handle_person_query(dispatcher, tracker, lang)
+            )
+
         # ── Individual person lookup ─────────────────────────────────────────
         if intent == "ask_about_team_member" or _lookup_person_from_text(raw_text):
-            return schedule_reset_events + self._handle_person_query(dispatcher, tracker, lang)
+            return (
+                schedule_reset_events
+                + team_context_events
+                + self._handle_person_query(dispatcher, tracker, lang)
+            )
 
         # ── Group dispatch ───────────────────────────────────────────────────
         if intent.startswith("ask_team_"):
@@ -310,7 +502,7 @@ class ActionAnswerTeamQuery(Action):
                 ),
                 buttons=meeting_buttons(lang),
             )
-            return schedule_reset_events + lang_event
+            return schedule_reset_events + team_context_events + lang_event
 
         translated_parts = translate_responses(list(TEAM_INFO[data_key]), lang)
         translated_parts.append(_team_page_link(lang))
@@ -326,7 +518,7 @@ class ActionAnswerTeamQuery(Action):
             else:
                 dispatcher.utter_message(text=msg)
 
-        return schedule_reset_events + lang_event
+        return schedule_reset_events + team_context_events + lang_event
 
     # ────────────────────────────────────────────────────────────────────────────
 
@@ -338,26 +530,36 @@ class ActionAnswerTeamQuery(Action):
     ) -> List[Dict[Text, Any]]:
         """Look up a person by entity value and return their bio."""
 
-        # Extract person entity from current message — try ALL entities to be
-        # robust against spurious short-token extractions like 'the'
-        person_key = None
-        for entity in tracker.latest_message.get("entities", []):
-            if entity.get("entity") == "person":
-                raw_value = entity.get("value", "")
-                person_key = _lookup_person(raw_value)
-                if person_key:
-                    break
+        raw_text = tracker.latest_message.get("text", "")
 
-        # Fallback: check person_name slot (cross-turn context)
+        # Explicit role-owner wording is stronger evidence than an extracted
+        # entity.  This prevents a noisy entity (or an auto-filled stale slot)
+        # from turning "who manages patents and innovation?" into the wrong bio.
+        person_key = _lookup_explicit_role_owner_from_text(raw_text)
+
+        # Otherwise try ALL current entities to be robust against spurious
+        # short-token extractions like 'the'.
         if not person_key:
+            for entity in tracker.latest_message.get("entities", []):
+                if entity.get("entity") == "person":
+                    raw_value = entity.get("value", "")
+                    person_key = _lookup_person(raw_value)
+                    if person_key:
+                        break
+
+        if not person_key:
+            person_key = _lookup_person_from_text(raw_text)
+
+        # Use prior person context only for genuine anaphoric/detail follow-ups.
+        # A stale Carla slot must never beat a new explicit founder/director query.
+        if not person_key and looks_like_person_detail_followup(
+            raw_text
+        ):
             slot_val = tracker.get_slot("person_name")
             if slot_val:
                 person_key = _lookup_person(slot_val)
 
-        if not person_key:
-            person_key = _lookup_person_from_text(tracker.latest_message.get("text", ""))
-
-        lang_event = [SlotSet("language", lang)] if lang else []
+        lang_event = [SlotSet("language", lang)]
 
         if not person_key or person_key not in PERSONS:
             dispatcher.utter_message(
@@ -371,6 +573,13 @@ class ActionAnswerTeamQuery(Action):
             return lang_event
 
         person = PERSONS[person_key]
+        detail_type = _infer_person_detail_type(tracker.latest_message.get("text", ""))
+        if detail_type:
+            dispatcher.utter_message(
+                text=translate_response(_person_detail_answer(person_key, detail_type), lang)
+            )
+            return [SlotSet("person_name", person_key)] + lang_event
+
         output_parts = list(person["bio"])
 
         # Light follow-up
@@ -389,4 +598,4 @@ class ActionAnswerTeamQuery(Action):
         for msg in translated_parts:
             dispatcher.utter_message(text=msg)
 
-        return lang_event
+        return [SlotSet("person_name", person_key)] + lang_event

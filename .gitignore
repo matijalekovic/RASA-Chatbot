@@ -20,6 +20,7 @@ models/*.tar.gz
 
 # Test artifacts
 tests/results/
+test_results/
 *.log
 
 # Environment / secrets

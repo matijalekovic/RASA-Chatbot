@@ -4,6 +4,7 @@ set -euo pipefail
 PORT=${PORT:-8080}
 RASA=/opt/venv/bin/rasa
 PYTHON=/opt/venv/bin/python
+RASA_MODEL_LAUNCHER=/app/conf/rasa_legacy_optimizer.py
 RASA_PORT=${RASA_PORT:-5005}
 ACTION_PORT=${ACTION_PORT:-5055}
 TRANSLATE_PORT=${TRANSLATE_PORT:-5056}
@@ -14,6 +15,7 @@ ACTION_ENDPOINT_URL=${ACTION_ENDPOINT_URL:-http://127.0.0.1:${ACTION_PORT}/webho
 ACTION_HEALTH_URL=${ACTION_HEALTH_URL:-${ACTION_ENDPOINT_URL%/webhook}/health}
 MODEL_DIR=/app/models
 RUNTIME_ENDPOINTS=/tmp/endpoints.runtime.yml
+SERVICE_PIDS=()
 
 is_true() {
   case "$(echo "${1}" | tr '[:upper:]' '[:lower:]')" in
@@ -34,6 +36,11 @@ pick_model() {
     fi
     echo "[start] ERROR: RASA_MODEL '${RASA_MODEL}' does not exist." >&2
     exit 1
+  fi
+
+  if [[ -f "${MODEL_DIR}/production.tar.gz" ]]; then
+    echo "${MODEL_DIR}/production.tar.gz"
+    return
   fi
 
   local latest
@@ -87,15 +94,35 @@ import sys
 import urllib.request
 
 port = int(sys.argv[1])
+probe_text = "What innovations has 1PAX developed?"
+expected_intent = "ask_company_innovation"
+minimum_confidence = 0.70
 req = urllib.request.Request(
     f"http://127.0.0.1:{port}/model/parse",
-    data=json.dumps({"text": "hello"}).encode("utf-8"),
+    data=json.dumps({"text": probe_text}).encode("utf-8"),
     headers={"Content-Type": "application/json"},
     method="POST",
 )
-with urllib.request.urlopen(req, timeout=10):
-    pass
-print("[start] Warm-up parse completed.")
+with urllib.request.urlopen(req, timeout=30) as response:
+    payload = json.load(response)
+
+intent = payload.get("intent") or {}
+intent_name = intent.get("name")
+confidence = float(intent.get("confidence") or 0.0)
+if intent_name != expected_intent or confidence < minimum_confidence:
+    print(
+        "[start] ERROR: Model readiness probe failed: "
+        f"expected {expected_intent!r} >= {minimum_confidence:.2f}, "
+        f"got {intent_name!r} at {confidence:.4f}.",
+        file=sys.stderr,
+    )
+    print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+    sys.exit(1)
+
+print(
+    "[start] Model readiness probe passed: "
+    f"{intent_name} at {confidence:.4f}."
+)
 PY
 }
 
@@ -123,6 +150,7 @@ MODEL_PATH="$(pick_model)"
 MODEL_FILE="$(basename "${MODEL_PATH}")"
 
 echo "[start] Rasa binary: ${RASA}"
+echo "[start] Rasa model launcher: ${RASA_MODEL_LAUNCHER}"
 echo "[start] Model files:"
 ls -1 "${MODEL_DIR}" 2>&1
 echo "[start] Selected model: ${MODEL_FILE}"
@@ -133,16 +161,22 @@ if grep -q "NGINX_PORT" /etc/nginx/conf.d/chatbot.conf; then
 fi
 
 cleanup() {
-  kill 0 >/dev/null 2>&1 || true
+  local pid
+  trap - EXIT INT TERM
+  for pid in "${SERVICE_PIDS[@]}"; do
+    kill "${pid}" >/dev/null 2>&1 || true
+  done
 }
 trap cleanup EXIT INT TERM
 
 echo "[start] Starting translation proxy server on port ${TRANSLATE_PORT}..."
 PYTHONUNBUFFERED=1 "${PYTHON}" -u /app/translation_server.py 2>&1 | sed 's/^/[translate] /' &
+SERVICE_PIDS+=("$!")
 
 if is_true "${RUN_LOCAL_ACTIONS}"; then
   echo "[start] Starting local action server on port ${ACTION_PORT}..."
   PYTHONUNBUFFERED=1 "${RASA}" run actions --port "${ACTION_PORT}" 2>&1 | sed 's/^/[actions] /' &
+  SERVICE_PIDS+=("$!")
 else
   echo "[start] RUN_LOCAL_ACTIONS=false; using external action server."
 fi
@@ -150,12 +184,13 @@ fi
 write_runtime_endpoints
 
 echo "[start] Starting Rasa API server on port ${RASA_PORT}..."
-PYTHONUNBUFFERED=1 "${RASA}" run \
+PYTHONUNBUFFERED=1 "${PYTHON}" "${RASA_MODEL_LAUNCHER}" run \
   --enable-api \
   --cors "*" \
   --port "${RASA_PORT}" \
   --model "${MODEL_PATH}" \
   --endpoints "${RUNTIME_ENDPOINTS}" 2>&1 | sed 's/^/[rasa] /' &
+SERVICE_PIDS+=("$!")
 
 wait_for_http "translation proxy" "http://127.0.0.1:${TRANSLATE_PORT}/health" "${BOOT_TIMEOUT_SECONDS}"
 if is_true "${WAIT_FOR_ACTIONS}"; then
@@ -163,10 +198,18 @@ if is_true "${WAIT_FOR_ACTIONS}"; then
 fi
 wait_for_http "rasa API" "http://127.0.0.1:${RASA_PORT}/status" "${BOOT_TIMEOUT_SECONDS}"
 
-if ! warm_up_rasa; then
-  echo "[start] WARN: Warm-up parse failed; continuing."
-fi
+warm_up_rasa
 
 echo "[start] Backends are warm. Starting nginx on port ${PORT}..."
 nginx -t
-exec nginx -g "daemon off;"
+nginx -g "daemon off;" &
+SERVICE_PIDS+=("$!")
+
+echo "[start] Monitoring ${#SERVICE_PIDS[@]} managed services."
+set +e
+wait -n "${SERVICE_PIDS[@]}"
+service_status=$?
+set -e
+
+echo "[start] ERROR: A managed service exited (status ${service_status}); restarting container." >&2
+exit 1

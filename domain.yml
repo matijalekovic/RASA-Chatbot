@@ -96,17 +96,33 @@ intents:
   - ask_schedule_meeting
   - provide_schedule_name
   - provide_schedule_email
+  - provide_schedule_purpose
   - provide_schedule_time_preference
   - select_schedule_slot
   - confirm_schedule_booking
   - cancel_schedule_booking
   # ── Other ─────────────────────────────────────────────────────────────────
   - out_of_scope
+  - ask_projects_ranking
+  - ask_projects_filter
+  - ask_company_awards
+  - ask_company_fellowship
+  - ask_company_languages
+  - ask_company_local_presence
+  - ask_company_engineering
+  - ask_company_partners
+  - ask_company_beyond_airports
+  - ask_company_project_size
+  - ask_company_engagement
+  - ask_company_project_stages
+  - ask_company_certifications
+  - ask_company_track_record
 
 entities:
   - project
   - person
   - client
+  - __lang__
 
 slots:
   language:

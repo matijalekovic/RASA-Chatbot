@@ -151,5 +151,23 @@ GOOGLE_CALENDAR_SEND_UPDATES=all
 GOOGLE_CALENDAR_EVENT_SUMMARY="1PAX consultation"
 ```
 
-Employees should block unavailable time directly on their calendars. The bot
-uses Google FreeBusy immediately before event creation to avoid stale slots.
+## Office holidays
+
+Employees should still block personal unavailable time directly on their
+calendars. For office-wide holidays that may not be on every colleague calendar,
+the scheduler also supports an office-holiday list:
+
+```bash
+GOOGLE_CALENDAR_OFFICE_HOLIDAYS_JSON='{
+  "Barcelona": ["2026-06-24: Sant Joan"],
+  "Paris": ["2026-07-14: Bastille Day"],
+  "all": ["2026-01-01: New Year"]
+}'
+```
+
+Use `YYYY-MM-DD` for one-off holidays or `MM-DD` for annually recurring dates.
+The bot blocks New Year's Day for all offices and June 24 for Barcelona by
+default.
+
+The bot still uses Google FreeBusy immediately before event creation to avoid
+stale slots.

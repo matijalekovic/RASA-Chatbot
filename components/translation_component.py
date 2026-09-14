@@ -113,6 +113,8 @@ _ENGLISH_HINT_WORDS = {
     "hi",
     "how",
     "in",
+    "innovation",
+    "innovations",
     "is",
     "kind",
     "list",
@@ -124,7 +126,10 @@ _ENGLISH_HINT_WORDS = {
     "overview",
     "pax",
     "projects",
+    "project",
+    "proposal",
     "schedule",
+    "scope",
     "services",
     "show",
     "sofia",
@@ -139,6 +144,7 @@ _ENGLISH_HINT_WORDS = {
     "work",
     "you",
     "your",
+    "supervision",
 }
 
 try:
@@ -202,19 +208,51 @@ class TranslationComponent(GraphComponent):
             return
 
         metadata = message.get("metadata") or {}
-        metadata_lang = _normalize_lang_code(metadata.get("lang"))
-        if metadata_lang:
-            # The web UI normally translates user input to English before
-            # sending it to Rasa, and carries the target response language in
-            # metadata. If that proxy returns the original non-English text,
-            # do one more guarded translation pass here instead of letting NLU
-            # classify untranslated Serbian/French/etc.
-            self._set_lang_entity(message, metadata_lang)
-            if _looks_like_english(text):
+        response_raw = (
+            metadata.get("response_lang")
+            if "response_lang" in metadata
+            else metadata.get("lang")
+        )
+        response_lang = _normalize_lang_code(response_raw)
+        input_lang_raw = metadata.get("input_lang")
+        input_lang_confident = metadata.get("input_lang_confident") is True
+        input_translated = metadata.get("input_translated") is True
+
+        # New UI contract: the proxy already translated the input exactly once.
+        # Carry the response language forward, but never paraphrase the English
+        # text a second time merely because the selected response language is not EN.
+        if input_translated:
+            if response_lang:
+                self._set_lang_entity(message, response_lang)
+            return
+
+        # If the proxy confidently identified raw input but could not translate
+        # it, use that actual input language rather than a stale button/geo hint.
+        if input_lang_confident and isinstance(input_lang_raw, str):
+            input_lang = _normalize_lang_code(input_lang_raw)
+            if not input_lang:  # Explicit, confidently identified English.
                 return
+            self._set_lang_entity(message, input_lang)
             if not self._api_key:
                 return
-            translated = self._translate_to_english(text, metadata_lang)
+            translated = self._translate_to_english(text, input_lang)
+            if translated:
+                message.set("text", translated)
+                logger.debug(f"[translate-in:identified] → EN: '{text}' → '{translated}'")
+            return
+
+        # Legacy contract: metadata.lang is a response preference and usually
+        # accompanies input the UI already translated. Protect clear English;
+        # otherwise retain the old guarded fallback for raw non-English callers.
+        if response_raw is not None and _looks_like_english(text):
+            if response_lang:
+                self._set_lang_entity(message, response_lang)
+            return
+        if response_lang:
+            self._set_lang_entity(message, response_lang)
+            if not self._api_key:
+                return
+            translated = self._translate_to_english(text, response_lang)
             if translated:
                 message.set("text", translated)
                 logger.debug(f"[translate-in:metadata] → EN: '{text}' → '{translated}'")
@@ -296,14 +334,19 @@ def _looks_like_english(text: str) -> bool:
     tokens = re.findall(r"[a-zA-Z]+", text.lower())
     if not tokens:
         return False
-    if len(tokens) > 8:
-        return False
+    # ``airport`` is an unambiguous English token.  Treat it as decisive in a
+    # short domain query so a misspelled place name (for example
+    # "belgarde airport") cannot make langdetect switch the answer to French.
+    if len(tokens) <= 4 and "airport" in tokens:
+        return True
     hits = sum(token in _ENGLISH_HINT_WORDS for token in tokens)
     if hits == len(tokens):
         return True
     starters = {"who", "what", "where", "when", "how", "tell", "show", "give", "can", "does", "is"}
     if tokens[0] in starters and hits >= max(2, len(tokens) // 2):
         return True
+    if len(tokens) > 8:
+        return hits >= max(4, int(len(tokens) * 0.35))
     return hits >= max(3, int(len(tokens) * 0.6))
 
 

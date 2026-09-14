@@ -102,7 +102,6 @@ nlu:
     - what are your current projects?
     - show me your work
     - give me an overview of all projects
-    - which projects have you completed?
     - what projects are you working on?
     - 1PAX portfolio
     - I want to see your portfolio
@@ -119,12 +118,6 @@ nlu:
     - what's your work like
     - what other project did you do
     - what other projects did you do
-    - how many projects has 1PAX completed?
-    - how many projects have you done?
-    - how many buildings has 1PAX designed?
-    - how many projects has 1PAX delivered?
-    - how many projects has 1PAX built?
-    - how many projects does 1PAX have in total?
     - how many total projects has 1PAX completed?
     - can you provide references — what have you delivered?
     - how many completed projects do you have?
@@ -153,13 +146,10 @@ nlu:
     - show me your catalogue
     - show me the full catalogue
     - I'm exploring your portfolio
-    - what's your biggest project
     - what's your most famous project
     - what projects are you most proud of
     - what's your signature project
-    - any completed projects
     - what projects have you delivered
-    - show me your completed work
     - what commissions have you had
     - what have you designed
     - what have you been working on
@@ -168,7 +158,6 @@ nlu:
     - any impressive projects
     - what buildings have you designed
     - any international projects
-    - how many projects have you done
     - what projects does 1PAX do?
     - what projects does 1PAX work on?
     - what are the projects?
@@ -176,10 +165,6 @@ nlu:
     - what are the projects at 1PAX?
     - show me the projects
     - list the projects
-    - what is 1PAX's track record with large-scale projects?
-    - what is 1PAX's track record on major projects?
-    - what does 1PAX's project track record look like?
-    - what is 1PAX's experience with large projects?
     - what is 1PAX's delivery record?
     - what are your plans for airports?
     - what are your plans for projects?
@@ -225,7 +210,7 @@ nlu:
     - do you do eVTOL infrastructure
     - any electric aviation projects
     - future of mobility projects
-    - do you work on metro stations
+    - show me your metro station projects
     - metro or underground projects
     - show me all the airports you've designed
     - what airports have you delivered?
@@ -298,9 +283,18 @@ nlu:
     - what categories of work do you do
     - what do you specialize in by type
     - show me your mobility projects
+    - show me urbanism projects
+    - show me projects by service urbanism
+    - which projects are urbanism and masterplan work?
+    - show me BIM project examples
+    - which projects used BIM?
+    - show me projects by service
+    - what projects do you have for Future of Mobility?
     - show me interior design work
     - show me industrial buildings
     - show me future mobility projects
+    - show me working and living projects
+    - show me control tower projects
     - are there airports in Africa?
     - what airports do you have in Africa?
     - do you work in francophone Africa?
@@ -354,9 +348,6 @@ nlu:
     - tell me about the airport project
     - tell me more about the airport project
     - Sofia Airport project
-    - tell me about the [biggest project](project)
-    - what is the [biggest project](project)?
-    - show me [your flagship project](project)
     - what's the airport project?
     - the terminal project
     - I'm interested in the airport project
@@ -2076,16 +2067,12 @@ nlu:
     - who set it up?
     - who's the founder?
     - who created the studio?
-    - who's the boss
-    - who's in charge
     - who started all this
     - who's the visionary behind 1PAX
     - who's the person behind the studio
     - is 1PAX woman-owned
     - is 1PAX owned by a woman
-    - who is the architect in charge
     - who conceived 1PAX
-    - who's the creative director
 
 # ── Company: offices / locations ──────────────────────────────────────────────
 
@@ -2133,6 +2120,21 @@ nlu:
     - where is the company located?
     - where is your company located?
     - where is the 1PAX company located?
+    - do you have an office in Madrid?
+    - is there a 1PAX office in Spain?
+    - do you have an office in Spain?
+    - is there an office near Madrid?
+    - which office is closest to Madrid?
+    - do you have a studio in Lisbon?
+    - is there a 1PAX office in the UK?
+    - where are your office addresses?
+    - what cities are your offices in?
+    - where are your global offices?
+    - do you have an office in London?
+    - is there a 1PAX office in the United States?
+    - which office is closest to Portugal?
+    - what is the nearest 1PAX office to Germany?
+    - if you do not have an office here which one should I contact?
 
 # ── Company: team ─────────────────────────────────────────────────────────────
 
@@ -2140,11 +2142,9 @@ nlu:
   examples: |
     - what is the team like at 1PAX?
     - how big is 1PAX?
-    - how many people work at 1PAX?
     - is 1PAX a large firm?
     - what kind of professionals work at 1PAX?
     - how diverse is the team?
-    - how many languages does 1PAX speak?
     - what disciplines are in the team?
     - is 1PAX interdisciplinary?
     - what's the makeup of the team?
@@ -2156,16 +2156,11 @@ nlu:
     - what makes up the 1PAX team?
     - how does the team work together?
     - is 1PAX a multicultural company?
-    - what languages does the team speak?
-    - how many employees does 1PAX have
-    - how many people are on the team
     - what's the headcount
-    - is 1PAX a small firm
     - is it a boutique studio
     - what backgrounds do your people come from
     - do you have civil engineers
     - do you work with consultants
-    - what's the size of the team
     - is it a big or small team
     - how international is 1PAX?
     - is 1PAX an international company?
@@ -2212,7 +2207,6 @@ nlu:
     - do you have experience in Latin America
     - what building types do you design
     - what's your main business
-    - do you build hospitals
     - do you design transit hubs
     - what projects do you usually work on
     - what is your niche
@@ -2371,11 +2365,19 @@ nlu:
     - what is 1PAX doing to promote sustainability?
     - how does 1PAX promote sustainability?
     - what is 1PAX's commitment to sustainable development?
+    - what is your sustainability approach?
+    - how do you approach sustainable design?
 
 # ── Company: innovation ───────────────────────────────────────────────────────
 
 - intent: ask_company_innovation
   examples: |
+    - innovation
+    - innovations
+    - your innovations
+    - tell me about your innovations
+    - show me 1PAX innovations
+    - what are your main innovations?
     - how innovative is 1PAX?
     - what innovations has 1PAX developed?
     - what proprietary innovations does 1PAX have?
@@ -2457,7 +2459,7 @@ nlu:
     - tell me about your patent portfolio
     - what patent families does 1PAX highlight?
     - do you commercialize patents?
-    - does 1PAX license its innovations?
+    - which 1PAX innovations are protected by patents?
     - what patents are available for licensing?
 
 # ── Company: urbanism / regenerative design ───────────────────────────────────
@@ -2528,13 +2530,10 @@ nlu:
     - how do you manage quality
     - what's your working style
     - from concept to construction — what's your process
-    - do you work in phases
     - how do you ensure client satisfaction
     - how do you communicate with clients
     - what methodology does 1PAX use?
     - what is the creative process at 1PAX?
-    - what RIBA stages do you cover
-    - do you do RIBA Stage 2 through 4
     - do you work from concept to construction documents
     - how do you coordinate with structural engineers
     - what is your quality management process
@@ -2589,7 +2588,6 @@ nlu:
     - what companies or bodies hire you
     - any well-known clients
     - what's your client profile
-    - have you partnered with international firms before?
     - do you work with international architecture firms?
     - do you collaborate with other firms on joint ventures?
     - have you done joint ventures with other studios?
@@ -2615,9 +2613,20 @@ nlu:
     - does 1PAX collaborate with technology partners?
     - does 1PAX work with tech firms?
     - do you partner with technology companies?
+    - can we discuss a strategic partnership?
+    - who should investors contact at 1PAX?
+    - can an investor partner with 1PAX?
+    - I am an investor interested in airport concessions
+    - I represent an investor interested in airport infrastructure
+    - do you do commercial partnerships?
+    - can we form a joint venture with 1PAX?
     - do you work in the Gulf region?
+    - do you work outside Serbia?
+    - does 1PAX work internationally?
+    - can 1PAX take projects outside Europe?
+    - do you have awards or recognition?
+    - has 1PAX won any awards?
     - what is your experience working with other firms?
-    - what is your track record working with other architecture firms?
     - have you collaborated with other design firms?
     - what is your experience as a specialist sub-consultant?
     - do you work with government ministries?
@@ -2649,7 +2658,6 @@ nlu:
     - do you have vertiport or eVTOL clients?
     - who are your commercial retail clients?
     - who are your banking or developer clients?
-    - do you have technology and engineering partners?
     - which clients are linked to Siemens or SETEC?
     - who are your clients in the Middle East?
     - which Gulf clients has 1PAX worked with?
@@ -2764,9 +2772,6 @@ nlu:
     - where is the contact form?
     - can I use the Say Ciao form?
     - can I upload my CV on the website?
-    - where are your office addresses?
-    - what cities are your offices in?
-    - where are your global offices?
     - what is the Paris office phone number?
     - what is the Belgrade office phone number?
     - what is the Lima office phone number?
@@ -2774,6 +2779,16 @@ nlu:
     - what is the Barcelona office phone number?
     - how can I speak to someone at 1PAX?
     - I need to contact your studio
+    - can we sign an NDA before sharing project documents?
+    - we need an NDA before discussing the project
+    - how should I send confidential project information?
+    - what is your privacy policy for meeting data?
+    - what do you do with my personal data if I book a meeting?
+    - do not let me upload private files here
+    - where can journalists request press images?
+    - can I get press photos of a project?
+    - I am a journalist and need press images
+    - who handles media kit requests?
 
 # ── Company: what makes 1PAX different ───────────────────────────────────────
 
@@ -2827,6 +2842,8 @@ nlu:
     - what's the most distinctive thing about 1PAX?
     - what is the most impressive thing about 1PAX?
     - what would impress me most about 1PAX?
+    - what awards have you won?
+    - what recognition has the studio received?
     - what's unique about 1PAX as a firm?
     - what makes the firm special?
     - what is most noteworthy about 1PAX?
@@ -3034,7 +3051,6 @@ nlu:
     - does 1PAX offer health insurance?
     - does 1PAX offer paid leave?
     - are internships paid?
-    - is the graduate fellowship paid?
     - do you pay interns?
     - what is the pay for junior architects?
     - what is the salary for senior architects?
@@ -3070,7 +3086,6 @@ nlu:
     - can I choose which office to work from?
     - what office would I join?
     - is visa support available for internships?
-    - can you sponsor a graduate fellowship visa?
     - do I need work authorization before applying?
     - should I mention visa needs in my application?
 
@@ -3187,11 +3202,7 @@ nlu:
     - does 1PAX offer internships?
     - does 1PAX offer graduate positions?
     - is there a graduate program at 1PAX?
-    - what is the fellowship program?
-    - is there a grad fellowship at 1PAX?
-    - tell me about the graduate fellowship
     - what opportunities are there for students?
-    - tell me about the 1PAX fellowship
     - can students apply to 1PAX?
     - does 1PAX have a program for recent graduates?
     - do you take interns?
@@ -3210,8 +3221,6 @@ nlu:
     - how can graduates join 1PAX?
     - does 1PAX mentor interns?
     - do you have student opportunities?
-    - how do I apply for the fellowship?
-    - is the fellowship for underserved communities?
 
 # ── Company: open roles ────────────────────────────────────────────────────────
 
@@ -3292,6 +3301,11 @@ nlu:
     - what values does the company have?
     - what are the values of the firm?
     - what values does this studio have?
+    - tell me about the 1PAX about us page
+    - what does the about us page say about 1PAX values?
+    - what does 1PAX say about itself on the about us page?
+    - what are the values from your about us page?
+    - summarize the about us values
 
 # ── Company: ethical framework / UN Global Compact ───────────────────────────
 
@@ -3501,7 +3515,6 @@ nlu:
     - how inclusive is 1PAX?
     - does 1PAX have a diversity program?
     - does 1PAX hire from underrepresented groups?
-    - what is the 1PAX Grad Fellowship?
     - does 1PAX support architects from developing countries?
     - what does LMIC mean at 1PAX?
     - does 1PAX support women in architecture?
@@ -3516,7 +3529,6 @@ nlu:
     - how does 1PAX promote inclusion?
     - does 1PAX have equal opportunity employment?
     - does 1PAX accept people of all religions?
-    - does 1PAX have a fellowship for young architects?
     - how does 1PAX give back to underserved communities?
     - is everyone welcome at 1PAX
     - does 1PAX have people from all backgrounds
@@ -3750,6 +3762,20 @@ nlu:
     - can I book a call about an airport terminal project?
     - I would like to book a call about an airport terminal
     - can we schedule time to discuss an airport terminal project?
+    - I want to schedule a meeting about an airport terminal project.
+    - I would like to schedule a meeting for the airport project.
+    - schedule a consultation about an airport project
+    - I want to schedule a meeting. My name is Lina Test, email lina.test@example.com. Purpose: airport terminal feasibility study in Lima. Next week works.
+    - can we schedule a hotel renovation consult?
+    - I want to book a call about a Barcelona office project
+    - can I meet Carla next week?
+    - does Paris have availability for a project call?
+    - I want to discuss a Dubai airport proposal
+    - are you free next week for an airport project?
+    - can I book 30 minutes in Paris?
+    - I already booked a meeting and need to reschedule it
+    - please cancel my appointment
+    - will this invite appear on my Google Calendar?
     - I need a meeting about an airport terminal design
     - book a consultation about an airport project
     - can I arrange a consultation about a terminal project?
@@ -3759,6 +3785,9 @@ nlu:
     - can we talk to someone about terminal architecture?
     - arrange a meeting for next week
     - book a meeting tomorrow afternoon
+    - book me tomorrow with Mabel at 10 am
+    - please book me a meeting with Mabel tomorrow
+    - reserve a call with the studio for next week
     - schedule a call next Tuesday morning
     - can we talk this week?
     - I want a consultation next week
@@ -3792,6 +3821,10 @@ nlu:
     - change my name to Julia Novak
     - correct the name to Marco Silva
     - the name should be Elena Costa
+    - Jordan Cancel
+    - Noah Stopford
+    - Ana María ONeil
+    - Morgan Tester
 
 - intent: provide_schedule_email
   examples: |
@@ -3811,6 +3844,17 @@ nlu:
     - update the email to marco@airportco.com
     - correct email is elena@developer.com
     - that email is wrong, use ana@studio.com
+
+- intent: provide_schedule_purpose
+  examples: |
+    - the meeting is about an airport terminal feasibility study in Lima
+    - I would like to discuss airport terminal concept design for a new concession
+    - the purpose is construction supervision
+    - I want the meeting to cover a hotel renovation consultation
+    - let's discuss a residential tower concept design
+    - the call is about an airport terminal feasibility and passenger flow study
+    - I would like to discuss an urban mobility hub proposal
+    - the meeting topic is an office building refurbishment consultation
 
 - intent: provide_schedule_time_preference
   examples: |
@@ -3962,7 +4006,6 @@ nlu:
     - what do you know about
     - what other things can you help with
     - are you able to do other things
-    - what is your purpose
     - what do you do exactly
     - can you do anything else
     - is there anything else you can help me with
@@ -4026,6 +4069,8 @@ nlu:
     - Terminal 3 International
     - Sofia Airport Terminal 3
     - Sofia Airport Terminal 2
+    - Sofia Airport – Terminal 3 International & Terminal 2 Refurbishment
+    - Sofia Airport - Terminal 3 International & Terminal 2 Refurbishment
     - Bulgarian airport
     - Bulgaria airport
     - sofia
@@ -4033,6 +4078,13 @@ nlu:
     - sofia project
     - Sofia project
     - the sofia project
+    - Belgrade Airport – Phase 1 & Phase 2 Terminal Expansion
+    - Velana International Airport – New Terminal Building
+    - Bordeaux–Mérignac Airport – Hall B New Façades
+    - Pointe-à-Pitre
+    - Pointe-à-Pitre International Airport – New Terminal Extension (Winner)
+    - Pointe-à-Pitre International Airport – Terminal 2 Extension
+    - AIK Bank – Branches and ATM Network Design
 
 # ── Lookup table (helps DIETClassifier recognise client names as entities) ───
 
@@ -4097,6 +4149,478 @@ nlu:
     - Doha Metro
     - Doha West Metro Depot
 
+
+# ── Client due diligence, portfolio insights & fellowship (2026-09) ─────────
+
+- intent: ask_projects_ranking
+  examples: |
+    - what is the biggest project you did?
+    - what's your biggest project
+    - what is 1PAX's largest project?
+    - which is the largest project you have built?
+    - what's the smallest project you've done?
+    - what is your smallest project?
+    - what is the most expensive project you worked on?
+    - which project had the biggest budget?
+    - what's the cheapest project in your portfolio?
+    - which project had the lowest budget?
+    - which of your airports handles the most passengers?
+    - what is the busiest airport you designed?
+    - what is your newest project?
+    - what is the latest project you worked on?
+    - what are your most recent projects?
+    - what was 1PAX's first project?
+    - what is the oldest project in the portfolio?
+    - which project took the longest?
+    - what are your top 5 biggest projects?
+    - list your three largest airport projects
+    - what is the largest terminal you have designed?
+    - what is the smallest airport project you did?
+    - which is your biggest interior design project?
+    - what's the largest built project by square meters?
+    - rank your projects by budget
+    - sort your projects by passenger capacity
+    - which project has the highest capex?
+    - largest GFA project in your portfolio
+    - what's the highest-value contract you delivered?
+    - what is the biggest thing you ever built
+    - whats ur biggest job
+    - is Sofia your biggest project?
+    - is Velana the most expensive project you did?
+    - what's the smallest job you ever did
+    - the biggest one you've done?
+    - biggest project
+    - smallest project
+    - most expensive project
+    - newest project
+    - which project has the largest floor area?
+    - what is your largest project in terms of passengers per year?
+    - what's the most recent airport you worked on?
+    - which projects have the biggest budgets?
+    - what are your most important projects?
+    - which projects are you most proud of?
+    - what are your flagship projects?
+    - what are your signature projects?
+    - what is your most famous project?
+    - what are your landmark projects?
+    - which projects best represent 1PAX?
+
+- intent: ask_projects_filter
+  examples: |
+    - which projects are built?
+    - which of your projects have been built?
+    - which projects have you completed so far?
+    - show me completed projects only
+    - which projects are under construction?
+    - what are you working on right now?
+    - what projects are currently under construction?
+    - which projects are still ongoing?
+    - show me projects in progress
+    - which projects were competition entries?
+    - what competitions have you entered?
+    - which projects were studies or feasibility work?
+    - what consultancy projects have you done?
+    - which projects were concession bids?
+    - which projects were never built?
+    - show me your unbuilt projects
+    - what renovation projects have you done?
+    - do you have experience with refurbishment of live terminals?
+    - which projects were extensions of existing terminals?
+    - what greenfield projects have you designed?
+    - show me your new build projects
+    - how many projects have you done?
+    - how many projects has 1PAX completed?
+    - how many projects does 1PAX have in total?
+    - how many projects has 1PAX delivered?
+    - how many buildings has 1PAX designed?
+    - how many countries have you worked in?
+    - in how many countries do you have projects?
+    - how many of your projects are built?
+    - give me your portfolio in numbers
+    - what are the key figures of your portfolio?
+    - group your projects by budget
+    - group your projects by size
+    - show your projects by year
+    - list your projects in chronological order
+    - break down your projects by status
+    - categorize your projects by how they were won
+    - which airport projects are under construction?
+    - which interior projects have been completed?
+    - what brownfield airport work have you done?
+    - can I visit any of your built projects?
+    - which of your projects are operational today?
+    - what is the status breakdown of your portfolio?
+    - projects under construction
+    - built projects
+
+- intent: ask_company_awards
+  examples: |
+    - what awards has 1PAX won?
+    - did you win any competitions?
+    - which competitions has 1PAX won?
+    - how many competitions have you won?
+    - have you won any architecture prizes?
+    - what prizes has the studio received?
+    - is 1PAX an award-winning firm?
+    - what recognition has 1PAX received?
+    - any design competition wins?
+    - which international competitions did you win?
+    - did you get any second prizes in competitions?
+    - what are your competition results?
+    - has your work been recognized internationally?
+    - do you have any industry awards?
+    - what honours has 1PAX received?
+    - list your competition wins
+    - awards
+    - competition wins
+    - have you ever won an architecture competition?
+    - what's your win rate in competitions?
+    - did you win first prize for anything?
+
+- intent: ask_company_fellowship
+  examples: |
+    - what is the 1PAX fellowship?
+    - tell me about the graduate fellowship
+    - tell me about the 1PAX Graduate Fellowship 2026
+    - is there a grad fellowship at 1PAX?
+    - what is the fellowship program?
+    - how do I apply for the fellowship?
+    - is the fellowship paid?
+    - is the graduate fellowship paid?
+    - how much does the fellowship pay?
+    - when is the fellowship deadline?
+    - what is the application deadline for the fellowship?
+    - is the fellowship still open?
+    - who can apply for the fellowship?
+    - what are the eligibility requirements for the fellowship?
+    - is there an age limit for the fellowship?
+    - can I apply for the fellowship from any country?
+    - can I apply to the fellowship if I studied at a private university?
+    - can final year students apply for the fellowship?
+    - how long is the fellowship?
+    - is the fellowship remote?
+    - do fellows visit the Paris office?
+    - will 1PAX help with my visa for the fellowship visit?
+    - can you sponsor a graduate fellowship visa?
+    - what documents do I need for the fellowship application?
+    - how many recommendation letters do I need for the fellowship?
+    - do I need a portfolio to apply for the fellowship?
+    - what is the research project in the fellowship?
+    - can fellows choose their own research topic?
+    - can I write my fellowship research in Spanish?
+    - who is on the fellowship jury?
+    - who selects the fellows?
+    - how are fellowship applications evaluated?
+    - when are the fellowship results announced?
+    - when does the fellowship start?
+    - how many fellows do you select?
+    - what is the difference between the fellowship and an internship?
+    - will I get a job after the fellowship?
+    - do fellows get a mentor?
+    - what will fellows work on?
+    - is the fellowship for underserved communities?
+    - what is the 1PAX Grad Fellowship?
+    - does 1PAX have a fellowship for young architects?
+    - I'm a recent architecture graduate, is the fellowship for me?
+    - fellowship
+    - grad fellowship deadline
+    - fellowship eligibility
+    - how many candidates get interviewed for the fellowship?
+    - is the fellowship only for architects?
+
+- intent: ask_company_languages
+  examples: |
+    - what languages does your team speak?
+    - what languages does the team speak?
+    - which languages can the team work in?
+    - how many languages does 1PAX speak?
+    - what languages do you speak at 1PAX?
+    - does your team speak French?
+    - does anyone on your team speak Spanish?
+    - can we work with your team in Spanish?
+    - can your team communicate in Chinese?
+    - do you have Serbian speakers in the team?
+    - can meetings with your team be held in French?
+    - what is your working language?
+    - is English your working language?
+    - can you deliver project documents in Spanish?
+    - can your architects present in Portuguese?
+    - is your team multilingual?
+    - what languages do your architects speak?
+    - do you work in languages other than English?
+    - can we communicate with your team in German?
+    - which languages are spoken in your offices?
+    - in what language will the project be managed?
+    - do your staff speak Arabic?
+    - can the design reports be written in French?
+    - language capabilities of the 1PAX team
+    - team languages
+    - do you guys speak spanish in the studio
+    - can I talk to your team in Mandarin?
+    - is language going to be a barrier working with you?
+
+- intent: ask_company_local_presence
+  examples: |
+    - does having an office affect the way you do business with us?
+    - do you need an office in our country to work with us?
+    - you don't have an office in our country, is that a problem?
+    - can you work with us if you have no office here?
+    - how do you work with clients in countries where you don't have an office?
+    - does the lack of a local office affect the project?
+    - will you open an office in our country for the project?
+    - how do you manage projects remotely?
+    - how do you handle time zone differences with clients?
+    - will your team travel to our site?
+    - how often will you visit the site?
+    - how do you coordinate with local authorities without a local office?
+    - do you work with local partners in countries where you have no office?
+    - we are based in Kenya, can you still work with us?
+    - we're in Canada and you have no office here, how would this work?
+    - does distance matter when working with 1PAX?
+    - can you deliver a project far from your offices?
+    - how do you stay responsive to international clients?
+    - is it a problem that our airport is in another country?
+    - how do you run workshops with remote clients?
+    - will we have a local point of contact?
+    - do you provide on site presence during the project?
+    - how do you work internationally without local offices?
+    - does your location matter for our project?
+    - remote collaboration with 1PAX
+    - do we need to travel to Paris to meet you?
+
+- intent: ask_company_engineering
+  examples: |
+    - do you do engineering?
+    - are you an architecture or an engineering firm?
+    - does 1PAX provide engineering services?
+    - do you only do architecture?
+    - do you have engineers in house?
+    - who does the structural engineering on your projects?
+    - do you provide MEP design?
+    - can 1PAX do the civil engineering too?
+    - are you engineers or architects?
+    - do you offer structural design?
+    - who handles engineering if we hire you?
+    - do you need an engineering partner?
+    - can you provide a full design team including engineers?
+    - do you work with engineering firms?
+    - do you do the engineering or just the architecture?
+    - who is the engineer of record on your projects?
+    - can you stamp engineering drawings?
+    - does your scope include engineering?
+    - is engineering part of your services?
+    - we need architecture and engineering, can you do both?
+    - do you coordinate the engineering disciplines?
+    - how do you handle MEP coordination on your projects?
+    - do you do baggage handling system engineering?
+    - are you a multidisciplinary engineering consultancy?
+    - engineering capabilities of 1PAX
+    - do you guys do engineering stuff too
+    - will you bring your own engineers?
+
+- intent: ask_company_partners
+  examples: |
+    - who are your partners?
+    - who are 1PAX's partners?
+    - which firms do you partner with?
+    - who do you collaborate with on projects?
+    - do you work with local architects?
+    - do you team up with local firms?
+    - can you work with a local architect of record?
+    - do you work with contractors?
+    - do you work on design and build projects with contractors?
+    - can a contractor hire you for a design and build bid?
+    - do you join consortia for tenders?
+    - have you partnered with international firms before?
+    - what is your track record working with other architecture firms?
+    - do you have technology and engineering partners?
+    - do you partner with engineering companies?
+    - have you worked with Arup?
+    - have you worked with Egis?
+    - do you collaborate with SETEC?
+    - have you worked with Foster + Partners?
+    - what engineering firms have you worked with?
+    - which contractors have you worked with?
+    - can we partner with 1PAX on a bid?
+    - we are a contractor looking for an architect partner
+    - what's your partner network like?
+    - can 1PAX be a subconsultant on our team?
+    - do you work with airport operators on concession bids?
+    - which companies do you usually team with?
+    - do you have a network of partners worldwide?
+    - partner firms
+
+- intent: ask_company_beyond_airports
+  examples: |
+    - what else do you do apart from airports?
+    - do you only design airports?
+    - do you do anything other than terminals?
+    - what other types of projects do you do?
+    - besides airports what do you design?
+    - apart from architecture and terminals what else do you do?
+    - is 1PAX only an airport firm?
+    - do you work outside aviation?
+    - what other sectors do you work in?
+    - have you designed metro stations?
+    - have you designed any fire stations?
+    - do you have experience with office buildings?
+    - have you designed embassies?
+    - do you design hospitals?
+    - can 1PAX help with a hospital project?
+    - do you build hospitals
+    - have you designed schools?
+    - do you design stadiums?
+    - have you designed museums?
+    - do you do warehouses or logistics buildings?
+    - have you designed data centers?
+    - do you design cruise terminals?
+    - do you do private houses?
+    - have you done bank branches?
+    - what non-airport projects have you done?
+    - do you only do transport projects?
+    - are airports all you do?
+    - other building types you have designed
+    - what kind of buildings do you design besides terminals?
+    - can you design a university campus?
+
+- intent: ask_company_project_size
+  examples: |
+    - do you only do large projects?
+    - is there a minimum project size?
+    - are there any requirements for the size of the project?
+    - do you take on small projects?
+    - is our project too small for you?
+    - do you have a minimum budget?
+    - what's the smallest project you would take on?
+    - do you work on small renovations?
+    - do you only work on big infrastructure?
+    - would you consider a small airport project?
+    - what size of projects do you usually work on?
+    - what project scale do you work at?
+    - do you have a minimum fee?
+    - can you handle a project of 500 square meters?
+    - do you do small interior jobs?
+    - is a small regional airport interesting for you?
+    - we have a modest budget, can we still work with you?
+    - are you only interested in mega projects?
+    - do you accept smaller commissions?
+    - what is 1PAX's experience with large projects?
+    - what is 1PAX's track record with large-scale projects?
+    - can you handle very large projects?
+    - is there a size limit on the projects you take?
+    - minimum project size
+    - how small a project will you do?
+    - do you only do big stuff
+
+- intent: ask_company_engagement
+  examples: |
+    - how do we start a project with you?
+    - how can we hire 1PAX?
+    - what is the process to work with you?
+    - how do I request a proposal from 1PAX?
+    - can you send us a proposal?
+    - what information do you need from us to prepare a proposal?
+    - what should we prepare before contacting you?
+    - how does working with 1PAX work?
+    - what are the next steps to work together?
+    - can we appoint you directly?
+    - do we need to run a tender to hire you?
+    - can you respond to our tender?
+    - how quickly can you start?
+    - how long does it take to design a terminal?
+    - what does your design timeline look like?
+    - how do you define fees and scope?
+    - we want to hire an architect for our airport, how do we proceed?
+    - I'm a developer and want to commission 1PAX
+    - how do you onboard new clients?
+    - what is your engagement model?
+    - do you work on fixed fee or time based contracts?
+    - how do I become a client?
+    - how do we get a quote?
+    - what happens after we contact you?
+    - can we start with a small feasibility study before committing?
+    - we have a project, what now?
+    - i want to work with you guys
+    - let's work together
+    - how do you usually get appointed on projects?
+
+- intent: ask_company_project_stages
+  examples: |
+    - what stages do you cover?
+    - which project stages does 1PAX cover?
+    - what RIBA stages do you cover
+    - do you do RIBA Stage 2 through 4
+    - do you work in phases
+    - do you do feasibility studies?
+    - do you stay involved during construction?
+    - do you provide full design services from concept to construction?
+    - can you do only the concept design?
+    - do you prepare tender documentation?
+    - do you do detailed design?
+    - can you take over a project at design development stage?
+    - do you do schematic design only or the full package?
+    - what part of the project do you take care of?
+    - do you offer end to end services?
+    - what is your scope of services on a typical project?
+    - do you support the client during construction?
+    - can you review a design done by another architect?
+    - do you do value engineering reviews?
+    - can you do a design peer review?
+    - do you produce construction drawings?
+    - at what stage should we involve you?
+    - from which phase can 1PAX join a project?
+    - do you do concession bid support?
+    - can you help us at the competition stage?
+
+- intent: ask_company_certifications
+  examples: |
+    - are you ISO certified?
+    - what certifications does 1PAX have?
+    - do you have ISO 9001?
+    - do you have professional indemnity insurance?
+    - are your architects licensed?
+    - is 1PAX a registered architecture firm?
+    - what accreditations does your studio hold?
+    - are you members of the UN Global Compact?
+    - what quality standards do you follow?
+    - can you provide company certificates for our tender?
+    - do you have insurance for design liability?
+    - do you have any quality management certification?
+    - what standards does 1PAX comply with?
+    - certifications
+    - are you accredited?
+    - can you share your insurance certificate?
+    - do you hold any professional registrations?
+
+- intent: ask_company_track_record
+  examples: |
+    - what is your track record?
+    - what does 1PAX's project track record look like?
+    - what is 1PAX's track record on major projects?
+    - how experienced is 1PAX?
+    - how long has 1PAX been in business?
+    - how old is the company?
+    - how established is 1PAX?
+    - why should we trust 1PAX with a large project?
+    - can you give me references?
+    - do you have client references?
+    - what are your credentials?
+    - how many people work at 1PAX?
+    - how many employees does 1PAX have
+    - how many people are on the team
+    - is 1PAX a small firm
+    - what's the size of the team
+    - how big is your company?
+    - how big is the studio?
+    - give me an overview of your experience
+    - what is your experience in numbers?
+    - is 1PAX a reliable firm?
+    - how many years of experience does 1PAX have?
+    - summarize your credentials for a prequalification
+    - company profile for due diligence
+    - what makes 1PAX credible for big infrastructure?
+    - since when has 1PAX been operating?
+
 # ── Entity synonyms (maps extracted values to canonical project key) ─────────
 
 - synonym: sofia_airport
@@ -4106,6 +4630,8 @@ nlu:
     - Sofia airport
     - Sofia Airport Terminal 3
     - Sofia Airport Terminal 2
+    - Sofia Airport – Terminal 3 International & Terminal 2 Refurbishment
+    - Sofia Airport - Terminal 3 International & Terminal 2 Refurbishment
     - Terminal 3
     - terminal 3
     - Terminal 2
@@ -4124,10 +4650,6 @@ nlu:
     - SOF
     - Sofia terminal
     - Sofia international terminal
-    - the biggest project
-    - your biggest project
-    - the flagship project
-    - flagship project
     - the airport project
     - the terminal project
     - terminal refurbishment
@@ -4157,6 +4679,8 @@ nlu:
     - belgrade airport T3
     - new Belgrade terminal
     - belgrade T3
+    - Belgrade Airport – Phase 1 & Phase 2 Terminal Expansion
+    - Belgrade Airport - Phase 1 & Phase 2 Terminal Expansion
 
 - synonym: velana_airport
   examples: |
@@ -4169,6 +4693,8 @@ nlu:
     - Male airport
     - Velana International Airport
     - Maldives international airport
+    - Velana International Airport – New Terminal Building
+    - Velana International Airport - New Terminal Building
 
 - synonym: bordeaux_airport
   examples: |
@@ -4180,6 +4706,8 @@ nlu:
     - BOD
     - Bordeaux terminal
     - Merignac airport
+    - Bordeaux–Mérignac Airport – Hall B New Façades
+    - Bordeaux-Merignac Airport - Hall B New Facades
 
 - synonym: cayenne_terminal
   examples: |
@@ -4203,6 +4731,11 @@ nlu:
 - synonym: pointe_a_pitre_t1
   examples: |
     - Pointe-a-Pitre Airport T1
+    - Pointe-à-Pitre
+    - Pointe-a-Pitre
+    - Pointe a Pitre
+    - Pointe-à-Pitre International Airport – New Terminal Extension (Winner)
+    - Pointe-a-Pitre International Airport - New Terminal Extension Winner
     - Pointe a Pitre T1
     - Guadeloupe airport T1
     - PTP airport T1
@@ -4213,6 +4746,8 @@ nlu:
   examples: |
     - Pointe-a-Pitre Airport T2
     - Pointe a Pitre T2
+    - Pointe-à-Pitre International Airport – Terminal 2 Extension
+    - Pointe-a-Pitre International Airport - Terminal 2 Extension
     - Guadeloupe airport T2
     - PTP airport T2
     - Guadeloupe terminal 2
@@ -4695,6 +5230,8 @@ nlu:
     - AIK Bank design
     - Serbia bank design
     - AIK Bank ATM design
+    - AIK Bank – Branches and ATM Network Design
+    - AIK Bank - Branches and ATM Network Design
 
 - synonym: cayenne_interior_design
   examples: |
@@ -4915,7 +5452,7 @@ nlu:
   examples: |
     - what services do you offer?
     - what are your services?
-    - what can you help me with?
+    - which architectural services can you help me with?
     - what services does 1PAX provide?
     - what are your core services?
     - what is 1PAX's full service offering?
@@ -4946,9 +5483,10 @@ nlu:
     - what projects or services can 1PAX take on?
     - what types of engagements does 1PAX accept?
     - do you offer project management as well?
-    - do you design hospitals?
+    - do you provide construction supervision?
+    - can 1PAX provide construction supervision?
+    - is construction supervision one of your services?
     - do you work on healthcare projects?
-    - can 1PAX help with a hospital project?
     - do you offer BIM as a standalone service?
     - is interior design one of your services?
     - can 1PAX handle urban masterplanning?
@@ -4956,6 +5494,10 @@ nlu:
     - what is your fee structure?
     - how much do you charge for your services?
     - how does 1PAX price its services?
+    - how much do your architecture services cost?
+    - what does a service cost?
+    - can you give me a fee estimate?
+    - how much would a project consultation cost?
 
 # ── Services: Airports & Railstations ─────────────────────────────────────────
 
@@ -5001,6 +5543,10 @@ nlu:
     - can you help us design a new passenger terminal?
     - can 1PAX design our airport extension?
     - we want to build a new terminal — do you offer that?
+    - I want a proposal for an airport in Dubai
+    - can 1PAX prepare an airport design proposal?
+    - we need a proposal for a new airport terminal
+    - how do I request an airport design proposal?
     - do you handle full masterplanning of airport campuses?
     - do you cover the full campus — landside and airside?
     - what is your experience with terminal passenger flow?
@@ -5314,6 +5860,11 @@ nlu:
     - can you design an embassy building with security requirements?
     - what non-airport building types do you design?
     - do you design airport hotels?
+    - can you help with a hotel renovation?
+    - do you design resorts and hospitality projects?
+    - can 1PAX design a residential tower?
+    - do you work on residential towers?
+    - can you help with a mixed-use residential building?
     - what is your working and living service?
     - what is your experience with government/diplomatic buildings?
     - do you have experience with diplomatic buildings?
@@ -5511,8 +6062,16 @@ nlu:
     - who is at the helm of the company?
     - who is in charge of 1PAX?
     - who is the head of 1PAX?
+    - who is the director?
+    - who is director?
+    - who is your director?
+    - who is the studio director?
+    - who is the company director?
+    - who is the architect in charge?
     - who's at the helm of 1PAX?
     - who's the boss at 1PAX?
+    - who's the boss?
+    - who's in charge?
     - who calls the shots at 1PAX?
     - who is the director of 1PAX?
     - give me an overview of 1PAX's leadership team
@@ -5525,6 +6084,7 @@ nlu:
     - who is driving the company?
     - who is steering 1PAX?
     - who pilots the studio?
+    - who's the creative director?
     - who leads the AAM work at 1PAX?
     - who leads the vertiport work at 1PAX?
     - who leads the AAM/vertiport work at 1PAX?
@@ -5632,8 +6192,6 @@ nlu:
     - tell me about [Mabel](person)
     - tell me about [mabel](person)
     - tell me about [Mabel Miranda](person), the founder
-    - who is our [founder](person)?
-    - who is your [founder](person)?
     - where did [Mabel Miranda](person) study?
     - what is [Mabel Miranda](person)'s background?
     - what is [Mabel](person)'s education?
@@ -5642,9 +6200,9 @@ nlu:
     - [Ali](person) background
     - who is the [CFO](person)?
     - tell me about the [CFO](person)
-    - who manages the [finances](person)?
-    - is 1PAX profitable — who manages the [finances](person)?
-    - who is in charge of [finances](person)?
+    - who is the [finance manager](person)?
+    - is 1PAX profitable — who manages finances?
+    - who is in charge of finance?
     - tell me about [Fabiola Espinoza](person)
     - who is [Fabiola Espinoza](person)?
     - [Fabiola](person) background
@@ -5660,8 +6218,8 @@ nlu:
     - [Carla](person) background
     - who handles [communications](person) at 1PAX?
     - who is in charge of [communications](person)?
-    - who leads [innovation](person) at 1PAX?
-    - who handles [patents](person) and innovation at 1PAX?
+    - who leads innovation at 1PAX?
+    - who handles patents and innovation at 1PAX?
     - who is the [CCIO](person)?
     - tell me about [Claudia Cornejo](person)
     - who is [Claudia Cornejo](person)?
@@ -5722,17 +6280,16 @@ nlu:
     - tell me more about [Boris Stojnic](person)
     - [Matija](person) background
     - what is [Fabiola](person)'s background?
-    - who is the [founder](person)?
     - tell me about the [CEO](person)
     - who is the [project director](person)?
     - tell me about [Marko](person)
     - who is the [BIM manager](person) at 1PAX?
     - [Renzo](person) background
     - tell me about [Kevin](person)
-    - who handles [BIM](person)?
-    - who handles [BIM](person) at 1PAX?
-    - who is the [BIM](person) lead?
-    - who manages [BIM](person) at 1PAX?
+    - who handles BIM?
+    - who handles BIM at 1PAX?
+    - who is the [BIM lead](person)?
+    - who manages BIM at 1PAX?
     - who is the [JV contact](person)?
     - who is the [business development manager](person)?
     - who is [1PAX's business development contact](person)?
@@ -5751,6 +6308,16 @@ nlu:
     - who is the [Shanghai representative](person) at 1PAX?
     - who is the [Shanghai representative](person)?
     - who is 1PAX's [visualization expert](person)?
+    - what is her role?
+    - what is his role?
+    - what is their role?
+    - what is her email?
+    - what is his email?
+    - how can I contact her?
+    - how can I contact him?
+    - what projects has she worked on?
+    - what projects has he worked on?
+    - what projects have they worked on?
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PERSON ENTITY SYNONYMS
@@ -5764,11 +6331,8 @@ nlu:
     - Mabel
     - the CEO
     - CEO
-    - the founder
-    - 1PAX founder
     - chief executive
     - the chief executive officer
-    - Miranda founder
 
 - synonym: ali_fawaz
   examples: |
@@ -5780,8 +6344,6 @@ nlu:
     - chief financial officer
     - the financial officer
     - finance manager
-    - finances
-    - finance
 
 - synonym: fabiola_espinoza
   examples: |
@@ -5808,14 +6370,11 @@ nlu:
     - Carla
     - chief communications officer
     - communications officer
-    - communications
     - CCIO
     - innovation officer
-    - innovation
     - communications lead
     - Barcelona lead
     - Barcelona office lead
-    - patents
 
 - synonym: claudia_cornejo
   examples: |
@@ -5869,7 +6428,6 @@ nlu:
     - BIM manager at 1PAX
     - ISO 19650 BIM manager
     - Soskic
-    - BIM
     - BIM lead
     - BIM coordinator
 

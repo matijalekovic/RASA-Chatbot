@@ -213,6 +213,32 @@
     .proj-chip:hover  { background: #eae8e4; border-color: #c8c5bf; }
     .proj-chip:active { background: #ddd9d3; }
 
+    .proj-chip .proj-thumb {
+      width: 46px;
+      height: 46px;
+      border-radius: 7px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: #d9d6cf;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .proj-chip .proj-thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .proj-chip .proj-thumb-fallback {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
     .proj-chip .proj-info { flex: 1; min-width: 0; }
     .proj-chip .proj-name {
       font-size: 13px;
@@ -509,14 +535,14 @@
 <div id="app">
   <header>
     <span class="logo">1PAX</span>
-    <span class="header-sub">Assistant · internal preview</span>
+    <span class="header-sub">Website assistant</span>
     <div class="lang-selector">
-      <button class="lang-btn active" data-lang="">EN</button>
-      <button class="lang-btn" data-lang="FR">FR</button>
-      <button class="lang-btn" data-lang="ES">ES</button>
-      <button class="lang-btn" data-lang="PT-PT">PT</button>
-      <button class="lang-btn" data-lang="ZH-HANS">中文</button>
-      <button class="lang-btn" data-lang="SR">SR</button>
+      <button class="lang-btn active" type="button" data-lang="" aria-pressed="true">EN</button>
+      <button class="lang-btn" type="button" data-lang="FR" aria-pressed="false">FR</button>
+      <button class="lang-btn" type="button" data-lang="ES" aria-pressed="false">ES</button>
+      <button class="lang-btn" type="button" data-lang="PT-PT" aria-pressed="false">PT</button>
+      <button class="lang-btn" type="button" data-lang="ZH-HANS" aria-pressed="false">中文</button>
+      <button class="lang-btn" type="button" data-lang="SR" aria-pressed="false">SR</button>
     </div>
     <span class="status-dot"></span>
   </header>
@@ -541,12 +567,77 @@
   const sendBtn    = document.getElementById("send");
   const typingEl   = document.getElementById("typing");
 
-  const DESKTOP_PLACEHOLDER = "Ask about projects, team, services…";
-  const MOBILE_PLACEHOLDER = "Ask 1PAX…";
+  const PLACEHOLDERS = {
+    EN: { desktop: "Ask about projects, team, services…", mobile: "Ask 1PAX…" },
+    FR: { desktop: "Posez une question sur les projets, l'équipe, les services…", mobile: "Demandez à 1PAX…" },
+    ES: { desktop: "Pregunta por proyectos, equipo o servicios…", mobile: "Pregunta a 1PAX…" },
+    PT: { desktop: "Pergunte sobre projetos, equipa ou serviços…", mobile: "Pergunte à 1PAX…" },
+    "PT-PT": { desktop: "Pergunte sobre projetos, equipa ou serviços…", mobile: "Pergunte à 1PAX…" },
+    "PT-BR": { desktop: "Pergunte sobre projetos, equipe ou serviços…", mobile: "Pergunte à 1PAX…" },
+    ZH: { desktop: "询问项目、团队或服务…", mobile: "询问 1PAX…" },
+    "ZH-HANS": { desktop: "询问项目、团队或服务…", mobile: "询问 1PAX…" },
+    "ZH-HANT": { desktop: "詢問項目、團隊或服務…", mobile: "詢問 1PAX…" },
+    SR: { desktop: "Pitajte o projektima, timu ili uslugama…", mobile: "Pitajte 1PAX…" },
+  };
+  const UI_COPY = {
+    EN: {
+      translationError: "⚠️ I couldn't translate that message reliably. Please try again shortly.",
+      loading: "⏳ Assistant is loading — this takes about a minute on first start. Retrying…",
+      stillLoading: seconds => `⏳ Still loading… (~${seconds}s remaining)`,
+      loadTimeout: "⚠️ Assistant took too long to start. Please refresh and try again.",
+      noResponse: "I didn't get a response — please try again.",
+      unreachable: "⚠️ Could not reach the assistant. Please check back shortly.",
+      projectCover: "Project cover",
+    },
+    SR: {
+      translationError: "⚠️ Nisam mogao pouzdano da prevedem poruku. Pokušajte ponovo uskoro.",
+      loading: "⏳ Asistent se pokreće — prvi put može potrajati oko minut. Pokušavam ponovo…",
+      stillLoading: seconds => `⏳ Asistent se još pokreće… (~${seconds}s preostalo)`,
+      loadTimeout: "⚠️ Pokretanje asistenta traje predugo. Osvežite stranicu i pokušajte ponovo.",
+      noResponse: "Nisam dobio odgovor — pokušajte ponovo.",
+      unreachable: "⚠️ Trenutno ne mogu da pristupim asistentu. Pokušajte ponovo uskoro.",
+      projectCover: "Naslovna slika projekta",
+    },
+    FR: {
+      translationError: "⚠️ Je n’ai pas pu traduire ce message de manière fiable. Réessayez bientôt.",
+      noResponse: "Je n’ai pas reçu de réponse — veuillez réessayer.",
+      unreachable: "⚠️ Impossible de joindre l’assistant. Veuillez réessayer bientôt.",
+      projectCover: "Image du projet",
+    },
+    ES: {
+      translationError: "⚠️ No pude traducir el mensaje de forma fiable. Inténtalo de nuevo en breve.",
+      noResponse: "No recibí una respuesta — inténtalo de nuevo.",
+      unreachable: "⚠️ No se pudo conectar con el asistente. Inténtalo de nuevo en breve.",
+      projectCover: "Imagen del proyecto",
+    },
+    PT: {
+      translationError: "⚠️ Não consegui traduzir a mensagem com segurança. Tente novamente em breve.",
+      noResponse: "Não recebi uma resposta — tente novamente.",
+      unreachable: "⚠️ Não foi possível contactar o assistente. Tente novamente em breve.",
+      projectCover: "Imagem do projeto",
+    },
+    ZH: {
+      translationError: "⚠️ 无法可靠地翻译这条消息，请稍后重试。",
+      noResponse: "没有收到回复，请重试。",
+      unreachable: "⚠️ 暂时无法连接助手，请稍后重试。",
+      projectCover: "项目封面",
+    },
+  };
+  function uiCopy(key, value) {
+    const code = responseLang();
+    const base = code.split("-")[0];
+    const copy = UI_COPY[code] || UI_COPY[base] || UI_COPY.EN;
+    const selected = copy[key] ?? UI_COPY.EN[key];
+    return typeof selected === "function" ? selected(value) : selected;
+  }
   function syncInputPlaceholder() {
+    let lang = "EN";
+    try { lang = responseLang(); } catch {}
+    const baseLang = lang.split("-")[0];
+    const copy = PLACEHOLDERS[lang] || PLACEHOLDERS[baseLang] || PLACEHOLDERS.EN;
     inputEl.placeholder = window.matchMedia("(max-width: 640px)").matches
-      ? MOBILE_PLACEHOLDER
-      : DESKTOP_PLACEHOLDER;
+      ? copy.mobile
+      : copy.desktop;
   }
   syncInputPlaceholder();
   window.addEventListener("resize", syncInputPlaceholder);
@@ -567,77 +658,43 @@
     CU:"ES", DO:"ES", EC:"ES", GT:"ES", HN:"ES", NI:"ES", PA:"ES",
     PE:"ES", PR:"ES", PY:"ES", SV:"ES", UY:"ES", VE:"ES",
     // Portuguese-speaking countries and territories
-    PT:"PT-PT", BR:"PT-PT", AO:"PT-PT", CV:"PT-PT", GW:"PT-PT",
+    PT:"PT-PT", BR:"PT-BR", AO:"PT-PT", CV:"PT-PT", GW:"PT-PT",
     MZ:"PT-PT", ST:"PT-PT", TL:"PT-PT",
     // Chinese-speaking countries and territories
-    CN:"ZH-HANS", HK:"ZH-HANS", MO:"ZH-HANS", SG:"ZH-HANS", TW:"ZH-HANS",
+    CN:"ZH-HANS", SG:"ZH-HANS", HK:"ZH-HANT", MO:"ZH-HANT", TW:"ZH-HANT",
     // Serbian / closely related local-language markets supported through SR
     RS:"SR", BA:"SR", ME:"SR", XK:"SR",
   };
 
   const storedLang = localStorage.getItem("pax_lang");
-  let currentLang = storedLang && storedLang.toUpperCase().startsWith("EN")
-    ? ""
-    : (storedLang ?? "");
-  const LANG_ID_LIMIT = 3;
-  const LANG_ID_COUNT_KEY = "pax_lang_ident_count";
-  const LANG_ID_LAST_KEY = "pax_lang_ident_last";
-  const LANG_ID_LOCKED_KEY = "pax_lang_locked";
-  let languageIdentificationCount = Math.max(
-    0,
-    Number(localStorage.getItem(LANG_ID_COUNT_KEY) || 0) || 0
-  );
-  let lastIdentifiedLang = normalizeLangCode(
-    localStorage.getItem(LANG_ID_LAST_KEY) ?? currentLang
-  );
-  let languageLocked = localStorage.getItem(LANG_ID_LOCKED_KEY) === "1";
+  const hasStoredLang = Boolean(storedLang && storedLang.trim());
+  let currentLang = normalizeLangCode(hasStoredLang ? storedLang : "");
+  let languageSource = hasStoredLang ? "saved" : "pending";
 
-  function setLang(code) {
+  function setLang(code, { persist = true, source = "runtime" } = {}) {
     currentLang = normalizeLangCode(code);
-    localStorage.setItem("pax_lang", currentLang);
-    document.querySelectorAll(".lang-btn").forEach(b =>
-      b.classList.toggle("active", b.dataset.lang === currentLang)
-    );
+    languageSource = source;
+    if (persist) localStorage.setItem("pax_lang", responseLang());
+    document.documentElement.lang = responseLang().toLowerCase();
+    document.querySelectorAll(".lang-btn").forEach(b => {
+      const active = b.dataset.lang === currentLang;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
+    });
+    syncInputPlaceholder();
+    if (typeof translateProjectCards === "function") {
+      translateProjectCards(messagesEl).catch(() => {});
+    }
   }
 
   function responseLang() {
     return currentLang || "EN";
   }
 
-  function lockLanguage(code) {
-    setLang(code);
-    lastIdentifiedLang = currentLang;
-    languageLocked = true;
-    languageIdentificationCount = LANG_ID_LIMIT;
-    localStorage.setItem(LANG_ID_LAST_KEY, lastIdentifiedLang);
-    localStorage.setItem(LANG_ID_COUNT_KEY, String(languageIdentificationCount));
-    localStorage.setItem(LANG_ID_LOCKED_KEY, "1");
-  }
-
-  function shouldIdentifyLanguage() {
-    return !languageLocked && languageIdentificationCount < LANG_ID_LIMIT;
-  }
-
-  function recordLanguageIdentification(lang, attempted, identified) {
-    if (!attempted) return;
-
-    languageIdentificationCount = Math.min(
-      LANG_ID_LIMIT,
-      languageIdentificationCount + 1
-    );
-    localStorage.setItem(LANG_ID_COUNT_KEY, String(languageIdentificationCount));
-
-    if (identified) {
-      lastIdentifiedLang = normalizeLangCode(lang);
-      localStorage.setItem(LANG_ID_LAST_KEY, lastIdentifiedLang);
-      setLang(lastIdentifiedLang);
-    }
-
-    if (languageIdentificationCount >= LANG_ID_LIMIT) {
-      languageLocked = true;
-      localStorage.setItem(LANG_ID_LOCKED_KEY, "1");
-      setLang(lastIdentifiedLang);
-    }
+  function selectLanguage(code) {
+    const previousLang = currentLang;
+    setLang(code, { source: "manual" });
+    refreshOpeningGreetingAfterLanguageChange(previousLang);
   }
 
   function normalizeLangCode(code) {
@@ -648,8 +705,14 @@
     return normalized;
   }
 
-  function requestMetadata() {
-    const metadata = { lang: responseLang() };
+  function requestMetadata(inputState = {}) {
+    const metadata = {
+      // `lang` remains for backward compatibility with older action models.
+      lang: responseLang(),
+      response_lang: responseLang(),
+      language_source: languageSource,
+      ...inputState,
+    };
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (timezone) metadata.timezone = timezone;
@@ -657,11 +720,11 @@
     return metadata;
   }
 
-  // Apply stored preference immediately
-  setLang(currentLang);
+  // Apply display state without creating a fake stored preference before geo runs.
+  setLang(currentLang, { persist: false, source: languageSource });
 
   document.querySelectorAll(".lang-btn").forEach(b =>
-    b.addEventListener("click", () => lockLanguage(b.dataset.lang))
+    b.addEventListener("click", () => selectLanguage(b.dataset.lang))
   );
 
   // Pre-select from IP geolocation (only if user hasn't chosen before)
@@ -673,11 +736,34 @@
     sendGreeting(currentLang);
   }
 
+  function refreshOpeningGreetingAfterLanguageChange(previousLang) {
+    if (!_greetingSent || previousLang === currentLang) return;
+    const messageCount = messagesEl.querySelectorAll(".message").length;
+    if (messageCount > 1) return;
+    messagesEl.querySelectorAll(".message").forEach(node => node.remove());
+    _greetingSent = false;
+    maybeGreet();
+  }
+
   function detectLanguageAndGreet() {
-    if (localStorage.getItem("pax_lang") !== null || typeof fetch !== "function") {
+    if (hasStoredLang || typeof fetch !== "function") {
       maybeGreet();
       return;
     }
+
+    const browserLanguage = (() => {
+      const locales = Array.isArray(navigator.languages)
+        ? navigator.languages
+        : [navigator.language];
+      for (const locale of locales.filter(Boolean)) {
+        const normalized = normalizeLangCode(locale);
+        const base = String(locale).split(/[-_]/)[0].toUpperCase();
+        if (base === "EN") return "EN";
+        if (normalized && PLACEHOLDERS[normalized]) return normalized;
+        if (PLACEHOLDERS[base]) return normalizeLangCode(base);
+      }
+      return "EN";
+    })();
 
     const timeoutOptions =
       typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
@@ -688,9 +774,13 @@
       .then(r => r.json())
       .then(d => {
         const country = String(d.country_code || "").toUpperCase();
-        setLang(COUNTRY_LANG[country] || "");
+        const multilingualCountry = ["BE", "CH", "CA", "SG"].includes(country);
+        const selected = multilingualCountry && browserLanguage
+          ? browserLanguage
+          : (COUNTRY_LANG[country] || browserLanguage || "");
+        setLang(selected, { source: "geolocation" });
       })
-      .catch(() => {})
+      .catch(() => setLang(browserLanguage, { source: "browser" }))
       .finally(() => maybeGreet());
   }
 
@@ -706,22 +796,35 @@
     return s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
   }
 
-  const PROJECT_QUERY_TEMPLATES = {
-    EN: name => `Tell me about ${name}`,
-    FR: name => `Parlez-moi de ${name}`,
-    ES: name => `Háblame de ${name}`,
-    PT: name => `Fale-me sobre ${name}`,
-    "PT-PT": name => `Fale-me sobre ${name}`,
-    ZH: name => `请介绍一下${name}`,
-    "ZH-HANS": name => `请介绍一下${name}`,
-    SR: name => `Recite mi nešto o ${name}`,
+  const PROJECT_ID_QUERY_NAMES = {
+    sofia_airport: "Sofia Airport",
+    belgrade_airport: "Belgrade Airport",
+    velana_airport: "Velana International Airport",
+    bordeaux_airport: "Bordeaux-Merignac Airport",
+    pointe_a_pitre_t1: "Pointe-a-Pitre International Airport",
+    pointe_a_pitre_t2: "Pointe-a-Pitre Terminal 2",
+    aik_bank_design: "AIK Bank",
   };
 
-  function projectQueryText(projectName) {
-    const lang = (currentLang || "EN").toUpperCase();
-    const baseLang = lang.split("-")[0];
-    const template = PROJECT_QUERY_TEMPLATES[lang] || PROJECT_QUERY_TEMPLATES[baseLang] || PROJECT_QUERY_TEMPLATES.EN;
-    return template(projectName);
+  function canonicalProjectName(projectName, projectId = "") {
+    const mapped = PROJECT_ID_QUERY_NAMES[projectId];
+    if (mapped) return mapped;
+    const clean = String(projectName || "")
+      .replace(/\s+/g, " ")
+      .replace(/\s+\([^)]*\)\s*$/g, "")
+      .trim();
+    const normalized = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (normalized.includes("sofia airport")) return "Sofia Airport";
+    if (normalized.includes("belgrade airport")) return "Belgrade Airport";
+    if (normalized.includes("velana")) return "Velana International Airport";
+    if (normalized.includes("bordeaux")) return "Bordeaux-Merignac Airport";
+    if (normalized.includes("pointe") && normalized.includes("pitre")) return "Pointe-a-Pitre International Airport";
+    if (normalized.includes("aik bank")) return "AIK Bank";
+    return clean.split(/\s+[–—-]\s+/)[0].trim() || clean;
+  }
+
+  function projectQueryText(projectName, projectId = "") {
+    return `Tell me about ${canonicalProjectName(projectName, projectId)}`;
   }
 
   function inlineMd(s) {
@@ -760,10 +863,11 @@
         const inner = listBuf.map(item => {
           if (item.chip) {
             const projectName = escAttr(decodeEnt(item.chip.name));
+            const projectMeta = escAttr(decodeEnt(item.chip.meta));
             return `<button class="proj-chip" data-project="${projectName}">
               <div class="proj-info">
-                <div class="proj-name">${item.chip.name}</div>
-                <div class="proj-meta">${item.chip.meta}</div>
+                <div class="proj-name" data-source-text="${projectName}">${item.chip.name}</div>
+                <div class="proj-meta" data-source-text="${projectMeta}">${item.chip.meta}</div>
               </div>
               <span class="proj-arrow">›</span>
             </button>`;
@@ -829,6 +933,13 @@
   messagesEl.addEventListener("click", e => {
     const action = e.target.closest(".quick-action");
     if (action) {
+      const url = safeHttpUrl(action.dataset.url || "");
+      if (url) {
+        const opened = window.open(url, "_blank");
+        if (opened) opened.opener = null;
+        if (!opened) window.location.assign(url);
+        return;
+      }
       const label = action.dataset.label || action.textContent.trim();
       const payload = action.dataset.payload || "";
       if (payload) {
@@ -842,7 +953,11 @@
     const chip = e.target.closest(".proj-chip");
     if (!chip) return;
     if (chip.dataset.project) {
-      send(projectQueryText(decodeEnt(chip.dataset.project)));
+      const query = projectQueryText(
+        decodeEnt(chip.dataset.project),
+        chip.dataset.projectId || ""
+      );
+      send(query, 0, query);
     } else if (chip.dataset.q) {
       send(decodeEnt(chip.dataset.q));
     }
@@ -870,10 +985,80 @@
     const img = document.createElement("img");
     img.className = "bubble-image";
     img.src = imageUrl;
-    img.alt = "Project cover";
+    img.alt = uiCopy("projectCover");
     img.loading = "lazy";
     img.decoding = "async";
     bubble.appendChild(img);
+  }
+
+  function projectInitials(name) {
+    return (name || "1PAX")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0])
+      .join("")
+      .toUpperCase();
+  }
+
+  function appendProjectCards(bubble, cards = []) {
+    if (!Array.isArray(cards) || !cards.length) return;
+
+    const list = document.createElement("div");
+    list.className = "proj-list";
+
+    for (const card of cards) {
+      const title = String(card?.title || card?.name || "").trim();
+      if (!title) continue;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "proj-chip";
+      button.dataset.project = title;
+      if (card.id) button.dataset.projectId = String(card.id);
+      if (card.url) button.dataset.url = safeHttpUrl(card.url);
+
+      const thumb = document.createElement("div");
+      thumb.className = "proj-thumb";
+      const imageUrl = safeHttpUrl(card.image || card.image_url || card.thumbnail || "");
+      if (imageUrl) {
+        const img = document.createElement("img");
+        img.src = imageUrl;
+        img.alt = "";
+        img.loading = "lazy";
+        img.decoding = "async";
+        thumb.appendChild(img);
+      } else {
+        const fallback = document.createElement("span");
+        fallback.className = "proj-thumb-fallback";
+        fallback.textContent = projectInitials(title);
+        thumb.appendChild(fallback);
+      }
+
+      const info = document.createElement("div");
+      info.className = "proj-info";
+      const name = document.createElement("div");
+      name.className = "proj-name";
+      name.textContent = title;
+      name.dataset.sourceText = title;
+      const meta = document.createElement("div");
+      meta.className = "proj-meta";
+      meta.textContent = String(card?.meta || "").trim();
+      meta.dataset.sourceText = meta.textContent;
+      info.appendChild(name);
+      if (meta.textContent) info.appendChild(meta);
+
+      const arrow = document.createElement("span");
+      arrow.className = "proj-arrow";
+      arrow.textContent = "›";
+
+      button.appendChild(thumb);
+      button.appendChild(info);
+      button.appendChild(arrow);
+      list.appendChild(button);
+    }
+
+    if (list.children.length) bubble.appendChild(list);
   }
 
   function appendQuickActions(wrapper, actions = []) {
@@ -892,13 +1077,14 @@
       button.textContent = title;
       button.dataset.label = title;
       if (action.payload) button.dataset.payload = action.payload;
+      if (action.url) button.dataset.url = action.url;
       row.appendChild(button);
     }
 
     if (row.children.length) wrapper.appendChild(row);
   }
 
-  function appendMessage(role, text = "", media = {}, actions = []) {
+  function appendMessage(role, text = "", media = {}, actions = [], custom = {}) {
     document.getElementById("welcome")?.remove();
     const wrap   = document.createElement("div");
     wrap.className = `message ${role}`;
@@ -906,6 +1092,7 @@
     bubble.className = "bubble";
     bubble.innerHTML = text ? renderMarkdown(text) : "";
     appendMedia(bubble, media);
+    appendProjectCards(bubble, custom.project_cards || custom.projects || []);
     const ts = document.createElement("div");
     ts.className = "ts";
     ts.textContent = now();
@@ -918,6 +1105,7 @@
   }
 
   function handleBotCustom(custom = {}) {
+    custom = custom || {};
     const url = safeHttpUrl(custom.redirect_url || custom.open_url);
     if (!url) return;
 
@@ -944,14 +1132,8 @@
     ? "http://localhost:5056/translate"
     : "/api/translate";
 
-  // DeepL target codes use regional variants (PT-PT, ZH-HANS); source codes use base language
-  const TARGET_TO_SOURCE = { "PT-PT": "PT", "PT-BR": "PT", "ZH-HANS": "ZH", "ZH-HANT": "ZH" };
-
   async function translateToEnglish(text, lang, identifyLanguage = false) {
-    const selectedLang = normalizeLangCode(lang);
-    const sourceLang = TARGET_TO_SOURCE[selectedLang] || selectedLang;
-    const payload = { text };
-    if (sourceLang) payload.source_lang = sourceLang;
+    const payload = { text, response_lang: responseLang() };
     if (identifyLanguage) payload.identify_language = true;
     try {
       const r = await fetch(TRANSLATE_URL, {
@@ -959,17 +1141,38 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!r.ok) throw new Error(`Translation HTTP ${r.status}`);
       const d = await r.json();
-      const detectedLang = normalizeLangCode(
-        d.identified_lang || d.detected_lang || d.source_lang || ""
+      const explicitInputLang = String(
+        d.input_lang
+        || (d.language_identified ? (d.identified_lang || "EN") : "UNKNOWN")
+      ).toUpperCase();
+      const identified = Boolean(
+        d.input_lang_confident ?? d.language_identified
       );
+      const preserveCurrent = Boolean(d.preserve_current);
+      const inputTranslated = Boolean(d.input_translated);
+      const needsTranslation = explicitInputLang !== "EN"
+        && explicitInputLang !== "UNKNOWN";
+      const failed = Boolean(d.translation_error)
+        || (!inputTranslated && !preserveCurrent && (needsTranslation || explicitInputLang === "UNKNOWN"));
       return {
-        text: d.text || text,
-        lang: detectedLang,
-        identified: Boolean(d.language_identified),
+        text: d.english_text || d.text || text,
+        lang: explicitInputLang,
+        identified,
+        preserveCurrent,
+        inputTranslated,
+        failed,
       };
     } catch {
-      return { text, lang: "", identified: false };  // translation server unavailable — send as-is
+      return {
+        text,
+        lang: "UNKNOWN",
+        identified: false,
+        preserveCurrent: false,
+        inputTranslated: false,
+        failed: true,
+      };
     }
   }
 
@@ -982,54 +1185,93 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ texts, target_lang: targetLang, mode }),
     });
+    if (!r.ok) throw new Error(`Translation HTTP ${r.status}`);
     const d = await r.json();
-    return Array.isArray(d.texts) && d.texts.length === texts.length
-      ? d.texts
-      : texts;
+    if (
+      d.translation_error
+      || d.translation_enabled === false
+      || !Array.isArray(d.texts)
+      || d.texts.length !== texts.length
+    ) {
+      throw new Error("Translation batch was not completed");
+    }
+    return d.texts;
   }
 
   async function translateProjectCards(root) {
     const targetLang = responseLang();
-    if (targetLang.toUpperCase().startsWith("EN")) return;
+    if (targetLang.toUpperCase().startsWith("EN")) {
+      root.querySelectorAll(".proj-name, .proj-meta").forEach(element => {
+        if (element.dataset.sourceText) element.textContent = element.dataset.sourceText;
+      });
+      root.querySelectorAll(".proj-chip").forEach(card => {
+        delete card.dataset.labelLang;
+      });
+      return;
+    }
 
     const cards = Array.from(root.querySelectorAll(".proj-chip"))
       .filter(card => card.dataset.project && card.dataset.labelLang !== targetLang);
     if (!cards.length) return;
 
     const jobs = [];
+    const expectedByCard = new Map();
+    const completedByCard = new Map();
     for (const card of cards) {
       const nameEl = card.querySelector(".proj-name");
       const metaEl = card.querySelector(".proj-meta");
-      if (nameEl?.textContent?.trim()) {
-        jobs.push({ element: nameEl, text: nameEl.textContent.trim() });
+      const sourceName = nameEl?.dataset.sourceText || nameEl?.textContent || "";
+      const sourceMeta = metaEl?.dataset.sourceText || metaEl?.textContent || "";
+      if (sourceName.trim()) {
+        jobs.push({ card, element: nameEl, text: sourceName.trim() });
+        expectedByCard.set(card, (expectedByCard.get(card) || 0) + 1);
       }
-      if (metaEl?.textContent?.trim()) {
-        jobs.push({ element: metaEl, text: metaEl.textContent.trim() });
+      if (sourceMeta.trim()) {
+        jobs.push({ card, element: metaEl, text: sourceMeta.trim() });
+        expectedByCard.set(card, (expectedByCard.get(card) || 0) + 1);
       }
     }
     if (!jobs.length) return;
 
-    const chunkSize = 40;
+    const chunkSize = 20;
     const chunks = [];
     for (let start = 0; start < jobs.length; start += chunkSize) {
       chunks.push(jobs.slice(start, start + chunkSize));
     }
 
-    await Promise.all(chunks.map(async chunk => {
+    for (const chunk of chunks) {
+      let translated = null;
       try {
-        const translated = await translateTextsFromEnglish(
+        translated = await translateTextsFromEnglish(
           chunk.map(job => job.text),
           targetLang,
           "project_labels"
         );
-        translated.forEach((text, index) => {
-          if (text && text.trim()) chunk[index].element.textContent = text.trim();
-        });
       } catch {
-        // Keep original labels if one translation chunk is unavailable.
+        // One bounded retry avoids a permanently mixed list after a transient miss.
+        try {
+          translated = await translateTextsFromEnglish(
+            chunk.map(job => job.text),
+            targetLang,
+            "project_labels"
+          );
+        } catch {}
       }
-    }));
-    cards.forEach(card => { card.dataset.labelLang = targetLang; });
+      if (translated) {
+        translated.forEach((text, index) => {
+          if (text && text.trim()) {
+            const job = chunk[index];
+            job.element.textContent = text.trim();
+            completedByCard.set(job.card, (completedByCard.get(job.card) || 0) + 1);
+          }
+        });
+      }
+    }
+    cards.forEach(card => {
+      if (completedByCard.get(card) === expectedByCard.get(card)) {
+        card.dataset.labelLang = targetLang;
+      }
+    });
   }
 
   // ── Bot-initiated greeting ────────────────────────────────────────────────────
@@ -1051,7 +1293,7 @@
         const replies = await res.json();
         for (const r of replies) {
           if (r.text || r.image || r.buttons?.length) {
-            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
+            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || [], r.custom || {});
           }
           handleBotCustom(r.custom);
         }
@@ -1063,7 +1305,13 @@
   }
 
   // ── Send ─────────────────────────────────────────────────────────────────────
-  async function send(text, _retries = 0, _cachedEnglish = null) {
+  async function send(
+    text,
+    _retries = 0,
+    _cachedEnglish = null,
+    _detectTypedLanguage = text == null,
+    _cachedInputState = null
+  ) {
     const msg = (text || inputEl.value).trim();
     if (!msg) return;
     if (_retries === 0) {
@@ -1074,19 +1322,44 @@
 
     // Translate input to English once; reuse on retries to avoid redundant API calls
     let englishMsg = _cachedEnglish;
+    let inputState = _cachedInputState || (
+      _cachedEnglish !== null
+        ? {
+            input_lang: "EN",
+            input_lang_confident: false,
+            input_translated: true,
+            synthetic_payload: true,
+          }
+        : null
+    );
     if (englishMsg === null) {
-      const identifyLanguage = shouldIdentifyLanguage();
-      const translated = await translateToEnglish(msg, currentLang, identifyLanguage);
-      englishMsg = translated.text;
-      if (identifyLanguage) {
-        recordLanguageIdentification(
-          translated.lang,
-          true,
-          translated.identified
-        );
-      } else if (translated.lang && !languageLocked) {
-        setLang(translated.lang);
+      const translated = await translateToEnglish(
+        msg,
+        currentLang,
+        _detectTypedLanguage
+      );
+      if (translated.failed) {
+        setLoading(false);
+        appendMessage("bot", uiCopy("translationError"));
+        inputEl.focus();
+        return;
       }
+      englishMsg = translated.text;
+      if (
+        _detectTypedLanguage
+        && translated.identified
+        && !translated.preserveCurrent
+        && translated.lang !== "UNKNOWN"
+      ) {
+        setLang(translated.lang, { source: "typed" });
+      }
+      inputState = {
+        input_lang: translated.identified ? translated.lang : "UNKNOWN",
+        input_lang_confident: Boolean(translated.identified),
+        input_translated: Boolean(translated.inputTranslated),
+        preserve_current_language: Boolean(translated.preserveCurrent),
+        synthetic_payload: !_detectTypedLanguage,
+      };
     }
 
     try {
@@ -1096,19 +1369,25 @@
         body: JSON.stringify({
           sender: SESSION_ID,
           message: englishMsg,
-          metadata: requestMetadata(),
+          metadata: requestMetadata(inputState || {}),
         }),
       });
 
       if (res.status === 502 || res.status === 503) {
         setLoading(false);
-        if (_retries === 0) appendMessage("bot", "⏳ Assistant is loading — this takes about a minute on first start. Retrying…");
+        if (_retries === 0) appendMessage("bot", uiCopy("loading"));
         if (_retries < 24) {
           if (_retries > 0 && _retries % 4 === 0)
-            appendMessage("bot", `⏳ Still loading… (~${Math.round((24 - _retries) * 5)}s remaining)`);
-          setTimeout(() => send(msg, _retries + 1, englishMsg), 5000);
+            appendMessage("bot", uiCopy("stillLoading", Math.round((24 - _retries) * 5)));
+          setTimeout(() => send(
+            msg,
+            _retries + 1,
+            englishMsg,
+            _detectTypedLanguage,
+            inputState
+          ), 5000);
         } else {
-          appendMessage("bot", "⚠️ Assistant took too long to start. Please refresh and try again.");
+          appendMessage("bot", uiCopy("loadTimeout"));
         }
         return;
       }
@@ -1117,11 +1396,11 @@
       const replies = await res.json();
       setLoading(false);
       if (!replies?.length) {
-        appendMessage("bot", "I didn't get a response — please try again.");
+        appendMessage("bot", uiCopy("noResponse"));
       } else {
         for (const r of replies) {
           if (r.text || r.image || r.buttons?.length) {
-            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || []);
+            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || [], r.custom || {});
           }
           handleBotCustom(r.custom);
         }
@@ -1129,7 +1408,7 @@
       inputEl.focus();
     } catch (err) {
       setLoading(false);
-      appendMessage("bot", "⚠️ Could not reach the assistant. Please check back shortly.");
+      appendMessage("bot", uiCopy("unreachable"));
       console.error(err);
       inputEl.focus();
     }

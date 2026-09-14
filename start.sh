@@ -14,6 +14,14 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
 fi
 
 PYTHON="$SCRIPT_DIR/.venv/bin/python3"
+MODEL_PATH="${RASA_MODEL:-$SCRIPT_DIR/models/production.tar.gz}"
+if [[ "$MODEL_PATH" != /* ]]; then
+    MODEL_PATH="$SCRIPT_DIR/${MODEL_PATH#./}"
+fi
+if [ ! -f "$MODEL_PATH" ]; then
+    echo "  ERROR: Rasa model not found: $MODEL_PATH" >&2
+    exit 1
+fi
 
 echo ""
 echo "  Starting 1PAX chatbot..."
@@ -51,10 +59,11 @@ UI_PID=$!
 echo ""
 echo "  ✅ Chat UI → http://localhost:8080"
 echo "  ✅ API     → http://localhost:5005"
+echo "  ✅ Model   → $MODEL_PATH"
 echo ""
 
 # Kill all servers on exit
 trap "kill $TRANSLATE_PID $ACTION_PID $UI_PID 2>/dev/null; echo ''; echo '  Servers stopped.'; exit 0" INT TERM EXIT
 
 # Start Rasa API in the foreground
-"$PYTHON" -m rasa run --enable-api --cors "*" --port 5005 --endpoints endpoints.yml
+"$PYTHON" -m rasa run --enable-api --cors "*" --port 5005 --model "$MODEL_PATH" --endpoints endpoints.yml

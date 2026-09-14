@@ -449,6 +449,11 @@ rules:
     - intent: provide_schedule_email
     - action: action_schedule_meeting
 
+- rule: Collect scheduling purpose
+  steps:
+    - intent: provide_schedule_purpose
+    - action: action_schedule_meeting
+
 - rule: Collect scheduling time preference
   steps:
     - intent: provide_schedule_time_preference
@@ -483,3 +488,75 @@ rules:
   steps:
   - intent: ask_company_skylo
   - action: action_answer_company_query
+
+# ── Client due diligence, portfolio insights & fellowship ─────────────────────
+
+- rule: Handle ask_projects_ranking
+  steps:
+    - intent: ask_projects_ranking
+    - action: action_list_projects
+
+- rule: Handle ask_projects_filter
+  steps:
+    - intent: ask_projects_filter
+    - action: action_list_projects
+
+- rule: Handle ask_company_awards
+  steps:
+    - intent: ask_company_awards
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_fellowship
+  steps:
+    - intent: ask_company_fellowship
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_languages
+  steps:
+    - intent: ask_company_languages
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_local_presence
+  steps:
+    - intent: ask_company_local_presence
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_engineering
+  steps:
+    - intent: ask_company_engineering
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_partners
+  steps:
+    - intent: ask_company_partners
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_beyond_airports
+  steps:
+    - intent: ask_company_beyond_airports
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_project_size
+  steps:
+    - intent: ask_company_project_size
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_engagement
+  steps:
+    - intent: ask_company_engagement
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_project_stages
+  steps:
+    - intent: ask_company_project_stages
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_certifications
+  steps:
+    - intent: ask_company_certifications
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_track_record
+  steps:
+    - intent: ask_company_track_record
+    - action: action_answer_company_query

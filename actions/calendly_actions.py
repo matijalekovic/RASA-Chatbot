@@ -356,7 +356,7 @@ def _user_timezone(tracker: Tracker, cfg: CalendlyConfig) -> str:
 
 
 def _lang_event(lang: Optional[str]) -> List[SlotSet]:
-    return [SlotSet("language", lang)] if lang else []
+    return [SlotSet("language", lang)]
 
 
 def _clear_schedule_events() -> List[SlotSet]:
@@ -516,7 +516,7 @@ def _extract_field_update_value(text: str, field_terms: Tuple[str, ...]) -> Opti
     field_pattern = "|".join(re.escape(term) for term in field_terms)
     patterns = [
         rf"^\s*(?:{field_pattern})\s*[:=]\s*(.+)$",
-        rf"\b(?:change|update|correct|edit|set)\s+(?:my\s+|the\s+)?(?:{field_pattern})\s+(?:to|as|with)\s+(.+)",
+        rf"\b(?:change|update|correct|edit|set|promeni|promenim|promijenim|izmeni|izmijeni|ispravi|azuriraj)\s+(?:my\s+|the\s+|moje\s+|moj\s+|moju\s+)?(?:{field_pattern})\s+(?:to|as|with|na|u|za)\s+(.+)",
         rf"\b(?:{field_pattern})\s+(?:should be|should read|is actually|is)\s+(.+)",
     ]
     for pattern in patterns:
@@ -557,6 +557,35 @@ def _clean_purpose(raw: str) -> Optional[str]:
 def _extract_purpose(text: str, stage: Optional[str]) -> Optional[str]:
     if stage == "collect_purpose":
         return _clean_purpose(text)
+
+    inline_label = re.search(
+        r"\b(?:purpose|reason|topic|agenda|povod|svrha|tema|razlog)\s*[:=]\s*(.+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if inline_label:
+        labeled = re.split(
+            r"\.\s*(?:today|tomorrow|next week|this week|"
+            r"monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+            inline_label.group(1),
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        return _clean_purpose(labeled)
+
+    labeled = _extract_field_update_value(
+        text,
+        ("purpose", "reason", "topic", "agenda", "povod", "svrha", "tema", "razlog"),
+    )
+    if labeled:
+        labeled = re.split(
+            r"\.\s*(?:today|tomorrow|next week|this week|"
+            r"monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+            labeled,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        return _clean_purpose(labeled)
 
     patterns = [
         r"\b(?:purpose|intent|reason)\s+(?:is|for the meeting is)\s+(.+)",
@@ -973,8 +1002,10 @@ def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
     lowered = text.lower().strip(" .!?,")
     if not lowered:
         return False
+    if not stage:
+        return False
 
-    explicit_cancel_phrases = (
+    exact_cancel_phrases = {
         "cancel",
         "no thanks",
         "not now",
@@ -992,11 +1023,175 @@ def _is_cancel(text: str, intent: str, stage: Optional[str]) -> bool:
         "changed my mind",
         "otkazi",
         "otkaži",
-    )
-    if any(phrase in lowered for phrase in explicit_cancel_phrases):
+    }
+    if lowered in exact_cancel_phrases:
+        return True
+
+    if re.fullmatch(
+        r"(?:please\s+)?(?:cancel|stop)"
+        r"(?:\s+(?:it|this|that|the|my|our)\s*)?"
+        r"(?:(?:calendar\s+)?(?:booking|meeting|request|scheduling|flow|appointment|invite|invitation))?",
+        lowered,
+    ):
         return True
 
     return stage in {"select_slot", "confirm"} and lowered in {"no", "ne"}
+
+
+def looks_like_new_schedule_request(text: str) -> bool:
+    """Public routing hook: true for customer requests to start booking."""
+    normalized = _ascii_norm(text or "")
+    if not normalized:
+        return False
+    if _looks_like_existing_meeting_management_request(text):
+        return True
+    unsupported_booking_objects = (
+        "flight",
+        "airline ticket",
+        "plane ticket",
+        "train ticket",
+        "bus ticket",
+        "hotel room",
+        "restaurant",
+        "dinner table",
+        "taxi",
+        "cab",
+    )
+    has_meeting_context = any(
+        term in normalized
+        for term in (
+            "meeting",
+            "call",
+            "consultation",
+            "appointment",
+            "with 1pax",
+            "with the studio",
+            "with your team",
+        )
+    )
+    if any(term in normalized for term in unsupported_booking_objects) and not has_meeting_context:
+        return False
+    schedule_phrases = (
+        "schedule",
+        "book a call",
+        "book call",
+        "book a meeting",
+        "book meeting",
+        "book me",
+        "book us",
+        "book with",
+        "reserve a meeting",
+        "reserve a call",
+        "arrange a meeting",
+        "arrange a call",
+        "set up a meeting",
+        "set up a call",
+        "consultation",
+        "appointment",
+        "meet with",
+        "speak with someone",
+        "talk to someone",
+        "talk with someone",
+        "available next",
+        "availability",
+        "free next",
+        "book 30 minutes",
+        "book thirty minutes",
+    )
+    if any(phrase in normalized for phrase in schedule_phrases):
+        return True
+    if "meet" in normalized and any(
+        term in normalized for term in ("next week", "tomorrow", "project", "proposal", "office")
+    ):
+        return True
+    return False
+
+
+def _looks_like_unscoped_service_inquiry(text: str) -> bool:
+    """Distinguish a service question from a purpose answer outside a booking flow."""
+    normalized = _ascii_norm(text or "")
+    return any(phrase in normalized for phrase in (
+        "do you provide", "do you offer", "can you provide", "can 1pax provide",
+        "can you help with", "what services", "which services", "i want a proposal",
+        "we need a proposal", "prepare a proposal", "request a proposal",
+    ))
+
+
+def _looks_like_existing_meeting_management_request(text: str) -> bool:
+    normalized = _ascii_norm(text or "")
+    if not normalized:
+        return False
+    return any(
+        phrase in normalized
+        for phrase in (
+            "already booked",
+            "already scheduled",
+            "already have a meeting",
+            "already have an appointment",
+            "booked a meeting",
+            "booked an appointment",
+            "change an existing meeting",
+            "change an existing appointment",
+            "cancel my appointment",
+            "cancel my meeting",
+            "cancel my booking",
+            "cancel my invite",
+            "cancel my invitation",
+            "reschedule my appointment",
+            "reschedule my meeting",
+            "reschedule my booking",
+            "reschedule it",
+            "reschedule the invite",
+            "reschedule the invitation",
+            "move my meeting",
+            "change my appointment",
+            "change my meeting",
+            "existing meeting",
+            "existing appointment",
+            "calendar invite",
+            "calendar invitation",
+            "meeting invite",
+            "google calendar invite",
+            "will this invite",
+            "invite appear",
+            "appear on my calendar",
+            "appear on google calendar",
+            "google calendar event",
+        )
+    )
+
+
+def _looks_like_non_booking_contact_request(text: str) -> bool:
+    normalized = _ascii_norm(text or "")
+    if not normalized:
+        return False
+    return any(
+        phrase in normalized
+        for phrase in (
+            "nda",
+            "non disclosure",
+            "non-disclosure",
+            "confidential",
+            "personal data",
+            "privacy",
+            "data protection",
+            "gdpr",
+            "press images",
+            "press photos",
+            "media kit",
+            "journalist",
+            "publication images",
+        )
+    )
+
+
+def _existing_meeting_management_message() -> str:
+    return (
+        "I cannot change an existing calendar invite from here. If you already "
+        "have a 1PAX invitation, use the reschedule or cancel controls in that "
+        "Google Calendar invite, or email **contact@1pax.com** with the meeting "
+        "details. I can still help you schedule a new meeting here."
+    )
 
 
 def _is_edit_request(text: str) -> bool:
@@ -1004,7 +1199,7 @@ def _is_edit_request(text: str) -> bool:
     if not lowered:
         return False
     if re.search(
-        r"^\s*(?:name|full name|email|e-mail|mail|purpose|reason|topic|agenda|time|date|office|colleague|host)\s*[:=]",
+        r"^\s*(?:name|full name|ime|email|e-mail|mail|mejl|purpose|reason|topic|agenda|povod|svrha|tema|time|date|office|kancelarija|colleague|host)\s*[:=]",
         lowered,
     ):
         return True
@@ -1023,27 +1218,90 @@ def _is_edit_request(text: str) -> bool:
             "not correct",
             "not right",
             "different",
+            "promen",
+            "promjen",
+            "izmeni",
+            "izmijeni",
+            "ispravi",
+            "azuriraj",
+            "greska",
+            "nije tacno",
+            "nije dobro",
+            "umesto",
+            "umjesto",
+            "zapravo",
         )
     )
 
 
+def _is_vague_edit_command(text: str) -> bool:
+    lowered = _ascii_norm(text)
+    if not lowered:
+        return False
+    return bool(
+        re.match(r"^(?:please\s+)?(?:change|correct|update|edit|fix|wrong)\b", lowered)
+    ) or lowered in {
+        "that is wrong",
+        "thats wrong",
+        "that's wrong",
+        "not correct",
+        "incorrect",
+    }
+
+
 def _requested_edit_field(text: str) -> Optional[str]:
     lowered = _ascii_norm(text)
-    if any(term in lowered for term in ("email", "e mail", "mail", "@")):
+    tokens = set(re.findall(r"[a-z0-9]+", lowered))
+    if any(term in lowered for term in ("email", "e mail", "mail", "mejl", "imejl", "@")):
         return "email"
-    if "name" in lowered:
+    if "full name" in lowered or "name" in tokens or "ime" in tokens or "imena" in tokens:
         return "name"
-    if any(term in lowered for term in ("purpose", "reason", "topic", "agenda")):
+    if any(
+        term in lowered
+        for term in ("purpose", "reason", "topic", "agenda", "povod", "svrha", "tema", "razlog")
+    ):
         return "purpose"
-    if any(term in lowered for term in ("time", "slot", "date", "day", "hour", "when")):
+    if any(
+        term in lowered
+        for term in (
+            "time",
+            "slot",
+            "date",
+            "day",
+            "hour",
+            "when",
+            "vreme",
+            "vrijeme",
+            "termin",
+            "datum",
+            "dan",
+            "sat",
+            "kada",
+        )
+    ):
         return "time"
-    if any(term in lowered for term in ("office", "colleague", "host", "person")):
+    if any(
+        term in lowered
+        for term in (
+            "office",
+            "colleague",
+            "host",
+            "person",
+            "kancelar",
+            "ured",
+            "biro",
+            "kolega",
+            "kolegin",
+            "domacin",
+            "osoba",
+        )
+    ):
         return "office"
     return None
 
 
 def _extract_updated_name(text: str) -> Optional[str]:
-    labeled = _extract_field_update_value(text, ("name", "full name"))
+    labeled = _extract_field_update_value(text, ("name", "full name", "ime", "puno ime"))
     if labeled:
         return _clean_name(labeled)
 
@@ -1061,7 +1319,7 @@ def _extract_updated_name(text: str) -> Optional[str]:
 def _extract_updated_purpose(text: str) -> Optional[str]:
     labeled = _extract_field_update_value(
         text,
-        ("purpose", "reason", "topic", "agenda"),
+        ("purpose", "reason", "topic", "agenda", "povod", "svrha", "tema", "razlog"),
     )
     if labeled:
         return _clean_purpose(labeled)
@@ -1166,8 +1424,19 @@ def _route_options_text(options: List[gcal.CalendarColleague]) -> str:
 
 
 def _is_route_rejection(text: str) -> bool:
-    lowered = (text or "").lower().strip(" .!?,")
-    if lowered in {"no", "ne", "not that one", "another", "other"}:
+    lowered = _ascii_norm(text or "").strip(" .!?,")
+    if lowered in {
+        "no",
+        "ne",
+        "not that one",
+        "another",
+        "other",
+        "druga",
+        "drugi",
+        "drugo",
+        "drugu",
+        "druge",
+    }:
         return True
     return any(
         phrase in lowered
@@ -1180,8 +1449,38 @@ def _is_route_rejection(text: str) -> bool:
             "different office",
             "not this",
             "not that",
+            "druga opcija",
+            "drugu opciju",
+            "druge opcije",
+            "prikazi druge",
+            "prikazi drugu",
+            "druga kancelarija",
+            "drugu kancelariju",
+            "drugi kolega",
+            "druga osoba",
+            "ne ova",
+            "ne ta",
+            "ne taj",
+            "nije ova",
+            "nije ta",
         )
     )
+
+
+def _office_choice_text(text: str) -> str:
+    normalized = _ascii_norm(text or "")
+    aliases = {
+        "beograd": "belgrade",
+        "beogradu": "belgrade",
+        "sangaj": "shanghai",
+        "shangaj": "shanghai",
+        "barselona": "barcelona",
+        "barselonu": "barcelona",
+        "pariz": "paris",
+        "parizu": "paris",
+    }
+    extras = [canonical for alias, canonical in aliases.items() if alias in normalized]
+    return f"{text or ''} {' '.join(extras)}".strip()
 
 
 def _google_context_events(
@@ -1276,9 +1575,13 @@ def _google_booking_success_message(
             f"Povod: **{purpose}**.{dry_note}",
         ]
         if booking.meet_link:
-            lines.append(f"Google Meet: {booking.meet_link}")
+            lines.append(f"[Google Meet]({booking.meet_link})")
         if booking.html_link:
-            lines.append(f"Calendar event: {booking.html_link}")
+            lines.append(f"[Calendar event]({booking.html_link})")
+        lines.append(
+            "Zakazivanje je završeno. Ako vam treba još nešto o 1PAX projektima, "
+            "uslugama ili timu, samo mi napišite novo pitanje."
+        )
         return "\n\n".join(lines)
 
     lines = [
@@ -1288,9 +1591,13 @@ def _google_booking_success_message(
         f"Purpose: **{purpose}**.{dry_note}",
     ]
     if booking.meet_link:
-        lines.append(f"Google Meet: {booking.meet_link}")
+        lines.append(f"[Google Meet]({booking.meet_link})")
     if booking.html_link:
-        lines.append(f"Calendar event: {booking.html_link}")
+        lines.append(f"[Calendar event]({booking.html_link})")
+    lines.append(
+        "The meeting flow is complete. If you need anything else about 1PAX "
+        "projects, services, offices, or the team, just send a new question."
+    )
     return "\n\n".join(lines)
 
 
@@ -1313,6 +1620,12 @@ def _book_google_calendar_event(
     )
 
     calendar_id = colleague.calendar_id or f"dryrun:{colleague.id}"
+    host_local_date = start.astimezone(_zone(colleague.timezone)).date()
+    if gcal.is_office_holiday(cfg, colleague, host_local_date):
+        raise gcal.GoogleCalendarError(
+            f"{colleague.office} is blocked for a local office holiday on {host_local_date.isoformat()}."
+        )
+
     busy = client.freebusy([calendar_id], start, end).get(calendar_id, [])
     if busy:
         raise gcal.GoogleCalendarError("That time was just booked. Please choose another slot.")
@@ -1467,6 +1780,63 @@ def _parse_date_value(raw: str, today: date) -> Optional[date]:
             return parsed if parsed >= today else None
         except ValueError:
             return None
+
+    return None
+
+
+def _explicit_past_date(raw: str, today: date) -> Optional[date]:
+    """Return a past explicit date so the scheduler can ask for a new window."""
+    text = _ascii_norm(raw)
+
+    iso_match = re.search(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", text)
+    if iso_match:
+        try:
+            parsed = date(
+                int(iso_match.group(1)),
+                int(iso_match.group(2)),
+                int(iso_match.group(3)),
+            )
+        except ValueError:
+            return None
+        return parsed if parsed < today else None
+
+    dotted_match = re.search(r"\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b", text)
+    if dotted_match:
+        year = int(dotted_match.group(3))
+        if year < 100:
+            year += 2000
+        try:
+            parsed = date(year, int(dotted_match.group(2)), int(dotted_match.group(1)))
+        except ValueError:
+            return None
+        return parsed if parsed < today else None
+
+    month_names = "|".join(sorted(_MONTHS, key=len, reverse=True))
+    month_first = re.search(
+        rf"\b({month_names})\s+(\d{{1,2}})(?:st|nd|rd|th|\.)?,?\s+(\d{{4}})\b",
+        text,
+    )
+    day_first = re.search(
+        rf"\b(\d{{1,2}})(?:st|nd|rd|th|\.)?\s+({month_names})\s+(\d{{4}})\b",
+        text,
+    )
+    try:
+        if month_first:
+            parsed = date(
+                int(month_first.group(3)),
+                _MONTHS[month_first.group(1)],
+                int(month_first.group(2)),
+            )
+            return parsed if parsed < today else None
+        if day_first:
+            parsed = date(
+                int(day_first.group(3)),
+                _MONTHS[day_first.group(2)],
+                int(day_first.group(1)),
+            )
+            return parsed if parsed < today else None
+    except ValueError:
+        return None
 
     return None
 
@@ -1884,9 +2254,10 @@ def _format_slots(
     host_label = f"{host} ({office})" if host and office else host
     if _is_sr(lang):
         intro = (
-            f"Pronašao sam ove dostupne termine sa {host_label} ({timezone_name}):"
+            f"Pronašao sam ove dostupne termine sa {host_label}. "
+            f"Vremena su prikazana u vašoj vremenskoj zoni: {timezone_name}."
             if host_label
-            else f"Pronašao sam ove dostupne termine ({timezone_name}):"
+            else f"Pronašao sam ove dostupne termine u vašoj vremenskoj zoni: {timezone_name}."
         )
         lines = [intro]
         for idx, slot in enumerate(slots, start=1):
@@ -1898,9 +2269,10 @@ def _format_slots(
         return "\n".join(lines)
 
     intro = (
-        f"I found these available times with {host_label} ({timezone_name}):"
+        f"I found these available times with {host_label}. "
+        f"Times are shown in your timezone: {timezone_name}."
         if host_label
-        else f"I found these available times ({timezone_name}):"
+        else f"I found these available times in your timezone: {timezone_name}."
     )
     lines = [intro]
     for idx, slot in enumerate(slots, start=1):
@@ -2310,6 +2682,16 @@ def _booking_success_message(
         lines.append(f"[{reschedule_label}]({reschedule_url})")
     if cancel_url:
         lines.append(f"[{cancel_label}]({cancel_url})")
+    if _is_sr(lang):
+        lines.append(
+            "Zakazivanje je završeno. Ako vam treba još nešto o 1PAX projektima, "
+            "uslugama ili timu, samo mi napišite novo pitanje."
+        )
+    else:
+        lines.append(
+            "The meeting flow is complete. If you need anything else about 1PAX "
+            "projects, services, offices, or the team, just send a new question."
+        )
     return "\n\n".join(lines)
 
 
@@ -2446,7 +2828,6 @@ def run_google_calendar_scheduling(
 ) -> List[SlotSet]:
     """Conversational Google Calendar scheduler."""
 
-    del domain
     lang = get_lang(tracker)
     events: List[SlotSet] = _lang_event(lang)
     cfg = _google_calendar_config()
@@ -2454,6 +2835,24 @@ def run_google_calendar_scheduling(
     text = tracker.latest_message.get("text") or ""
     intent = tracker.latest_message.get("intent", {}).get("name", "")
     stage = tracker.get_slot("schedule_stage")
+
+    if (
+        not stage
+        and intent == "provide_schedule_purpose"
+        and _looks_like_unscoped_service_inquiry(text)
+    ):
+        from .services_actions import ActionAnswerServicesQuery
+
+        return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
+
+    if not stage and _looks_like_existing_meeting_management_request(text):
+        _utter(dispatcher, _existing_meeting_management_message(), lang)
+        return _clear_schedule_events() + events
+
+    if not stage and _looks_like_non_booking_contact_request(text):
+        from .company_actions import ActionAnswerCompanyQuery
+
+        return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
     if _is_cancel(text, intent, stage):
         _utter(
@@ -2506,6 +2905,169 @@ def run_google_calendar_scheduling(
             ]
         )
 
+    if stage and stage != "confirm" and _is_edit_request(text):
+        edit_field = _requested_edit_field(text)
+        if edit_field == "email":
+            updated_email = _extract_updated_email(text)
+            if updated_email:
+                email = updated_email
+                events.extend(
+                    [
+                        SlotSet("schedule_email", email),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(dispatcher, "Sure. What email address should I use instead?", lang)
+                return events + [
+                    SlotSet("schedule_email", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_email")
+
+        elif edit_field == "name":
+            updated_name = _extract_updated_name(text)
+            if updated_name:
+                name = updated_name
+                events.extend(
+                    [
+                        SlotSet("schedule_name", name),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(dispatcher, "Sure. What name should I use instead?", lang)
+                return events + [
+                    SlotSet("schedule_name", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_name")
+
+        elif edit_field == "purpose":
+            updated_purpose = _extract_updated_purpose(text)
+            if updated_purpose:
+                purpose = updated_purpose
+                events.extend(
+                    [
+                        SlotSet("schedule_purpose", purpose),
+                        SlotSet("schedule_purpose_screening", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(
+                    dispatcher,
+                    "Sure. What should the meeting purpose be instead?",
+                    lang,
+                )
+                return events + [
+                    SlotSet("schedule_purpose", None),
+                    SlotSet("schedule_purpose_screening", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_purpose")
+
+        elif edit_field == "time":
+            updated_time = _extract_field_update_value(
+                text,
+                (
+                    "time",
+                    "date",
+                    "day",
+                    "slot",
+                    "vreme",
+                    "vrijeme",
+                    "termin",
+                    "datum",
+                    "dan",
+                    "sat",
+                ),
+            )
+            if updated_time or _has_time_words(text):
+                time_preference = updated_time or _clean_update_value(text)
+                offered_slots = []
+                selected_slot = None
+                selected_label = None
+                events.extend(
+                    [
+                        SlotSet("schedule_time_preference", time_preference),
+                        SlotSet("schedule_offered_slots", None),
+                        SlotSet("schedule_selected_slot", None),
+                        SlotSet("schedule_selected_slot_label", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(
+                    dispatcher,
+                    "Sure. What day or time would you prefer instead?",
+                    lang,
+                )
+                return events + [
+                    SlotSet("schedule_time_preference", None),
+                    SlotSet("schedule_offered_slots", None),
+                    SlotSet("schedule_selected_slot", None),
+                    SlotSet("schedule_selected_slot_label", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_time")
+
+        elif edit_field == "office":
+            requested_colleague = gcal.parse_colleague_choice(
+                _office_choice_text(text),
+                ranked_options,
+            )
+            if requested_colleague:
+                selected_colleague = requested_colleague
+                time_preference = None
+                offered_slots = []
+                selected_slot = None
+                selected_label = None
+                events.extend(
+                    [
+                        SlotSet("schedule_time_preference", None),
+                        SlotSet("schedule_offered_slots", None),
+                        SlotSet("schedule_selected_slot", None),
+                        SlotSet("schedule_selected_slot_label", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                events.extend(
+                    _google_context_events(context, selected_colleague, ranked_options)
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(
+                    dispatcher,
+                    _route_options_text(ranked_options),
+                    lang,
+                    buttons=_colleague_option_buttons(ranked_options),
+                )
+                return events + [
+                    SlotSet("schedule_time_preference", None),
+                    SlotSet("schedule_offered_slots", None),
+                    SlotSet("schedule_selected_slot", None),
+                    SlotSet("schedule_selected_slot_label", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _google_context_events(
+                    context,
+                    options=ranked_options,
+                ) + _set_stage("choose_route")
+
+        elif _is_vague_edit_command(text):
+            _utter(dispatcher, _edit_help_message(), lang)
+            return events + _set_stage(stage)
+
     if stage in {"collect_time", "select_slot"} and _is_route_rejection(text):
         _utter(
             dispatcher,
@@ -2523,7 +3085,9 @@ def run_google_calendar_scheduling(
         ) + _set_stage("choose_route")
 
     extracted_time_preference = (
-        None if stage == "collect_purpose" else _extract_time_preference(text, stage)
+        None
+        if stage in {"collect_name", "collect_email", "collect_purpose"}
+        else _extract_time_preference(text, stage)
     )
     if extracted_time_preference and stage not in {"select_slot", "confirm"}:
         time_preference = extracted_time_preference
@@ -2685,6 +3249,25 @@ def run_google_calendar_scheduling(
             SlotSet("schedule_timezone", timezone_name),
             SlotSet("schedule_stage", "collect_time"),
         ]
+
+    past_date = _explicit_past_date(time_preference, datetime.now(_zone(timezone_name)).date())
+    if past_date:
+        _utter(
+            dispatcher,
+            (
+                f"That date, **{past_date.isoformat()}**, is in the past. "
+                "Please send a future day or time window, like *tomorrow afternoon* "
+                "or *next week*."
+            ),
+            lang,
+        )
+        return events + [
+            SlotSet("schedule_time_preference", None),
+            SlotSet("schedule_offered_slots", None),
+            SlotSet("schedule_selected_slot", None),
+            SlotSet("schedule_selected_slot_label", None),
+            SlotSet("schedule_timezone", timezone_name),
+        ] + _set_stage("collect_time")
 
     if stage == "select_slot" and offered_slots:
         choice = _parse_slot_choice(text, offered_slots, timezone_name)
@@ -3230,7 +3813,6 @@ def _run_calendly_scheduling(
 ) -> List[SlotSet]:
     """Legacy Calendly implementation."""
 
-    del domain
     lang = get_lang(tracker)
     events: List[SlotSet] = _lang_event(lang)
     cfg = _config_from_env()
@@ -3238,6 +3820,24 @@ def _run_calendly_scheduling(
     text = tracker.latest_message.get("text") or ""
     intent = tracker.latest_message.get("intent", {}).get("name", "")
     stage = tracker.get_slot("schedule_stage")
+
+    if (
+        not stage
+        and intent == "provide_schedule_purpose"
+        and _looks_like_unscoped_service_inquiry(text)
+    ):
+        from .services_actions import ActionAnswerServicesQuery
+
+        return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
+
+    if not stage and _looks_like_existing_meeting_management_request(text):
+        _utter(dispatcher, _existing_meeting_management_message(), lang)
+        return _clear_schedule_events() + events
+
+    if not stage and _looks_like_non_booking_contact_request(text):
+        from .company_actions import ActionAnswerCompanyQuery
+
+        return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
     if _is_cancel(text, intent, stage):
         _utter(
@@ -3281,6 +3881,134 @@ def _run_calendly_scheduling(
             ]
         )
 
+    if stage and stage != "confirm" and _is_edit_request(text):
+        edit_field = _requested_edit_field(text)
+        if edit_field == "email":
+            updated_email = _extract_updated_email(text)
+            if updated_email:
+                email = updated_email
+                events.extend(
+                    [
+                        SlotSet("schedule_email", email),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(dispatcher, "Sure. What email address should I use instead?", lang)
+                return events + [
+                    SlotSet("schedule_email", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_email")
+
+        elif edit_field == "name":
+            updated_name = _extract_updated_name(text)
+            if updated_name:
+                name = updated_name
+                events.extend(
+                    [
+                        SlotSet("schedule_name", name),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(dispatcher, "Sure. What name should I use instead?", lang)
+                return events + [
+                    SlotSet("schedule_name", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_name")
+
+        elif edit_field == "purpose":
+            updated_purpose = _extract_updated_purpose(text)
+            if updated_purpose:
+                purpose = updated_purpose
+                events.extend(
+                    [
+                        SlotSet("schedule_purpose", purpose),
+                        SlotSet("schedule_purpose_screening", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(
+                    dispatcher,
+                    "Sure. What should the meeting purpose be instead?",
+                    lang,
+                )
+                return events + [
+                    SlotSet("schedule_purpose", None),
+                    SlotSet("schedule_purpose_screening", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_purpose")
+
+        elif edit_field == "time":
+            updated_time = _extract_field_update_value(
+                text,
+                (
+                    "time",
+                    "date",
+                    "day",
+                    "slot",
+                    "vreme",
+                    "vrijeme",
+                    "termin",
+                    "datum",
+                    "dan",
+                    "sat",
+                ),
+            )
+            if updated_time or _has_time_words(text):
+                time_preference = updated_time or _clean_update_value(text)
+                offered_slots = []
+                selected_slot = None
+                selected_label = None
+                events.extend(
+                    [
+                        SlotSet("schedule_time_preference", time_preference),
+                        SlotSet("schedule_offered_slots", None),
+                        SlotSet("schedule_selected_slot", None),
+                        SlotSet("schedule_selected_slot_label", None),
+                        SlotSet("schedule_pending_edit_field", None),
+                    ]
+                )
+                _utter(dispatcher, "Got it, I updated that.", lang)
+                text = ""
+                stage = "edit_resume"
+            else:
+                _utter(
+                    dispatcher,
+                    "Sure. What day or time would you prefer instead?",
+                    lang,
+                )
+                return events + [
+                    SlotSet("schedule_time_preference", None),
+                    SlotSet("schedule_offered_slots", None),
+                    SlotSet("schedule_selected_slot", None),
+                    SlotSet("schedule_selected_slot_label", None),
+                    SlotSet("schedule_pending_edit_field", None),
+                ] + _set_stage("collect_time")
+
+        elif edit_field == "office":
+            _utter(
+                dispatcher,
+                "This scheduling link does not route by office. Tell me a "
+                "different day or time and I will look again.",
+                lang,
+            )
+            return events + _set_stage(stage)
+
+        elif _is_vague_edit_command(text):
+            _utter(dispatcher, _edit_help_message(), lang)
+            return events + _set_stage(stage)
+
     if stage in {"collect_time", "select_slot"} and _is_route_rejection(text):
         _utter(
             dispatcher,
@@ -3294,7 +4022,9 @@ def _run_calendly_scheduling(
         ] + _set_stage("collect_time")
 
     extracted_time_preference = (
-        None if stage == "collect_purpose" else _extract_time_preference(text, stage)
+        None
+        if stage in {"collect_name", "collect_email", "collect_purpose"}
+        else _extract_time_preference(text, stage)
     )
     if extracted_time_preference and stage not in {"select_slot", "confirm"}:
         time_preference = extracted_time_preference
@@ -3359,6 +4089,25 @@ def _run_calendly_scheduling(
             SlotSet("schedule_timezone", timezone_name),
             SlotSet("schedule_stage", "collect_time"),
         ]
+
+    past_date = _explicit_past_date(time_preference, datetime.now(_zone(timezone_name)).date())
+    if past_date:
+        _utter(
+            dispatcher,
+            (
+                f"That date, **{past_date.isoformat()}**, is in the past. "
+                "Please send a future day or time window, like *tomorrow afternoon* "
+                "or *next week*."
+            ),
+            lang,
+        )
+        return events + [
+            SlotSet("schedule_time_preference", None),
+            SlotSet("schedule_offered_slots", None),
+            SlotSet("schedule_selected_slot", None),
+            SlotSet("schedule_selected_slot_label", None),
+            SlotSet("schedule_timezone", timezone_name),
+        ] + _set_stage("collect_time")
 
     if stage == "select_slot" and offered_slots:
         choice = _parse_slot_choice(text, offered_slots, timezone_name)

@@ -2,24 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>1PAX — Assistant</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #f5f4f2;
-      --surface:   #ffffff;
-      --border:    #e2e0db;
-      --text:      #1a1a1a;
-      --muted:     #7a7670;
-      --accent:    #1a1a1a;
-      --user-bg:   #1a1a1a;
-      --user-text: #ffffff;
-      --bot-bg:    #ffffff;
-      --bot-text:  #1a1a1a;
-      --radius:    14px;
-      --shadow:    0 2px 16px rgba(0,0,0,0.08);
+      --bg:       #f4f3f1;
+      --surface:  #ffffff;
+      --border:   #e3e1dc;
+      --text:     #111111;
+      --muted:    #8a8580;
+      --radius:   16px;
     }
 
     html, body {
@@ -27,110 +21,118 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
+      overflow: hidden;
     }
 
     #app {
       display: flex;
       flex-direction: column;
-      max-width: 760px;
+      width: 100%;
+      max-width: 780px;
       height: 100vh;
+      height: 100dvh;
+      min-height: 0;
       margin: 0 auto;
+      background: var(--bg);
     }
 
     /* ── Header ── */
     header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 18px 24px;
+      gap: 10px;
+      padding: 15px 24px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      position: relative;
+      z-index: 2;
     }
-    .logo {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-    }
-    .logo-dot {
-      display: inline-block;
-      width: 7px; height: 7px;
-      background: var(--accent);
-      border-radius: 50%;
-      margin-left: 3px;
-      vertical-align: middle;
-    }
-    .header-sub {
-      font-size: 13px;
+    .logo { font-size: 16px; font-weight: 700; letter-spacing: 0.07em; }
+    .header-sub { font-size: 12px; color: var(--muted); min-width: 0; }
+    .status-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; margin-left: 8px; flex-shrink: 0; }
+
+    /* ── Language selector ── */
+    .lang-selector { display: flex; gap: 3px; margin-left: auto; }
+    .lang-btn {
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      background: transparent;
       color: var(--muted);
-      font-weight: 400;
+      font-family: inherit;
+      transition: all 0.1s;
+      line-height: 1.6;
     }
-    .status-dot {
-      width: 8px; height: 8px;
-      background: #22c55e;
-      border-radius: 50%;
-      margin-left: auto;
-      flex-shrink: 0;
-    }
+    .lang-btn:hover  { border-color: #aaa; color: var(--text); }
+    .lang-btn.active { background: #111; color: #fff; border-color: #111; }
 
     /* ── Messages ── */
     #messages {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 20px;
+      padding: 24px 18px 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      scroll-behavior: smooth;
+      gap: 3px;
+      min-height: 0;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     .message {
       display: flex;
       flex-direction: column;
-      max-width: 78%;
+      max-width: 84%;
       min-width: 0;
-      animation: fadeIn 0.18s ease;
+      animation: fadeIn 0.14s ease;
     }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message.user { align-self: flex-end; align-items: flex-end; margin-top: 10px; }
     .message.bot  { align-self: flex-start; align-items: flex-start; }
+    .message.bot + .message.bot { margin-top: 2px; }
+    .message.bot + .message.user,
+    .message.user + .message.bot { margin-top: 14px; }
 
     .bubble {
       max-width: 100%;
       min-width: 0;
-      padding: 11px 16px;
+      padding: 10px 14px;
       border-radius: var(--radius);
       font-size: 14.5px;
-      line-height: 1.6;
+      line-height: 1.65;
       word-break: break-word;
       overflow-wrap: anywhere;
-      box-shadow: var(--shadow);
     }
     .message.user .bubble {
-      background: var(--user-bg);
-      color: var(--user-text);
+      background: #111;
+      color: #fff;
       border-bottom-right-radius: 4px;
     }
     .message.bot .bubble {
-      background: var(--bot-bg);
-      color: var(--bot-text);
+      background: var(--surface);
+      color: var(--text);
       border: 1px solid var(--border);
       border-bottom-left-radius: 4px;
     }
+    .message.bot + .message.bot .bubble { border-top-left-radius: 4px; }
 
-    /* Markdown rendering inside bubbles */
+    /* ── Markdown — base ── */
+    .bubble p { margin: 0 0 6px; }
+    .bubble p:last-child { margin-bottom: 0; }
     .bubble strong { font-weight: 600; }
     .bubble em { font-style: italic; color: var(--muted); }
-    .bubble ul { padding-left: 18px; margin: 6px 0; }
-    .bubble li { margin: 3px 0; overflow-wrap: anywhere; }
-    .bubble p { margin: 5px 0; }
-    .bubble p:first-child { margin-top: 0; }
-    .bubble p:last-child  { margin-bottom: 0; }
-    .bubble a { color: inherit; text-decoration: underline; }
+    .message.user .bubble em { color: rgba(255,255,255,0.6); }
+    .bubble a { color: inherit; text-decoration: underline; text-underline-offset: 2px; opacity: 0.85; }
+    .bubble a:hover { opacity: 1; }
     .bubble-image {
       display: block;
       width: 100%;
@@ -144,12 +146,153 @@
     }
     .bubble-image:first-child { margin-top: 0; }
 
-    /* Timestamp */
-    .ts {
+    /* Section headers — standalone **Category** lines */
+    .bubble .md-h4 {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 14px 0 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border);
+    }
+    .bubble .md-h4:first-child { margin-top: 0; }
+    .message.user .bubble .md-h4 { color: rgba(255,255,255,0.45); border-color: rgba(255,255,255,0.2); }
+
+    /* Plain bullet list */
+    .bubble ul { list-style: none; padding: 0; margin: 4px 0 6px; }
+    .bubble ul:last-child { margin-bottom: 0; }
+    .bubble li {
+      display: flex;
+      gap: 8px;
+      padding: 2px 0;
+      font-size: 14px;
+      line-height: 1.55;
+      align-items: baseline;
+    }
+    .bubble li .li-dot {
+      color: var(--muted);
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .bubble li span:last-child {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .message.user .bubble li .li-dot { color: rgba(255,255,255,0.35); }
+
+    /* ── Project / entity chips ── */
+    .proj-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin: 4px 0 6px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .proj-list:last-child { margin-bottom: 0; }
+
+    .proj-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      cursor: pointer;
+      background: var(--bg);
+      transition: background 0.1s, border-color 0.1s;
+      text-align: left;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .proj-chip:hover  { background: #eae8e4; border-color: #c8c5bf; }
+    .proj-chip:active { background: #ddd9d3; }
+
+    .proj-chip .proj-thumb {
+      width: 46px;
+      height: 46px;
+      border-radius: 7px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: #d9d6cf;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .proj-chip .proj-thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .proj-chip .proj-thumb-fallback {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .proj-chip .proj-info { flex: 1; min-width: 0; }
+    .proj-chip .proj-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .proj-chip .proj-meta {
       font-size: 11px;
       color: var(--muted);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .proj-chip .proj-arrow {
+      color: #c0bdb8;
+      font-size: 13px;
+      flex-shrink: 0;
+      font-weight: 300;
+    }
+    .proj-chip:hover .proj-arrow { color: var(--muted); }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+      max-width: 100%;
+    }
+    .quick-action {
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.25;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .quick-action:hover { background: var(--border); border-color: #c8c5bf; }
+    .quick-action:active { background: #ddd9d3; }
+
+    /* ── Timestamp ── */
+    .ts {
+      font-size: 10px;
+      color: var(--muted);
       margin-top: 3px;
-      padding: 0 4px;
+      padding: 0 3px;
+      opacity: 0.7;
     }
 
     /* ── Typing indicator ── */
@@ -158,42 +301,44 @@
       display: flex;
       align-items: center;
       gap: 5px;
-      padding: 12px 18px;
-      background: var(--bot-bg);
+      padding: 10px 15px;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       border-bottom-left-radius: 4px;
-      margin: 0 20px 6px;
-      box-shadow: var(--shadow);
-      animation: fadeIn 0.18s ease;
+      margin: 2px 18px 6px;
+      animation: fadeIn 0.14s ease;
     }
     #typing.hidden { display: none; }
     #typing span {
-      width: 7px; height: 7px;
+      width: 6px; height: 6px;
       background: var(--muted);
       border-radius: 50%;
       animation: bounce 1.2s infinite ease-in-out;
     }
-    #typing span:nth-child(2) { animation-delay: 0.2s; }
-    #typing span:nth-child(3) { animation-delay: 0.4s; }
+    #typing span:nth-child(2) { animation-delay: 0.18s; }
+    #typing span:nth-child(3) { animation-delay: 0.36s; }
     @keyframes bounce {
-      0%, 60%, 100% { transform: translateY(0); }
-      30%            { transform: translateY(-5px); }
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-5px); }
     }
 
     /* ── Input bar ── */
     #input-bar {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
+      gap: 8px;
+      padding: 12px 18px;
       background: var(--surface);
       border-top: 1px solid var(--border);
       flex-shrink: 0;
+      position: relative;
+      z-index: 2;
     }
     #input {
       flex: 1;
-      padding: 11px 16px;
+      min-width: 0;
+      padding: 10px 16px;
       border: 1px solid var(--border);
       border-radius: 24px;
       font-size: 14.5px;
@@ -203,12 +348,11 @@
       outline: none;
       transition: border-color 0.15s;
     }
-    #input:focus { border-color: #999; }
+    #input:focus { border-color: #aaa; }
     #input::placeholder { color: var(--muted); }
-
     #send {
-      padding: 11px 20px;
-      background: var(--accent);
+      padding: 10px 20px;
+      background: #111;
       color: #fff;
       border: none;
       border-radius: 24px;
@@ -218,96 +362,194 @@
       cursor: pointer;
       transition: opacity 0.15s;
       white-space: nowrap;
+      flex-shrink: 0;
     }
-    #send:hover { opacity: 0.82; }
-    #send:disabled { opacity: 0.35; cursor: default; }
+    #send:hover:not(:disabled) { opacity: 0.75; }
+    #send:disabled { opacity: 0.28; cursor: default; }
 
-    /* ── Welcome message ── */
-    .welcome {
-      text-align: center;
-      padding: 32px 24px;
-      color: var(--muted);
-    }
-    .welcome h2 {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 8px;
-    }
-    .welcome p { font-size: 14px; line-height: 1.6; }
-    .suggestions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      margin-top: 18px;
-    }
-    .suggestion {
-      padding: 8px 14px;
+    /* ── Welcome ── */
+    .welcome { text-align: center; padding: 32px 16px 16px; }
+    .welcome h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.01em; }
+    .welcome p  { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+    .chips-row  { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 16px; }
+    .sug-chip {
+      padding: 7px 13px;
       border: 1px solid var(--border);
       border-radius: 20px;
       font-size: 13px;
-      color: var(--text);
       background: var(--surface);
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.1s;
     }
-    .suggestion:hover { background: var(--border); }
-
-    .quick-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-      margin-top: 8px;
-      max-width: 100%;
-    }
-    .quick-action {
-      padding: 8px 14px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      color: var(--text);
-      background: var(--surface);
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 13px;
-      line-height: 1.25;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .quick-action:hover { background: var(--border); }
+    .sug-chip:hover { background: var(--border); }
 
     /* Scrollbar */
-    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar { width: 4px; }
     #messages::-webkit-scrollbar-track { background: transparent; }
-    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 640px) {
+      :root { --radius: 18px; }
+
+      #app {
+        max-width: none;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+          "logo subtitle status"
+          "langs langs langs";
+        align-items: center;
+        row-gap: 8px;
+        column-gap: 9px;
+        padding: calc(8px + env(safe-area-inset-top)) 12px 9px;
+      }
+
+      .logo {
+        grid-area: logo;
+        font-size: 22px;
+        line-height: 1;
+        letter-spacing: 0.055em;
+      }
+
+      .header-sub {
+        grid-area: subtitle;
+        font-size: 11px;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status-dot {
+        grid-area: status;
+        margin-left: 0;
+      }
+
+      .lang-selector {
+        grid-area: langs;
+        margin-left: 0;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 6px;
+        min-width: 0;
+        width: 100%;
+      }
+
+      .lang-btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 34px;
+        padding: 0 6px;
+        border-radius: 13px;
+        font-size: 12px;
+        line-height: 1;
+        touch-action: manipulation;
+      }
+
+      #messages {
+        padding: 16px 12px 10px;
+        gap: 2px;
+      }
+
+      .message {
+        max-width: 92%;
+      }
+
+      .message.user {
+        margin-top: 8px;
+      }
+
+      .message.bot + .message.user,
+      .message.user + .message.bot {
+        margin-top: 12px;
+      }
+
+      .bubble {
+        padding: 11px 13px;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .message.bot .bubble {
+        max-width: 100%;
+      }
+
+      .ts {
+        font-size: 11px;
+        margin-top: 4px;
+      }
+
+      #typing {
+        margin: 2px 12px 6px;
+        padding: 10px 14px;
+      }
+
+      #input-bar {
+        gap: 8px;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      }
+
+      #input {
+        width: 0;
+        height: 44px;
+        padding: 0 14px;
+        font-size: 16px;
+      }
+
+      #send {
+        min-width: 74px;
+        height: 44px;
+        padding: 0 18px;
+        font-size: 15px;
+      }
+
+      .quick-actions {
+        gap: 7px;
+        margin-top: 8px;
+      }
+
+      .quick-action {
+        min-height: 38px;
+        padding: 8px 13px;
+        font-size: 14px;
+      }
+
+      .proj-chip {
+        padding: 10px 11px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .logo { font-size: 20px; }
+      .header-sub { font-size: 10.5px; }
+      .lang-selector { gap: 4px; }
+      .lang-btn { min-height: 32px; font-size: 11px; }
+      #send { min-width: 66px; padding: 0 14px; }
+    }
   </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <span class="logo">1PAX<span class="logo-dot"></span></span>
-    <span class="header-sub">Assistant — internal preview</span>
-    <span class="status-dot" title="Online"></span>
+    <span class="logo">1PAX</span>
+    <span class="header-sub">Website assistant</span>
+    <div class="lang-selector">
+      <button class="lang-btn active" type="button" data-lang="" aria-pressed="true">EN</button>
+      <button class="lang-btn" type="button" data-lang="FR" aria-pressed="false">FR</button>
+      <button class="lang-btn" type="button" data-lang="ES" aria-pressed="false">ES</button>
+      <button class="lang-btn" type="button" data-lang="PT-PT" aria-pressed="false">PT</button>
+      <button class="lang-btn" type="button" data-lang="ZH-HANS" aria-pressed="false">中文</button>
+      <button class="lang-btn" type="button" data-lang="SR" aria-pressed="false">SR</button>
+    </div>
+    <span class="status-dot"></span>
   </header>
 
-  <div id="messages">
-    <div class="welcome" id="welcome">
-      <h2>Hello 👋</h2>
-      <p>Ask me about 1PAX projects, the team, services, products, or schedule a meeting with the studio.</p>
-      <div class="suggestions">
-        <span class="suggestion" onclick="send('What projects has 1PAX designed?')">What projects has 1PAX designed?</span>
-        <span class="suggestion" onclick="send('Tell me about Sofia Airport')">Tell me about Sofia Airport</span>
-        <span class="suggestion" onclick="send('What is Ecoport?')">What is Ecoport?</span>
-        <span class="suggestion" onclick="send('Who is the CEO?')">Who is the CEO?</span>
-        <span class="suggestion" onclick="send('What services does 1PAX offer?')">What services does 1PAX offer?</span>
-        <span class="suggestion" onclick="send('I would like to schedule a meeting.')">Schedule a meeting</span>
-        <span class="suggestion" onclick="send('Tell me about the PAX cart')">Tell me about the PAX cart</span>
-      </div>
-    </div>
-  </div>
+  <div id="messages"></div>
 
-  <div id="typing" class="hidden">
-    <span></span><span></span><span></span>
-  </div>
+  <div id="typing" class="hidden"><span></span><span></span><span></span></div>
 
   <div id="input-bar">
     <input id="input" type="text" placeholder="Ask about projects, team, services…" autocomplete="off" />
@@ -316,70 +558,416 @@
 </div>
 
 <script>
-  const RASA_URL = "${RASA_API_URL}";
-  const SESSION_ID = "user_" + Math.random().toString(36).slice(2, 10);
+  const CONFIGURED_API_URL = "${RASA_API_URL}".trim().replace(/\/+$/, "");
+  const IS_LOCAL = (
+    window.location.hostname === "localhost"
+    || window.location.hostname === "127.0.0.1"
+  );
+  const RASA_URL = CONFIGURED_API_URL || (IS_LOCAL ? "http://localhost:5005" : "");
 
+  const SESSION_ID = "u_" + Math.random().toString(36).slice(2, 10);
   const messagesEl = document.getElementById("messages");
   const inputEl    = document.getElementById("input");
   const sendBtn    = document.getElementById("send");
   const typingEl   = document.getElementById("typing");
 
-  function clientMetadata() {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-    const languages = Array.isArray(navigator.languages)
-      ? navigator.languages.filter(Boolean)
-      : [];
-    const locale = navigator.language || languages[0] || "";
-    return {
-      timezone,
-      locale,
-      browser_locale: locale,
-      browser_language: locale,
-      browser_languages: languages,
-    };
+  const PLACEHOLDERS = {
+    EN: { desktop: "Ask about projects, team, services…", mobile: "Ask 1PAX…" },
+    FR: { desktop: "Posez une question sur les projets, l'équipe, les services…", mobile: "Demandez à 1PAX…" },
+    ES: { desktop: "Pregunta por proyectos, equipo o servicios…", mobile: "Pregunta a 1PAX…" },
+    PT: { desktop: "Pergunte sobre projetos, equipa ou serviços…", mobile: "Pergunte à 1PAX…" },
+    "PT-PT": { desktop: "Pergunte sobre projetos, equipa ou serviços…", mobile: "Pergunte à 1PAX…" },
+    "PT-BR": { desktop: "Pergunte sobre projetos, equipe ou serviços…", mobile: "Pergunte à 1PAX…" },
+    ZH: { desktop: "询问项目、团队或服务…", mobile: "询问 1PAX…" },
+    "ZH-HANS": { desktop: "询问项目、团队或服务…", mobile: "询问 1PAX…" },
+    "ZH-HANT": { desktop: "詢問項目、團隊或服務…", mobile: "詢問 1PAX…" },
+    SR: { desktop: "Pitajte o projektima, timu ili uslugama…", mobile: "Pitajte 1PAX…" },
+  };
+  const UI_COPY = {
+    EN: {
+      translationError: "⚠️ I couldn't translate that message reliably. Please try again shortly.",
+      loading: "⏳ Assistant is loading — this takes about a minute on first start. Retrying…",
+      stillLoading: seconds => `⏳ Still loading… (~${seconds}s remaining)`,
+      loadTimeout: "⚠️ Assistant took too long to start. Please refresh and try again.",
+      noResponse: "I didn't get a response — please try again.",
+      unreachable: "⚠️ Could not reach the assistant. Please check back shortly.",
+      projectCover: "Project cover",
+    },
+    SR: {
+      translationError: "⚠️ Nisam mogao pouzdano da prevedem poruku. Pokušajte ponovo uskoro.",
+      loading: "⏳ Asistent se pokreće — prvi put može potrajati oko minut. Pokušavam ponovo…",
+      stillLoading: seconds => `⏳ Asistent se još pokreće… (~${seconds}s preostalo)`,
+      loadTimeout: "⚠️ Pokretanje asistenta traje predugo. Osvežite stranicu i pokušajte ponovo.",
+      noResponse: "Nisam dobio odgovor — pokušajte ponovo.",
+      unreachable: "⚠️ Trenutno ne mogu da pristupim asistentu. Pokušajte ponovo uskoro.",
+      projectCover: "Naslovna slika projekta",
+    },
+    FR: {
+      translationError: "⚠️ Je n’ai pas pu traduire ce message de manière fiable. Réessayez bientôt.",
+      noResponse: "Je n’ai pas reçu de réponse — veuillez réessayer.",
+      unreachable: "⚠️ Impossible de joindre l’assistant. Veuillez réessayer bientôt.",
+      projectCover: "Image du projet",
+    },
+    ES: {
+      translationError: "⚠️ No pude traducir el mensaje de forma fiable. Inténtalo de nuevo en breve.",
+      noResponse: "No recibí una respuesta — inténtalo de nuevo.",
+      unreachable: "⚠️ No se pudo conectar con el asistente. Inténtalo de nuevo en breve.",
+      projectCover: "Imagen del proyecto",
+    },
+    PT: {
+      translationError: "⚠️ Não consegui traduzir a mensagem com segurança. Tente novamente em breve.",
+      noResponse: "Não recebi uma resposta — tente novamente.",
+      unreachable: "⚠️ Não foi possível contactar o assistente. Tente novamente em breve.",
+      projectCover: "Imagem do projeto",
+    },
+    ZH: {
+      translationError: "⚠️ 无法可靠地翻译这条消息，请稍后重试。",
+      noResponse: "没有收到回复，请重试。",
+      unreachable: "⚠️ 暂时无法连接助手，请稍后重试。",
+      projectCover: "项目封面",
+    },
+  };
+  function uiCopy(key, value) {
+    const code = responseLang();
+    const base = code.split("-")[0];
+    const copy = UI_COPY[code] || UI_COPY[base] || UI_COPY.EN;
+    const selected = copy[key] ?? UI_COPY.EN[key];
+    return typeof selected === "function" ? selected(value) : selected;
+  }
+  function syncInputPlaceholder() {
+    let lang = "EN";
+    try { lang = responseLang(); } catch {}
+    const baseLang = lang.split("-")[0];
+    const copy = PLACEHOLDERS[lang] || PLACEHOLDERS[baseLang] || PLACEHOLDERS.EN;
+    inputEl.placeholder = window.matchMedia("(max-width: 640px)").matches
+      ? copy.mobile
+      : copy.desktop;
+  }
+  syncInputPlaceholder();
+  window.addEventListener("resize", syncInputPlaceholder);
+
+  // ── Language selection ───────────────────────────────────────────────────────
+
+  // Country → response language code (pre-selects based on IP; user can override)
+  const COUNTRY_LANG = {
+    // French-speaking countries and territories
+    FR:"FR", BE:"FR", CH:"FR", MC:"FR", LU:"FR", CA:"FR", HT:"FR",
+    BJ:"FR", BF:"FR", BI:"FR", CD:"FR", CF:"FR", CG:"FR", CI:"FR",
+    CM:"FR", DJ:"FR", GA:"FR", GF:"FR", GN:"FR", GP:"FR", GQ:"FR",
+    KM:"FR", MG:"FR", ML:"FR", MQ:"FR", NC:"FR", NE:"FR", PF:"FR",
+    RE:"FR", RW:"FR", SC:"FR", SN:"FR", TD:"FR", TG:"FR", VU:"FR",
+    WF:"FR", YT:"FR",
+    // Spanish-speaking countries and territories
+    ES:"ES", MX:"ES", AR:"ES", BO:"ES", CL:"ES", CO:"ES", CR:"ES",
+    CU:"ES", DO:"ES", EC:"ES", GT:"ES", HN:"ES", NI:"ES", PA:"ES",
+    PE:"ES", PR:"ES", PY:"ES", SV:"ES", UY:"ES", VE:"ES",
+    // Portuguese-speaking countries and territories
+    PT:"PT-PT", BR:"PT-BR", AO:"PT-PT", CV:"PT-PT", GW:"PT-PT",
+    MZ:"PT-PT", ST:"PT-PT", TL:"PT-PT",
+    // Chinese-speaking countries and territories
+    CN:"ZH-HANS", SG:"ZH-HANS", HK:"ZH-HANT", MO:"ZH-HANT", TW:"ZH-HANT",
+    // Serbian / closely related local-language markets supported through SR
+    RS:"SR", BA:"SR", ME:"SR", XK:"SR",
+  };
+
+  const storedLang = localStorage.getItem("pax_lang");
+  const hasStoredLang = Boolean(storedLang && storedLang.trim());
+  let currentLang = normalizeLangCode(hasStoredLang ? storedLang : "");
+  let languageSource = hasStoredLang ? "saved" : "pending";
+
+  function setLang(code, { persist = true, source = "runtime" } = {}) {
+    currentLang = normalizeLangCode(code);
+    languageSource = source;
+    if (persist) localStorage.setItem("pax_lang", responseLang());
+    document.documentElement.lang = responseLang().toLowerCase();
+    document.querySelectorAll(".lang-btn").forEach(b => {
+      const active = b.dataset.lang === currentLang;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
+    });
+    syncInputPlaceholder();
+    if (typeof translateProjectCards === "function") {
+      translateProjectCards(messagesEl).catch(() => {});
+    }
   }
 
-  // ── Markdown-lite renderer ──────────────────────────────────────────────────
-  function renderMarkdown(text) {
-    // Escape HTML first
-    let s = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  function responseLang() {
+    return currentLang || "EN";
+  }
 
-    // Bold: **text**
+  function selectLanguage(code) {
+    const previousLang = currentLang;
+    setLang(code, { source: "manual" });
+    refreshOpeningGreetingAfterLanguageChange(previousLang);
+  }
+
+  function normalizeLangCode(code) {
+    const normalized = String(code || "").trim().replace(/_/g, "-").toUpperCase();
+    if (!normalized || normalized.startsWith("EN")) return "";
+    if (normalized === "PT") return "PT-PT";
+    if (normalized === "ZH") return "ZH-HANS";
+    return normalized;
+  }
+
+  function requestMetadata(inputState = {}) {
+    const metadata = {
+      // `lang` remains for backward compatibility with older action models.
+      lang: responseLang(),
+      response_lang: responseLang(),
+      language_source: languageSource,
+      ...inputState,
+    };
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (timezone) metadata.timezone = timezone;
+    } catch {}
+    return metadata;
+  }
+
+  // Apply display state without creating a fake stored preference before geo runs.
+  setLang(currentLang, { persist: false, source: languageSource });
+
+  document.querySelectorAll(".lang-btn").forEach(b =>
+    b.addEventListener("click", () => selectLanguage(b.dataset.lang))
+  );
+
+  // Pre-select from IP geolocation (only if user hasn't chosen before)
+  // Then fire the opening greeting once language is known.
+  let _greetingSent = false;
+  function maybeGreet() {
+    if (_greetingSent) return;
+    _greetingSent = true;
+    sendGreeting(currentLang);
+  }
+
+  function refreshOpeningGreetingAfterLanguageChange(previousLang) {
+    if (!_greetingSent || previousLang === currentLang) return;
+    const messageCount = messagesEl.querySelectorAll(".message").length;
+    if (messageCount > 1) return;
+    messagesEl.querySelectorAll(".message").forEach(node => node.remove());
+    _greetingSent = false;
+    maybeGreet();
+  }
+
+  function detectLanguageAndGreet() {
+    if (hasStoredLang || typeof fetch !== "function") {
+      maybeGreet();
+      return;
+    }
+
+    const browserLanguage = (() => {
+      const locales = Array.isArray(navigator.languages)
+        ? navigator.languages
+        : [navigator.language];
+      for (const locale of locales.filter(Boolean)) {
+        const normalized = normalizeLangCode(locale);
+        const base = String(locale).split(/[-_]/)[0].toUpperCase();
+        if (base === "EN") return "EN";
+        if (normalized && PLACEHOLDERS[normalized]) return normalized;
+        if (PLACEHOLDERS[base]) return normalizeLangCode(base);
+      }
+      return "EN";
+    })();
+
+    const timeoutOptions =
+      typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+        ? { signal: AbortSignal.timeout(3000) }
+        : {};
+
+    fetch("https://ipapi.co/json/", timeoutOptions)
+      .then(r => r.json())
+      .then(d => {
+        const country = String(d.country_code || "").toUpperCase();
+        const multilingualCountry = ["BE", "CH", "CA", "SG"].includes(country);
+        const selected = multilingualCountry && browserLanguage
+          ? browserLanguage
+          : (COUNTRY_LANG[country] || browserLanguage || "");
+        setLang(selected, { source: "geolocation" });
+      })
+      .catch(() => setLang(browserLanguage, { source: "browser" }))
+      .finally(() => maybeGreet());
+  }
+
+  // ── Markdown renderer ────────────────────────────────────────────────────────
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function escAttr(s) {
+    return esc(s).replace(/"/g, "&quot;");
+  }
+  function decodeEnt(s) {
+    return s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
+  }
+
+  const PROJECT_ID_QUERY_NAMES = {
+    sofia_airport: "Sofia Airport",
+    belgrade_airport: "Belgrade Airport",
+    velana_airport: "Velana International Airport",
+    bordeaux_airport: "Bordeaux-Merignac Airport",
+    pointe_a_pitre_t1: "Pointe-a-Pitre International Airport",
+    pointe_a_pitre_t2: "Pointe-a-Pitre Terminal 2",
+    aik_bank_design: "AIK Bank",
+  };
+
+  function canonicalProjectName(projectName, projectId = "") {
+    const mapped = PROJECT_ID_QUERY_NAMES[projectId];
+    if (mapped) return mapped;
+    const clean = String(projectName || "")
+      .replace(/\s+/g, " ")
+      .replace(/\s+\([^)]*\)\s*$/g, "")
+      .trim();
+    const normalized = clean.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (normalized.includes("sofia airport")) return "Sofia Airport";
+    if (normalized.includes("belgrade airport")) return "Belgrade Airport";
+    if (normalized.includes("velana")) return "Velana International Airport";
+    if (normalized.includes("bordeaux")) return "Bordeaux-Merignac Airport";
+    if (normalized.includes("pointe") && normalized.includes("pitre")) return "Pointe-a-Pitre International Airport";
+    if (normalized.includes("aik bank")) return "AIK Bank";
+    return clean.split(/\s+[–—-]\s+/)[0].trim() || clean;
+  }
+
+  function projectQueryText(projectName, projectId = "") {
+    return `Tell me about ${canonicalProjectName(projectName, projectId)}`;
+  }
+
+  function inlineMd(s) {
     s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    // Italic: *text* (single asterisk, not double)
-    s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
-    // Links: [text](url)
-    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s = s.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+    s = s.replace(/(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
 
-    // Bullet lists — collect consecutive bullet lines into <ul>
-    const lines = s.split("\n");
-    const out = [];
-    let inList = false;
-    for (const line of lines) {
-      const bulletMatch = line.match(/^[•\-\*]\s+(.+)/);
-      if (bulletMatch) {
-        if (!inList) { out.push("<ul>"); inList = true; }
-        out.push(`<li>${bulletMatch[1]}</li>`);
+  // A bullet item is a clickable project chip if it has **Name** — Meta ending
+  // in a project year/status parenthetical. Company/client bullets can also
+  // contain parentheses, so checking for any parens is too broad.
+  function parseChip(raw) {
+    const m = raw.match(/^<strong>(.+?)<\/strong>\s*[—\-]\s*(.+)$/);
+    const meta = (m?.[2] || "").trim();
+    const hasProjectYearTail =
+      /\([\s\S]*(?:\d{4}|ongoing|disclosed|construction|built|competition|concession|phase|delivery)[\s\S]*\)\.?$/i.test(meta);
+    if (!m || !hasProjectYearTail) return null;
+    return { name: m[1], meta: m[2] };
+  }
+
+  function renderMarkdown(raw) {
+    const lines = esc(raw).split("\n");
+    const blocks = [];
+    let listBuf = []; // {chip: {name,meta}|null, html: string}
+
+    function flushList() {
+      if (!listBuf.length) return;
+
+      const hasChips = listBuf.some(i => i.chip);
+
+      if (hasChips) {
+        // All items render as interactive chip cards
+        const inner = listBuf.map(item => {
+          if (item.chip) {
+            const projectName = escAttr(decodeEnt(item.chip.name));
+            const projectMeta = escAttr(decodeEnt(item.chip.meta));
+            return `<button class="proj-chip" data-project="${projectName}">
+              <div class="proj-info">
+                <div class="proj-name" data-source-text="${projectName}">${item.chip.name}</div>
+                <div class="proj-meta" data-source-text="${projectMeta}">${item.chip.meta}</div>
+              </div>
+              <span class="proj-arrow">›</span>
+            </button>`;
+          }
+          // Non-chip item mixed in (rare) — plain li style
+          return `<div style="display:flex;gap:8px;padding:3px 2px;font-size:14px">
+            <span style="color:var(--muted);font-size:10px;margin-top:3px">●</span>
+            <span>${item.html}</span></div>`;
+        }).join("");
+        blocks.push(`<div class="proj-list">${inner}</div>`);
       } else {
-        if (inList) { out.push("</ul>"); inList = false; }
-        out.push(line);
+        // Regular bullet list
+        const items = listBuf.map(i =>
+          `<li><span class="li-dot">●</span><span>${i.html}</span></li>`).join("");
+        blocks.push(`<ul>${items}</ul>`);
+      }
+      listBuf = [];
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine.replace(/^\s+/, ""); // strip indent
+
+      if (line.trim() === "") { flushList(); continue; }
+
+      const bullet = line.match(/^[•\-\*]\s+(.+)/);
+      if (bullet) {
+        const html = inlineMd(bullet[1]);
+        listBuf.push({ chip: parseChip(html), html });
+        continue;
+      }
+
+      flushList();
+      const t = line.trim();
+
+      // Standalone **heading** (nothing else on the line)
+      const hdg = t.match(/^\*\*([^*]+?)\*\*:?\s*$/);
+      if (hdg) {
+        blocks.push(`<div class="md-h4">${hdg[1]}</div>`);
+        continue;
+      }
+
+      blocks.push(`<p>${inlineMd(t)}</p>`);
+    }
+    flushList();
+
+    // Merge adjacent <p> blocks into one paragraph with <br>
+    const out = [];
+    let pBuf = [];
+    for (const b of blocks) {
+      if (b.startsWith("<p>") && b.endsWith("</p>")) {
+        pBuf.push(b.slice(3, -4));
+      } else {
+        if (pBuf.length) { out.push(`<p>${pBuf.join("<br>")}</p>`); pBuf = []; }
+        out.push(b);
       }
     }
-    if (inList) out.push("</ul>");
+    if (pBuf.length) out.push(`<p>${pBuf.join("<br>")}</p>`);
 
-    // Paragraphs: blank lines → <p> splits
-    return out.join("\n")
-      .split(/\n{2,}/)
-      .map(p => p.trim())
-      .filter(Boolean)
-      .map(p => p.startsWith("<ul>") || p.startsWith("<li>") ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`)
-      .join("\n");
+    return out.join("");
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Chip click (event delegation) ───────────────────────────────────────────
+  messagesEl.addEventListener("click", e => {
+    const action = e.target.closest(".quick-action");
+    if (action) {
+      const url = safeHttpUrl(action.dataset.url || "");
+      if (url) {
+        const opened = window.open(url, "_blank");
+        if (opened) opened.opener = null;
+        if (!opened) window.location.assign(url);
+        return;
+      }
+      const label = action.dataset.label || action.textContent.trim();
+      const payload = action.dataset.payload || "";
+      if (payload) {
+        send(label, 0, payload);
+      } else {
+        send(label);
+      }
+      return;
+    }
+
+    const chip = e.target.closest(".proj-chip");
+    if (!chip) return;
+    if (chip.dataset.project) {
+      const query = projectQueryText(
+        decodeEnt(chip.dataset.project),
+        chip.dataset.projectId || ""
+      );
+      send(query, 0, query);
+    } else if (chip.dataset.q) {
+      send(decodeEnt(chip.dataset.q));
+    }
+  });
+
+  // ── UI helpers ───────────────────────────────────────────────────────────────
   function now() {
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
@@ -401,10 +989,80 @@
     const img = document.createElement("img");
     img.className = "bubble-image";
     img.src = imageUrl;
-    img.alt = "Project cover";
+    img.alt = uiCopy("projectCover");
     img.loading = "lazy";
     img.decoding = "async";
     bubble.appendChild(img);
+  }
+
+  function projectInitials(name) {
+    return (name || "1PAX")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0])
+      .join("")
+      .toUpperCase();
+  }
+
+  function appendProjectCards(bubble, cards = []) {
+    if (!Array.isArray(cards) || !cards.length) return;
+
+    const list = document.createElement("div");
+    list.className = "proj-list";
+
+    for (const card of cards) {
+      const title = String(card?.title || card?.name || "").trim();
+      if (!title) continue;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "proj-chip";
+      button.dataset.project = title;
+      if (card.id) button.dataset.projectId = String(card.id);
+      if (card.url) button.dataset.url = safeHttpUrl(card.url);
+
+      const thumb = document.createElement("div");
+      thumb.className = "proj-thumb";
+      const imageUrl = safeHttpUrl(card.image || card.image_url || card.thumbnail || "");
+      if (imageUrl) {
+        const img = document.createElement("img");
+        img.src = imageUrl;
+        img.alt = "";
+        img.loading = "lazy";
+        img.decoding = "async";
+        thumb.appendChild(img);
+      } else {
+        const fallback = document.createElement("span");
+        fallback.className = "proj-thumb-fallback";
+        fallback.textContent = projectInitials(title);
+        thumb.appendChild(fallback);
+      }
+
+      const info = document.createElement("div");
+      info.className = "proj-info";
+      const name = document.createElement("div");
+      name.className = "proj-name";
+      name.textContent = title;
+      name.dataset.sourceText = title;
+      const meta = document.createElement("div");
+      meta.className = "proj-meta";
+      meta.textContent = String(card?.meta || "").trim();
+      meta.dataset.sourceText = meta.textContent;
+      info.appendChild(name);
+      if (meta.textContent) info.appendChild(meta);
+
+      const arrow = document.createElement("span");
+      arrow.className = "proj-arrow";
+      arrow.textContent = "›";
+
+      button.appendChild(thumb);
+      button.appendChild(info);
+      button.appendChild(arrow);
+      list.appendChild(button);
+    }
+
+    if (list.children.length) bubble.appendChild(list);
   }
 
   function appendQuickActions(wrapper, actions = []) {
@@ -421,37 +1079,37 @@
       button.type = "button";
       button.className = "quick-action";
       button.textContent = title;
-      button.dataset.payload = action.payload || title;
+      button.dataset.label = title;
+      if (action.payload) button.dataset.payload = action.payload;
+      if (action.url) button.dataset.url = action.url;
       row.appendChild(button);
     }
 
     if (row.children.length) wrapper.appendChild(row);
   }
 
-  function appendMessage(role, text = "", media = {}, actions = []) {
-    const welcome = document.getElementById("welcome");
-    if (welcome) welcome.remove();
-
-    const wrapper = document.createElement("div");
-    wrapper.className = `message ${role}`;
-
+  function appendMessage(role, text = "", media = {}, actions = [], custom = {}) {
+    document.getElementById("welcome")?.remove();
+    const wrap   = document.createElement("div");
+    wrap.className = `message ${role}`;
     const bubble = document.createElement("div");
     bubble.className = "bubble";
     bubble.innerHTML = text ? renderMarkdown(text) : "";
     appendMedia(bubble, media);
-
+    appendProjectCards(bubble, custom.project_cards || custom.projects || []);
     const ts = document.createElement("div");
     ts.className = "ts";
     ts.textContent = now();
-
-    wrapper.appendChild(bubble);
-    if (role === "bot") appendQuickActions(wrapper, actions);
-    wrapper.appendChild(ts);
-    messagesEl.appendChild(wrapper);
+    wrap.appendChild(bubble);
+    if (role === "bot") appendQuickActions(wrap, actions);
+    wrap.appendChild(ts);
+    messagesEl.appendChild(wrap);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+    translateProjectCards(wrap).catch(() => {});
   }
 
   function handleBotCustom(custom = {}) {
+    custom = custom || {};
     const url = safeHttpUrl(custom.redirect_url || custom.open_url);
     if (!url) return;
 
@@ -464,12 +1122,6 @@
     }, delay);
   }
 
-  messagesEl.addEventListener("click", e => {
-    const action = e.target.closest(".quick-action");
-    if (!action) return;
-    send(action.dataset.payload || action.textContent.trim());
-  });
-
   function setLoading(on) {
     sendBtn.disabled = on;
     inputEl.disabled = on;
@@ -477,13 +1129,242 @@
     if (on) messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // ── Send ────────────────────────────────────────────────────────────────────
-  async function send(text) {
+  // ── Input translation (→ English for Rasa NLU) ──────────────────────────────
+  // Local dev: call translation server directly on port 5056 (CORS enabled).
+  // Production (nginx): proxied via /api/translate.
+  const TRANSLATE_URL = CONFIGURED_API_URL
+    ? CONFIGURED_API_URL + "/api/translate"
+    : (IS_LOCAL ? "http://localhost:5056/translate" : "/api/translate");
+
+  async function translateToEnglish(text, lang, identifyLanguage = false) {
+    const payload = { text, response_lang: responseLang() };
+    if (identifyLanguage) payload.identify_language = true;
+    try {
+      const r = await fetch(TRANSLATE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(`Translation HTTP ${r.status}`);
+      const d = await r.json();
+      const explicitInputLang = String(
+        d.input_lang
+        || (d.language_identified ? (d.identified_lang || "EN") : "UNKNOWN")
+      ).toUpperCase();
+      const identified = Boolean(
+        d.input_lang_confident ?? d.language_identified
+      );
+      const preserveCurrent = Boolean(d.preserve_current);
+      const inputTranslated = Boolean(d.input_translated);
+      const needsTranslation = explicitInputLang !== "EN"
+        && explicitInputLang !== "UNKNOWN";
+      const failed = Boolean(d.translation_error)
+        || (!inputTranslated && !preserveCurrent && (needsTranslation || explicitInputLang === "UNKNOWN"));
+      return {
+        text: d.english_text || d.text || text,
+        lang: explicitInputLang,
+        identified,
+        preserveCurrent,
+        inputTranslated,
+        failed,
+      };
+    } catch {
+      return {
+        text,
+        lang: "UNKNOWN",
+        identified: false,
+        preserveCurrent: false,
+        inputTranslated: false,
+        failed: true,
+      };
+    }
+  }
+
+  async function translateTextsFromEnglish(texts, lang, mode = "") {
+    const targetLang = lang || "EN";
+    if (!texts.length || targetLang.toUpperCase().startsWith("EN")) return texts;
+
+    const r = await fetch(TRANSLATE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texts, target_lang: targetLang, mode }),
+    });
+    if (!r.ok) throw new Error(`Translation HTTP ${r.status}`);
+    const d = await r.json();
+    if (
+      d.translation_error
+      || d.translation_enabled === false
+      || !Array.isArray(d.texts)
+      || d.texts.length !== texts.length
+    ) {
+      throw new Error("Translation batch was not completed");
+    }
+    return d.texts;
+  }
+
+  async function translateProjectCards(root) {
+    const targetLang = responseLang();
+    if (targetLang.toUpperCase().startsWith("EN")) {
+      root.querySelectorAll(".proj-name, .proj-meta").forEach(element => {
+        if (element.dataset.sourceText) element.textContent = element.dataset.sourceText;
+      });
+      root.querySelectorAll(".proj-chip").forEach(card => {
+        delete card.dataset.labelLang;
+      });
+      return;
+    }
+
+    const cards = Array.from(root.querySelectorAll(".proj-chip"))
+      .filter(card => card.dataset.project && card.dataset.labelLang !== targetLang);
+    if (!cards.length) return;
+
+    const jobs = [];
+    const expectedByCard = new Map();
+    const completedByCard = new Map();
+    for (const card of cards) {
+      const nameEl = card.querySelector(".proj-name");
+      const metaEl = card.querySelector(".proj-meta");
+      const sourceName = nameEl?.dataset.sourceText || nameEl?.textContent || "";
+      const sourceMeta = metaEl?.dataset.sourceText || metaEl?.textContent || "";
+      if (sourceName.trim()) {
+        jobs.push({ card, element: nameEl, text: sourceName.trim() });
+        expectedByCard.set(card, (expectedByCard.get(card) || 0) + 1);
+      }
+      if (sourceMeta.trim()) {
+        jobs.push({ card, element: metaEl, text: sourceMeta.trim() });
+        expectedByCard.set(card, (expectedByCard.get(card) || 0) + 1);
+      }
+    }
+    if (!jobs.length) return;
+
+    const chunkSize = 20;
+    const chunks = [];
+    for (let start = 0; start < jobs.length; start += chunkSize) {
+      chunks.push(jobs.slice(start, start + chunkSize));
+    }
+
+    for (const chunk of chunks) {
+      let translated = null;
+      try {
+        translated = await translateTextsFromEnglish(
+          chunk.map(job => job.text),
+          targetLang,
+          "project_labels"
+        );
+      } catch {
+        // One bounded retry avoids a permanently mixed list after a transient miss.
+        try {
+          translated = await translateTextsFromEnglish(
+            chunk.map(job => job.text),
+            targetLang,
+            "project_labels"
+          );
+        } catch {}
+      }
+      if (translated) {
+        translated.forEach((text, index) => {
+          if (text && text.trim()) {
+            const job = chunk[index];
+            job.element.textContent = text.trim();
+            completedByCard.set(job.card, (completedByCard.get(job.card) || 0) + 1);
+          }
+        });
+      }
+    }
+    cards.forEach(card => {
+      if (completedByCard.get(card) === expectedByCard.get(card)) {
+        card.dataset.labelLang = targetLang;
+      }
+    });
+  }
+
+  // ── Bot-initiated greeting ────────────────────────────────────────────────────
+  async function sendGreeting(lang) {
+    typingEl.classList.remove("hidden");
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    try {
+      const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: SESSION_ID,
+          message: "hello",
+          metadata: requestMetadata(),
+        }),
+      });
+      typingEl.classList.add("hidden");
+      if (res.ok) {
+        const replies = await res.json();
+        for (const r of replies) {
+          if (r.text || r.image || r.buttons?.length) {
+            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || [], r.custom || {});
+          }
+          handleBotCustom(r.custom);
+        }
+      }
+    } catch {
+      typingEl.classList.add("hidden");
+    }
+    inputEl.focus();
+  }
+
+  // ── Send ─────────────────────────────────────────────────────────────────────
+  async function send(
+    text,
+    _retries = 0,
+    _cachedEnglish = null,
+    _detectTypedLanguage = text == null,
+    _cachedInputState = null
+  ) {
     const msg = (text || inputEl.value).trim();
     if (!msg) return;
-    inputEl.value = "";
-    appendMessage("user", msg);
+    if (_retries === 0) {
+      inputEl.value = "";
+      appendMessage("user", msg);
+    }
     setLoading(true);
+
+    // Translate input to English once; reuse on retries to avoid redundant API calls
+    let englishMsg = _cachedEnglish;
+    let inputState = _cachedInputState || (
+      _cachedEnglish !== null
+        ? {
+            input_lang: "EN",
+            input_lang_confident: false,
+            input_translated: true,
+            synthetic_payload: true,
+          }
+        : null
+    );
+    if (englishMsg === null) {
+      const translated = await translateToEnglish(
+        msg,
+        currentLang,
+        _detectTypedLanguage
+      );
+      if (translated.failed) {
+        setLoading(false);
+        appendMessage("bot", uiCopy("translationError"));
+        inputEl.focus();
+        return;
+      }
+      englishMsg = translated.text;
+      if (
+        _detectTypedLanguage
+        && translated.identified
+        && !translated.preserveCurrent
+        && translated.lang !== "UNKNOWN"
+      ) {
+        setLang(translated.lang, { source: "typed" });
+      }
+      inputState = {
+        input_lang: translated.identified ? translated.lang : "UNKNOWN",
+        input_lang_confident: Boolean(translated.identified),
+        input_translated: Boolean(translated.inputTranslated),
+        preserve_current_language: Boolean(translated.preserveCurrent),
+        synthetic_payload: !_detectTypedLanguage,
+      };
+    }
 
     try {
       const res = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
@@ -491,37 +1372,57 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sender: SESSION_ID,
-          message: msg,
-          metadata: clientMetadata(),
+          message: englishMsg,
+          metadata: requestMetadata(inputState || {}),
         }),
       });
+
+      if (res.status === 502 || res.status === 503) {
+        setLoading(false);
+        if (_retries === 0) appendMessage("bot", uiCopy("loading"));
+        if (_retries < 24) {
+          if (_retries > 0 && _retries % 4 === 0)
+            appendMessage("bot", uiCopy("stillLoading", Math.round((24 - _retries) * 5)));
+          setTimeout(() => send(
+            msg,
+            _retries + 1,
+            englishMsg,
+            _detectTypedLanguage,
+            inputState
+          ), 5000);
+        } else {
+          appendMessage("bot", uiCopy("loadTimeout"));
+        }
+        return;
+      }
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const replies = await res.json();
       setLoading(false);
-      if (!replies || replies.length === 0) {
-        appendMessage("bot", "I didn't get a response — please try again.");
+      if (!replies?.length) {
+        appendMessage("bot", uiCopy("noResponse"));
       } else {
-        for (const reply of replies) {
-          if (reply.text || reply.image || reply.buttons?.length) {
-            appendMessage("bot", reply.text || "", { image: reply.image }, reply.buttons || []);
+        for (const r of replies) {
+          if (r.text || r.image || r.buttons?.length) {
+            appendMessage("bot", r.text || "", { image: r.image }, r.buttons || [], r.custom || {});
           }
-          handleBotCustom(reply.custom);
+          handleBotCustom(r.custom);
         }
       }
+      inputEl.focus();
     } catch (err) {
       setLoading(false);
-      appendMessage("bot", "⚠️ Could not reach the assistant. Please check back shortly.");
+      appendMessage("bot", uiCopy("unreachable"));
       console.error(err);
+      inputEl.focus();
     }
   }
 
   function handleSend() { send(); }
-
   inputEl.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });
-
-  // Focus input on load
+  detectLanguageAndGreet();
   inputEl.focus();
 </script>
 </body>

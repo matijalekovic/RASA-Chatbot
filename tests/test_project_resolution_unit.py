@@ -68,7 +68,8 @@ def test_explicit_detail_question_still_wins_after_title_stripping():
 def test_named_project_token_beats_generic_airport_project_alias():
     assert _fuzzy_match_project("tell me about the Kigali airport project") == "kigali_airport"
     assert _fuzzy_match_project("nice airport project") == "nice_airport"
-    assert _fuzzy_match_project("tell me about the biggest project") == "sofia_airport"
+    # Superlatives are portfolio rankings (portfolio_insights), not a Sofia alias.
+    assert _fuzzy_match_project("tell me about the biggest project") is None
 
 
 def test_partial_title_residue_still_routes_to_overview():
@@ -80,7 +81,16 @@ def test_partial_title_residue_still_routes_to_overview():
 
 def test_current_website_titles_resolve_to_expected_projects():
     expected = {
+        "Sofia Airport – Terminal 3 International & Terminal 2 Refurbishment": "sofia_airport",
+        "Belgrade Airport – Phase 1 & Phase 2 Terminal Expansion": "belgrade_airport",
+        "Velana International Airport – New Terminal Building": "velana_airport",
+        "Bordeaux–Mérignac Airport – Hall B New Façades": "bordeaux_airport",
+        "Pointe-à-Pitre": "pointe_a_pitre_t1",
+        "Pointe-à-Pitre International Airport – New Terminal Extension (Winner)": "pointe_a_pitre_t1",
+        "Pointe-à-Pitre International Airport – Terminal 2 Extension": "pointe_a_pitre_t2",
+        "AIK Bank – Branches and ATM Network Design": "aik_bank_design",
         "Al Wakrah Metro Depot Masterplan": "doha_metro_depot",
+        "tell me about Al Wakrah metro depot": "doha_metro_depot",
         "Belgrade Airport Administration Building": "belgrade_admin_building",
         "Belgrade Airport Main Fire Station": "belgrade_fire_station",
         "Bordeaux International Airport - Hall B Terminal New Facades": "bordeaux_airport",
@@ -173,8 +183,9 @@ def test_action_list_projects_filters_country_instead_of_full_portfolio():
     assert dispatcher.messages
     text = dispatcher.messages[0]["text"]
     assert "Serbia" in text
+    assert "5 most relevant" in text
     assert "Belgrade Airport" in text
-    assert "AIK Bank" in text
+    assert "AIK Bank" not in text
     assert "Sofia Airport" not in text
     assert "all 58" not in text
 
@@ -225,11 +236,17 @@ def test_out_of_scope_project_safety_net_keeps_media_and_link():
 
     events = ActionHandleOutOfScope().run(dispatcher, tracker, {})
 
-    assert dispatcher.messages
-    message = dispatcher.messages[0]
+    assert len(dispatcher.messages) >= 3
     project = PROJECTS["cayenne_interior_design"]
-    assert message["image"] == project["cover_image_url"]
-    assert project["project_url"] in message["text"]
+    text_message = dispatcher.messages[0]
+    image_message = dispatcher.messages[1]
+    button_message = dispatcher.messages[2]
+    assert image_message["image"] == project["cover_image_url"]
+    assert all(project["project_url"] not in value for value in (text_message["text"],))
+    assert any(
+        button.get("url") == project["project_url"]
+        for button in button_message.get("buttons", [])
+    )
     assert any(
         event.get("event") == "slot"
         and event.get("name") == "project_name"

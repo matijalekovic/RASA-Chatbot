@@ -1,5 +1,7 @@
 .git
 .gitignore
+.env
+.env.*
 .DS_Store
 **/.DS_Store
 
@@ -18,6 +20,7 @@ __pycache__/
 *.pyd
 
 tests/
+test_results/
 docs/
 
 # Deploy only the locally prepared production model; keep older local models out

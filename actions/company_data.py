@@ -942,10 +942,10 @@ COMPANY_INFO = {
         ),
         (
             "**Global office network:**\n\n"
-            "The public 1PAX contact page lists offices in **Paris, Belgrade, Lima, Shanghai, "
-            "Barcelona, and the United States**. Use **contact@1pax.com** or the contact form "
-            "on 1pax.com for routing to the right office or team. For applications, the contact "
-            "page also includes a CV upload field.\n\n"
+            "1PAX's staffed office network spans **Paris, Belgrade, Lima, Shanghai, and "
+            "Barcelona**. Use **contact@1pax.com** or the contact form on 1pax.com "
+            "for routing to the right office or regional contact. For applications, "
+            "the contact page also includes a CV upload field.\n\n"
             "You can also ask me to help schedule a meeting."
         ),
     ],
@@ -1149,8 +1149,9 @@ COMPANY_INFO = {
             "Our senior team — including founder Mabel Miranda — actively mentors young professionals, "
             "sharing experience, expertise, and time to help shape the next generation of leaders. "
             "We trust our people with meaningful challenges and provide the guidance they need to advance.\n\n"
-            "For students and recent graduates, we offer a **Graduate Fellowship Program** — a structured "
-            "pathway into the studio for emerging talent, especially those from underserved communities. "
+            "For students and recent graduates, we offer the **1PAX Graduate Fellowship** — a paid, remote "
+            "six-month programme with an academic and a professional mentor, real project work, and an "
+            "independent research project. "
             "At 1PAX, your ideas and your voice matter, regardless of your background."
         ),
         (
@@ -1162,9 +1163,13 @@ COMPANY_INFO = {
     "internships": [
         (
             "**Students, interns, and recent graduates:**\n\n"
-            "1PAX supports emerging talent through mentorship and a Graduate Fellowship Program. Students, "
-            "recent graduates, junior architects, planners, designers, and innovation-minded candidates can "
-            "express interest even if they are still early in their career."
+            "1PAX supports emerging talent through mentorship and the **1PAX Graduate Fellowship** — a paid, "
+            "fully remote, six-month programme for recent architecture graduates and final-year students "
+            "(20–28 years old, from any country) that combines real project work with an independent "
+            "research project. Two fellows are selected each year; ask me about the fellowship for "
+            "eligibility, dates, and how to apply.\n\n"
+            "Students, recent graduates, junior architects, planners, designers, and innovation-minded "
+            "candidates can also express interest in other opportunities even if they are early in their career."
         ),
         (
             "When applying, explain your studies or recent experience, the discipline you want to grow in, "
@@ -1206,6 +1211,12 @@ COMPANY_INFO = {
             "Our work is guided by a commitment to improve lives, foster equity, and build a more "
             "resilient and hopeful future for all."
         ),
+        (
+            "**From the About Us story:** 1PAX is shaped by a simple idea — every journey "
+            "begins with one person. That is why the studio combines mobility expertise, "
+            "cultural awareness, inclusive teamwork, and long-term environmental thinking "
+            "instead of treating architecture as only a technical deliverable."
+        ),
     ],
 
     # ── Ethics & Sustainability pillars ──────────────────────────────────────
@@ -1223,7 +1234,7 @@ COMPANY_INFO = {
             "2. **Social commitment** — inclusive design that improves lives\n"
             "3. **Culture and heritage** — respecting local identity in every context\n"
             "4. **We value our people** — safe, inclusive, growth-oriented workplace\n"
-            "5. **Diversity and inclusion** — no discrimination, equal opportunity, LMIC Fellowship\n"
+            "5. **Diversity and inclusion** — no discrimination, equal opportunity, Graduate Fellowship\n"
             "6. **Good governance** — ethics committee, anti-corruption, public annual report\n"
             "7. **Aligned partners** — suppliers held to the same standards we hold ourselves\n"
             "8. **Intellectual property** — protecting creativity and honoring authorship\n\n"
@@ -1276,8 +1287,9 @@ COMPANY_INFO = {
             "We believe in gender equality and reject all forms of discrimination — based on race, "
             "religion, age, sexual orientation, political opinion, or disability.\n\n"
             "• **Equal opportunities** and active support for diversity at every level\n"
-            "• **1PAX Grad Fellowship** — opens doors for talented architects from LMICs "
-            "(Low- and Middle-Income Countries)\n"
+            "• **1PAX Graduate Fellowship** — a paid, remote fellowship that opens international project "
+            "experience and mentorship to emerging architects from any country — because talent is "
+            "universal, but opportunity is not\n"
             "• Active collaborations with educational institutions to **mentor underrepresented professionals**\n"
             "• **Annual diversity report** to track and publish our progress\n"
             "• Senior leadership maintains at least **50% female representation**\n\n"
@@ -1341,7 +1353,7 @@ COMPANY_INFO = {
             "• **Cultural respect** — cultural impact assessments before every design phase\n"
             "• **Our people** — 80% of staff continuously trained by 2028; annual well-being surveys; "
             "flexible work models\n"
-            "• **Diversity** — annual Grad Fellowship for LMIC architects; 50% female senior leadership\n"
+            "• **Diversity** — annual Graduate Fellowship for emerging architects; 50% female senior leadership\n"
             "• **Governance** — full policy publication by 2026; annual ethics review; "
             "anti-corruption compliance\n"
             "• **Suppliers** — 100% supplier compliance with ethics and sustainability standards by 2028; "

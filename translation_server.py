@@ -62,6 +62,40 @@ _LANG_MAP = {
     "bs": "SR",
 }
 
+_OBVIOUS_LANGUAGE_PHRASES = {
+    "EN": {
+        "hi", "hello", "hey", "thanks", "thank you", "goodbye", "bye",
+        "good morning", "good afternoon", "good evening", "innovation",
+        "innovations", "projects", "services", "team", "who is", "what is",
+        "tell me", "show me", "can you", "do you", "where is", "how do",
+    },
+    "SR": {
+        "zdravo", "cao", "ćao", "hvala", "dobar dan", "dobro vece",
+        "dobro veče", "inovacija", "inovacije", "ko je", "koji su",
+        "reci mi", "recite mi", "sta je", "šta je", "gde je", "gdje je",
+        "kako", "zelim", "želim",
+    },
+    "FR": {
+        "bonjour", "salut", "merci", "bonsoir", "qui est", "quel est",
+        "quelle est", "parlez moi", "parlez-moi", "montrez moi", "où est",
+    },
+    "ES": {
+        "hola", "gracias", "buenos dias", "buenos días", "quien es",
+        "quién es", "que es", "qué es", "cuentame", "cuéntame", "donde esta",
+        "dónde está",
+    },
+    "PT-PT": {
+        "ola", "olá", "obrigado", "obrigada", "bom dia", "quem e", "quem é",
+        "o que e", "o que é", "fale me", "fale-me", "onde esta", "onde está",
+    },
+}
+
+_LOW_INFORMATION_CONTROLS = {
+    "yes", "no", "ok", "okay", "sure", "confirm", "cancel", "stop",
+    "book it", "go ahead", "next week", "this week", "today", "tomorrow",
+    "tomorrow morning", "tomorrow afternoon", "tomorrow evening",
+}
+
 def _read_api_key() -> str:
     # Support both names so deployment envs are less brittle.
     return (
@@ -119,6 +153,60 @@ def _normalize_detected_lang(lang: str) -> str:
     return lowered.upper()
 
 
+def _normalize_source_hint(lang: str) -> str:
+    """Normalize a current-language hint while preserving explicit English."""
+    raw = (lang or "").strip().replace("_", "-")
+    if not raw:
+        return ""
+    if raw.lower().startswith("en"):
+        return "EN"
+    return _normalize_detected_lang(raw)
+
+
+def _identify_obvious_language(text: str) -> str:
+    """Return a language only for deterministic script or phrase evidence."""
+    stripped = (text or "").strip()
+    if not stripped:
+        return ""
+
+    if re.search(r"[\u4e00-\u9fff]", stripped):
+        traditional_markers = set("體臺灣門國學與為這個來時會說問麼")
+        return "ZH-HANT" if any(char in traditional_markers for char in stripped) else "ZH-HANS"
+
+    normalized = re.sub(r"\s+", " ", stripped.lower()).strip(" .!?,;:\"'()[]{}")
+    for lang, phrases in _OBVIOUS_LANGUAGE_PHRASES.items():
+        if normalized in phrases:
+            return lang
+        for phrase in phrases:
+            if " " in phrase and normalized.startswith(f"{phrase} "):
+                return lang
+    return ""
+
+
+def _looks_like_low_information_turn(text: str) -> bool:
+    """Names, contact details and terse booking controls should keep UI language."""
+    stripped = (text or "").strip()
+    if not stripped:
+        return True
+    lowered = stripped.lower().strip(" .!?,;:")
+    if lowered in _LOW_INFORMATION_CONTROLS:
+        return True
+    if re.search(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", stripped, re.I):
+        return True
+    if re.fullmatch(r"(?:option|slot)?\s*\d{1,2}[.)]?", lowered):
+        return True
+    if re.fullmatch(r"https?://\S+", stripped, re.I):
+        return True
+
+    tokens = re.findall(r"[^\W\d_][^\W\d_'\-]*", stripped, flags=re.UNICODE)
+    if len(tokens) == 1:
+        return True
+    if 1 <= len(tokens) <= 4 and "?" not in stripped:
+        if all(token[:1].isupper() for token in tokens):
+            return True
+    return False
+
+
 def _detect_source_lang(text: str) -> str:
     if not _LANGDETECT_OK or len(text.strip()) < 4:
         return ""
@@ -149,6 +237,21 @@ def _extract_json_object(raw_text: str) -> dict:
 
 
 def _identify_source_lang_with_gemini(text: str, source_hint: str = "") -> tuple[str, bool]:
+    obvious_lang = _identify_obvious_language(text)
+    if obvious_lang:
+        return obvious_lang, True
+
+    if _looks_like_low_information_turn(text):
+        return "", False
+
+    # Keep short, lowercase architecture queries deterministic even when a
+    # place name is misspelled.  langdetect otherwise labels phrases such as
+    # "belgarde airport" as French or Dutch.  Title-cased names are handled by
+    # the low-information guard above and continue to preserve the UI language.
+    short_tokens = re.findall(r"[a-zA-Z]+", text.lower())
+    if len(short_tokens) <= 4 and "airport" in short_tokens:
+        return "EN", True
+
     if not _READY or not text.strip():
         return "", False
 
@@ -177,11 +280,13 @@ def _identify_source_lang_with_gemini(text: str, source_hint: str = "") -> tuple
         return "", False
 
     payload = _extract_json_object(raw)
+    raw_code = str(payload.get("language_code") or "").strip().lower()
+    if raw_code in {"en", "eng", "english"}:
+        return "EN", True
     lang = _normalize_detected_lang(
         str(payload.get("language_code") or payload.get("lang") or "")
     )
-    raw_code = str(payload.get("language_code") or "").strip().lower()
-    if lang or raw_code in {"en", "eng", "english"}:
+    if lang:
         return lang, True
     return "", False
 
@@ -309,6 +414,28 @@ def _translate_project_labels_from_english(texts: list[str], target_lang: str) -
     return translated
 
 
+def _translate_batch_resilient(
+    texts: list[str],
+    target_lang: str,
+    mode: str = "",
+) -> list[str]:
+    """Retry failed output batches in halves so one transient miss cannot mix languages."""
+    if not texts:
+        return []
+    try:
+        if mode == "project_labels":
+            return _translate_project_labels_from_english(texts, target_lang)
+        return _translate_many_from_english(texts, target_lang)
+    except Exception:
+        if len(texts) == 1:
+            raise
+        midpoint = max(1, len(texts) // 2)
+        return (
+            _translate_batch_resilient(texts[:midpoint], target_lang, mode)
+            + _translate_batch_resilient(texts[midpoint:], target_lang, mode)
+        )
+
+
 class Handler(BaseHTTPRequestHandler):
 
     def _send(self, data: dict, status: int = 200) -> None:
@@ -364,13 +491,11 @@ class Handler(BaseHTTPRequestHandler):
                     self._send({"texts": texts, "translation_enabled": False})
                     return
                 try:
-                    if mode == "project_labels":
-                        translated_texts = _translate_project_labels_from_english(
-                            texts,
-                            target_lang,
-                        )
-                    else:
-                        translated_texts = _translate_many_from_english(texts, target_lang)
+                    translated_texts = _translate_batch_resilient(
+                        texts,
+                        target_lang,
+                        mode,
+                    )
                     self._send({"texts": translated_texts, "translation_enabled": True})
                 except Exception as exc:
                     print(f"[translate] Gemini output error: {exc}")
@@ -398,38 +523,77 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         text = _normalize((data.get("text") or "").strip())
-        source_hint = _normalize_detected_lang(
-            data.get("source_lang") or data.get("source") or ""
+        identify_language = bool(data.get("identify_language"))
+        source_hint = _normalize_source_hint(
+            data.get("response_lang")
+            or data.get("current_lang")
+            or data.get("source_lang")
+            or data.get("source")
+            or ""
         )
         identified_lang = ""
         language_identified = False
-        if data.get("identify_language"):
+        if identify_language:
             identified_lang, language_identified = _identify_source_lang_with_gemini(
                 text,
                 source_hint,
             )
         detected_lang = _detect_source_lang(text)
-        source_lang = identified_lang or detected_lang or source_hint
+        preserve_current = bool(
+            identify_language
+            and not language_identified
+            and _looks_like_low_information_turn(text)
+        )
+
+        if language_identified:
+            source_lang = identified_lang
+        elif identify_language:
+            # Weak langdetect output is diagnostic only. A wrong source-language
+            # instruction is worse than asking Gemini to auto-detect.
+            source_lang = source_hint if preserve_current else ""
+        else:
+            # Legacy callers explicitly provided a source language.
+            source_lang = source_hint or detected_lang
+
+        input_lang = identified_lang if language_identified else "UNKNOWN"
+
+        response_base = {
+            "identified_lang": identified_lang,
+            "language_identified": language_identified,
+            "input_lang": input_lang,
+            "input_lang_confident": language_identified,
+            "preserve_current": preserve_current,
+            "detected_lang": detected_lang,
+            "source_lang": source_lang,
+        }
 
         if not text:
             self._send({
                 "text": text,
+                "english_text": text,
                 "translation_enabled": _READY,
-                "identified_lang": identified_lang,
-                "language_identified": language_identified,
-                "detected_lang": detected_lang,
-                "source_lang": source_lang,
+                "input_translated": False,
+                **response_base,
             })
             return
 
         if not _READY:
             self._send({
                 "text": text,
+                "english_text": text,
                 "translation_enabled": False,
-                "identified_lang": identified_lang,
-                "language_identified": language_identified,
-                "detected_lang": detected_lang,
-                "source_lang": source_lang,
+                "input_translated": source_lang == "EN",
+                **response_base,
+            })
+            return
+
+        if source_lang == "EN":
+            self._send({
+                "text": text,
+                "english_text": text,
+                "translation_enabled": True,
+                "input_translated": True,
+                **response_base,
             })
             return
 
@@ -437,22 +601,20 @@ class Handler(BaseHTTPRequestHandler):
             translated = _translate_to_english(text, source_lang)
             self._send({
                 "text": translated,
+                "english_text": translated,
                 "translation_enabled": True,
-                "identified_lang": identified_lang,
-                "language_identified": language_identified,
-                "detected_lang": detected_lang,
-                "source_lang": source_lang,
+                "input_translated": True,
+                **response_base,
             })
         except Exception as exc:
             print(f"[translate] Gemini error: {exc}")
             self._send({
                 "text": text,
+                "english_text": text,
                 "translation_enabled": True,
                 "translation_error": True,
-                "identified_lang": identified_lang,
-                "language_identified": language_identified,
-                "detected_lang": detected_lang,
-                "source_lang": source_lang,
+                "input_translated": False,
+                **response_base,
             })
 
     def log_message(self, *args):

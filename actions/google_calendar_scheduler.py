@@ -19,7 +19,7 @@ import os
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -105,6 +105,13 @@ class BookingWindow:
 
 
 @dataclass(frozen=True)
+class OfficeHoliday:
+    office: str
+    date_key: str
+    name: str = ""
+
+
+@dataclass(frozen=True)
 class CalendarColleague:
     id: str
     label: str
@@ -153,6 +160,7 @@ class CalendarBooking:
 @dataclass(frozen=True)
 class GoogleCalendarConfig:
     roster: Tuple[CalendarColleague, ...]
+    office_holidays: Tuple[OfficeHoliday, ...]
     dry_run: bool
     service_account_file: str
     service_account_json: str
@@ -247,6 +255,98 @@ def _parse_booking_windows(raw: Any) -> Tuple[BookingWindow, ...]:
     if not windows:
         return _parse_booking_windows({"mon-fri": [["09:00", "17:00"]]})
     return tuple(windows)
+
+
+def _holiday_office_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (value or "").lower()).strip()
+
+
+def _default_office_holidays() -> Tuple[OfficeHoliday, ...]:
+    return (
+        OfficeHoliday("all", "01-01", "New Year's Day"),
+        OfficeHoliday("Barcelona", "06-24", "Sant Joan / Barcelona public holiday"),
+    )
+
+
+def _parse_holiday_item(office: str, item: Any) -> Optional[OfficeHoliday]:
+    if isinstance(item, dict):
+        date_value = str(
+            item.get("date")
+            or item.get("day")
+            or item.get("date_key")
+            or item.get("dateKey")
+            or ""
+        ).strip()
+        name = str(item.get("name") or item.get("label") or "").strip()
+        item_office = str(item.get("office") or item.get("location") or office).strip()
+    else:
+        raw = str(item or "").strip()
+        if ":" in raw:
+            date_value, name = [part.strip() for part in raw.split(":", 1)]
+        else:
+            date_value, name = raw, ""
+        item_office = office
+
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}|\d{2}-\d{2}", date_value):
+        return None
+    return OfficeHoliday(item_office or "all", date_value, name)
+
+
+def _office_holidays_from_env() -> Tuple[OfficeHoliday, ...]:
+    raw = os.environ.get("GOOGLE_CALENDAR_OFFICE_HOLIDAYS_JSON", "").strip()
+    holidays = list(_default_office_holidays())
+    if not raw:
+        return tuple(holidays)
+
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        raise GoogleCalendarError("GOOGLE_CALENDAR_OFFICE_HOLIDAYS_JSON is invalid JSON.") from exc
+
+    parsed: List[OfficeHoliday] = []
+    if isinstance(data, dict):
+        for office, items in data.items():
+            source = items if isinstance(items, list) else [items]
+            for item in source:
+                holiday = _parse_holiday_item(str(office), item)
+                if holiday:
+                    parsed.append(holiday)
+    elif isinstance(data, list):
+        for item in data:
+            holiday = _parse_holiday_item("all", item)
+            if holiday:
+                parsed.append(holiday)
+    else:
+        raise GoogleCalendarError(
+            "GOOGLE_CALENDAR_OFFICE_HOLIDAYS_JSON must be a list or object."
+        )
+
+    holidays.extend(parsed)
+    return tuple(holidays)
+
+
+def _holiday_matches_date(holiday: OfficeHoliday, local_date: date) -> bool:
+    if len(holiday.date_key) == 5:
+        return holiday.date_key == local_date.strftime("%m-%d")
+    return holiday.date_key == local_date.isoformat()
+
+
+def is_office_holiday(
+    cfg: GoogleCalendarConfig,
+    colleague: CalendarColleague,
+    local_date: date,
+) -> bool:
+    colleague_keys = {
+        "all",
+        "global",
+        "*",
+        _holiday_office_key(colleague.id),
+        _holiday_office_key(colleague.office),
+    }
+    for holiday in cfg.office_holidays:
+        if _holiday_office_key(holiday.office) in colleague_keys and _holiday_matches_date(holiday, local_date):
+            return True
+    return False
 
 
 def _normalize_lang(value: Optional[str]) -> str:
@@ -494,6 +594,7 @@ def _load_roster_from_env() -> Tuple[CalendarColleague, ...]:
 def config_from_env() -> GoogleCalendarConfig:
     return GoogleCalendarConfig(
         roster=_load_roster_from_env(),
+        office_holidays=_office_holidays_from_env(),
         dry_run=_env_bool("GOOGLE_CALENDAR_DRY_RUN", False),
         service_account_file=os.environ.get("GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE", "").strip(),
         service_account_json=os.environ.get("GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON", "").strip(),
@@ -924,6 +1025,10 @@ def available_slots(
         while cursor + duration <= block_end_utc:
             end = cursor + duration
             if not _overlaps(cursor, end, busy, buffer):
+                local_date = cursor.astimezone(_zone(colleague.timezone)).date()
+                if is_office_holiday(cfg, colleague, local_date):
+                    cursor += step
+                    continue
                 label = label_formatter(_iso_utc(cursor), visitor_timezone)
                 slot = CalendarSlot(
                     start_time=_iso_utc(cursor),

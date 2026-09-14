@@ -33,6 +33,27 @@ def _schedule_topic_shift_events(tracker):
     return schedule_topic_shift_events(tracker)
 
 
+def _start_schedule_if_requested(dispatcher, tracker, domain):
+    from .calendly_actions import looks_like_new_schedule_request, run_calendly_scheduling
+
+    if tracker.get_slot("schedule_stage"):
+        return None
+    if looks_like_new_schedule_request(tracker.latest_message.get("text") or ""):
+        return run_calendly_scheduling(dispatcher, tracker, domain)
+    return None
+
+
+def _answer_team_followup_if_requested(dispatcher, tracker, domain):
+    if not tracker.get_slot("person_name"):
+        return None
+
+    from .team_actions import ActionAnswerTeamQuery, looks_like_person_detail_followup
+
+    if looks_like_person_detail_followup(tracker.latest_message.get("text") or ""):
+        return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
+    return None
+
+
 # ── Variation pools ──────────────────────────────────────────────────────────
 
 _OVERVIEW_INTROS = [
@@ -80,6 +101,108 @@ _PROJECT_MEETING_INFO_TYPES = {
     "program",
     "sustainability",
 }
+
+_PROJECT_RESULT_LIMIT = 5
+
+_PROJECT_SERVICE_LABELS = {
+    "airports": "Airports and Transportation",
+    "urbanism": "Urbanism & Masterplan",
+    "future_mobility": "Future of Mobility",
+    "control_towers": "Control Towers & Industrial Buildings",
+    "interior": "Interior Design",
+    "working_living": "Working & Living",
+    "bim": "BIM-led Delivery",
+    "innovation": "Innovation",
+}
+
+_PROJECT_SERVICE_ALIASES = (
+    (
+        "control_towers",
+        (
+            "control tower",
+            "control towers",
+            "atct",
+            "fire station",
+            "hangar",
+            "industrial",
+            "mro",
+        ),
+    ),
+    (
+        "future_mobility",
+        (
+            "future of mobility",
+            "future mobility",
+            "vertiport",
+            "vertiports",
+            "evtol",
+            "metro",
+            "rail",
+            "station",
+            "stations",
+            "transit",
+            "mobility",
+        ),
+    ),
+    (
+        "urbanism",
+        (
+            "urbanism",
+            "urban",
+            "urban planning",
+            "masterplan",
+            "masterplanning",
+            "master plan",
+            "site planning",
+            "airport city",
+            "city planning",
+            "phasing",
+        ),
+    ),
+    (
+        "interior",
+        (
+            "interior",
+            "interiors",
+            "retail",
+            "commercial",
+            "wayfinding",
+            "food hall",
+            "food court",
+            "lounge",
+        ),
+    ),
+    (
+        "working_living",
+        (
+            "working and living",
+            "working living",
+            "office building",
+            "office buildings",
+            "workplace",
+            "embassy",
+            "embassies",
+            "residential",
+            "mixed use",
+            "mixed-use",
+            "headquarters",
+        ),
+    ),
+    ("bim", ("bim", "revit", "modeling", "modelling", "digital model")),
+    ("innovation", ("innovation", "ai", "research", "patent", "technology")),
+    (
+        "airports",
+        (
+            "airport",
+            "airports",
+            "terminal",
+            "terminals",
+            "aviation",
+            "transportation",
+            "transport infrastructure",
+        ),
+    ),
+)
 
 _OUT_OF_SCOPE_WITH_CONTEXT = [
     (
@@ -212,6 +335,73 @@ def _localized_project_category(category: str, lang: Optional[str]) -> str:
     return _PROJECT_LIST_TEXT[lang_key]["categories"].get(category, category)
 
 
+def _project_card_payload(project_key: str) -> Dict[str, str]:
+    project = PROJECTS[project_key]
+    meta_bits = [
+        project.get("location", ""),
+        project.get("category", ""),
+        project.get("year", ""),
+    ]
+    return {
+        "id": project_key,
+        "title": project.get("display_name", project_key.replace("_", " ").title()),
+        "meta": " | ".join(bit for bit in meta_bits if bit),
+        "image": project.get("cover_image_url", ""),
+        "url": project.get("project_url", ""),
+    }
+
+
+def _project_cards_for_keys(project_keys: List[str]) -> List[Dict[str, str]]:
+    return [
+        _project_card_payload(key)
+        for key in project_keys
+        if key in PROJECTS
+    ]
+
+
+def _infer_project_service_filter(raw_msg: str) -> str:
+    normalized = _ascii_norm(raw_msg)
+    if not normalized:
+        return ""
+    padded = f" {normalized} "
+    for info_type, aliases in _PROJECT_SERVICE_ALIASES:
+        for alias in aliases:
+            if f" {_ascii_norm(alias)} " in padded:
+                return info_type
+    return ""
+
+
+def _project_service_keys(info_type: str) -> List[str]:
+    from .services_actions import _SERVICE_PROJECT_EXAMPLES, _SERVICE_PROJECT_LIMIT
+
+    return [
+        key
+        for key in _SERVICE_PROJECT_EXAMPLES.get(info_type, [])[:_SERVICE_PROJECT_LIMIT]
+        if key in PROJECTS
+    ]
+
+
+def _format_service_project_list(info_type: str, project_keys: List[str]) -> str:
+    label = _PROJECT_SERVICE_LABELS.get(info_type, info_type.replace("_", " ").title())
+    lines = [
+        f"Here are **{len(project_keys)} relevant 1PAX project examples** for **{label}**:",
+        "",
+    ]
+    for key in project_keys:
+        project = PROJECTS[key]
+        lines.append(
+            f"• **{project['display_name']}** — "
+            f"{project['location']} ({project['category']}, {project['year']})"
+        )
+    lines.extend(
+        [
+            "",
+            "Name any of these projects and I can go deeper into the budget, scope, timeline, design approach, or key challenge.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 # ── Greet / Goodbye / Bot challenge ─────────────────────────────────────────
 
 
@@ -235,7 +425,7 @@ class ActionGreet(Action):
             ]), lang),
             buttons=meeting_buttons(lang),
         )
-        return schedule_reset_events + ([SlotSet("language", lang)] if lang else [])
+        return schedule_reset_events + [SlotSet("language", lang)]
 
 
 class ActionGoodbye(Action):
@@ -254,7 +444,7 @@ class ActionGoodbye(Action):
             "Thanks for exploring 1PAX's work. Have a great day!",
             "Goodbye! Don't hesitate to reach out if you have more questions about our projects.",
         ]), lang))
-        return [SlotSet("language", lang)] if lang else []
+        return [SlotSet("language", lang)]
 
 
 class ActionIAmABot(Action):
@@ -272,7 +462,7 @@ class ActionIAmABot(Action):
             "I'm a chatbot built to answer questions about 1PAX's projects — airports, mobility infrastructure, interior design, and more.",
             "I'm the 1PAX assistant — an AI built to guide you through our portfolio of 57 architectural projects.",
         ]), lang))
-        return [SlotSet("language", lang)] if lang else []
+        return [SlotSet("language", lang)]
 
 
 # ── Fuzzy project matching ───────────────────────────────────────────────────
@@ -341,6 +531,9 @@ _NAME_INDEX.update({
     "doha metro":                  "doha_metro_depot",
     "doha west metro":             "doha_metro_depot",
     "qatar metro":                 "doha_metro_depot",
+    "al wakrah":                   "doha_metro_depot",
+    "al wakrah depot":             "doha_metro_depot",
+    "al wakrah metro depot":       "doha_metro_depot",
     "qatar railways":              "qatar_railways_hq",
     "qatar rail hq":               "qatar_railways_hq",
     "qatar railways hq":           "qatar_railways_hq",
@@ -388,14 +581,6 @@ _NAME_INDEX.update({
     "sof airport":                 "sofia_airport",
     "sofia t3":                    "sofia_airport",
     "t3 sofia":                    "sofia_airport",
-    "biggest project":             "sofia_airport",
-    "the biggest project":         "sofia_airport",
-    "our biggest project":         "sofia_airport",
-    "your biggest project":        "sofia_airport",
-    "flagship project":            "sofia_airport",
-    "the flagship project":        "sofia_airport",
-    "our flagship project":        "sofia_airport",
-    "your flagship project":       "sofia_airport",
     "airport project":             "sofia_airport",
     "terminal project":            "sofia_airport",
     # Bordeaux–Mérignac
@@ -599,6 +784,15 @@ _NAME_INDEX.update({
     "lille lesquin":               "lille_airport",
     "lil airport":                 "lille_airport",
     # Current public website titles that differ from internal display names
+    "sofia airport terminal 3 international terminal 2 refurbishment": "sofia_airport",
+    "belgrade airport phase 1 phase 2 terminal expansion": "belgrade_airport",
+    "velana international airport new terminal building": "velana_airport",
+    "bordeaux merignac airport hall b new facades": "bordeaux_airport",
+    "pointe a pitre": "pointe_a_pitre_t1",
+    "pointe a pitre airport": "pointe_a_pitre_t1",
+    "pointe a pitre international airport new terminal extension winner": "pointe_a_pitre_t1",
+    "pointe a pitre international airport terminal 2 extension": "pointe_a_pitre_t2",
+    "aik bank branches and atm network design": "aik_bank_design",
     "al wakrah metro depot masterplan": "doha_metro_depot",
     "qatar railways al wakrah metro depot masterplan": "doha_metro_depot",
     "bordeaux international airport hall b terminal new facades": "bordeaux_airport",
@@ -1040,11 +1234,12 @@ def _areas_for_project_key(project_key: str) -> Tuple[str, ...]:
 def _format_geo_project_list(result: Dict[str, Any]) -> str:
     label = result["label"]
     matched_label = result.get("matched_label") or label
-    project_keys = result.get("project_keys", [])
+    all_project_keys = result.get("project_keys", [])
+    project_keys = all_project_keys[:_PROJECT_RESULT_LIMIT]
 
     if result["direct"]:
         intro = f"1PAX projects in **{label}**:"
-    elif project_keys:
+    elif all_project_keys:
         intro = (
             f"I don't see a current 1PAX project tagged directly to **{label}** "
             f"in the project database. The closest regional view is **{matched_label}**:"
@@ -1067,6 +1262,12 @@ def _format_geo_project_list(result: Dict[str, Any]) -> str:
             "**France**, **Latin America**, **Europe**, **Africa**, or **Asia**."
         )
         return "\n".join(lines)
+
+    if len(all_project_keys) > _PROJECT_RESULT_LIMIT:
+        lines.append(
+            f"Showing the **{_PROJECT_RESULT_LIMIT} most relevant** matches "
+            f"out of {len(all_project_keys)} current portfolio projects."
+        )
 
     covered_areas = []
     for key in project_keys:
@@ -1233,14 +1434,8 @@ def _fuzzy_match_project(text: str) -> Optional[str]:
 
 
 _SPECIFIC_PROJECT_SIGNALS = {
-    "biggest project",
-    "the biggest project",
-    "your biggest project",
-    "our biggest project",
-    "most famous project",
-    "signature project",
-    "flagship project",
-    "the flagship project",
+    # Superlatives ("biggest project", "flagship project") are portfolio-ranking
+    # questions handled by portfolio_insights, not a single-project lookup.
     "airport project",
     "terminal project",
 }
@@ -1328,6 +1523,16 @@ def _project_link_label(lang: Optional[str]) -> str:
     return _PROJECT_LINK_LABELS.get(lang.upper(), "View project page on 1pax.com")
 
 
+def _project_link_button(project: Dict, lang: Optional[str]) -> Optional[Dict[str, str]]:
+    project_url = project.get("project_url")
+    if not project_url:
+        return None
+    return {
+        "title": _project_link_label(lang),
+        "url": project_url,
+    }
+
+
 def _format_project_response(
     text: str,
     project: Dict,
@@ -1336,11 +1541,7 @@ def _format_project_response(
 ) -> str:
     if offer_meeting:
         text = f"{text}\n\n{meeting_cta_text('project')}"
-    response = translate_response(text, lang)
-    project_url = project.get("project_url")
-    if project_url:
-        response = f"{response}\n\n[{_project_link_label(lang)}]({project_url})"
-    return response
+    return translate_response(text, lang)
 
 
 def _has_photo_word(raw_msg: str) -> bool:
@@ -1374,14 +1575,24 @@ def _utter_project_response(
     offer_meeting: bool = False,
 ) -> None:
     cover_image_url = project.get("cover_image_url")
-    message = {
-        "text": _format_project_response(text, project, lang, offer_meeting),
-    }
+    dispatcher.utter_message(
+        text=_format_project_response(text, project, lang, offer_meeting),
+    )
     if cover_image_url and _should_attach_cover_image(info_type, raw_msg):
-        message["image"] = cover_image_url
+        dispatcher.utter_message(image=cover_image_url)
+
+    buttons: List[Dict[str, str]] = []
+    project_button = _project_link_button(project, lang)
+    if project_button:
+        buttons.append(project_button)
     if offer_meeting:
-        message["buttons"] = meeting_buttons(lang)
-    dispatcher.utter_message(**message)
+        buttons.extend(meeting_buttons(lang))
+    if buttons:
+        button_prompt = "Project page:" if project_button else "Next step:"
+        dispatcher.utter_message(
+            text=translate_response(button_prompt, lang),
+            buttons=buttons,
+        )
 
 
 # ── Intent → info-type dispatch map ─────────────────────────────────────────
@@ -1471,6 +1682,14 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
     entity_values = list(tracker.get_latest_entity_values("project"))
     raw_text = tracker.latest_message.get("text", "")
 
+    def last_valid_project_from_events(current_slot: Optional[str]) -> Tuple[Optional[str], Optional[Dict]]:
+        for event in reversed(list(tracker.events)):
+            if event.get("event") == "slot" and event.get("name") == "project_name":
+                old_val = event.get("value")
+                if old_val and old_val != current_slot and old_val in PROJECTS:
+                    return old_val, PROJECTS[old_val]
+        return None, None
+
     # Partition entities into meaningful vs generic/spurious
     meaningful = [ev for ev in entity_values
                   if ev.lower() not in _GENERIC_PROJECT_REF and len(ev) > 3]
@@ -1497,6 +1716,13 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
     # 4. Meaningful entity was present but didn't match — signal not found.
     # Do NOT fall through to slot (it would return the wrong project).
     if meaningful:
+        slot_key = tracker.get_slot("project_name")
+        recovered_key, recovered_project = last_valid_project_from_events(slot_key)
+        if recovered_key and _looks_like_project_detail_followup(
+            raw_text,
+            has_project_context=True,
+        ):
+            return recovered_key, recovered_project
         return None, None
 
     # 5. Fall back to slot (conversation context).
@@ -1510,12 +1736,7 @@ def _resolve_project(tracker: Tracker) -> Tuple[Optional[str], Optional[Dict]]:
     if slot_key in PROJECTS:
         return slot_key, PROJECTS[slot_key]
     # Slot was auto-filled with an invalid value — find the last valid one
-    for event in reversed(list(tracker.events)):
-        if event.get("event") == "slot" and event.get("name") == "project_name":
-            old_val = event.get("value")
-            if old_val and old_val != slot_key and old_val in PROJECTS:
-                return old_val, PROJECTS[old_val]
-    return None, None
+    return last_valid_project_from_events(slot_key)
 
 
 def _infer_project_info_type(text: str) -> str:
@@ -1526,7 +1747,7 @@ def _infer_project_info_type(text: str) -> str:
         padded = f" {raw} "
         return any(f" {_ascii_norm(phrase)} " in padded for phrase in phrases)
 
-    if any(token in raw for token in ("tender", "competition", "selected")):
+    if any(token in raw for token in ("tender", "competition", "selected", "award", "awarded")):
         return "tender"
     if any(token in raw for token in (
         "scope",
@@ -1753,6 +1974,77 @@ def _intent_to_info_type(
     return inferred
 
 
+# ── Portfolio insights routing ───────────────────────────────────────────────
+
+_PORTFOLIO_INTENTS = {"ask_projects_ranking", "ask_projects_filter"}
+
+
+def _previous_user_texts(tracker: Tracker, limit: int = 2) -> List[str]:
+    latest = tracker.latest_message.get("text", "") or ""
+    texts: List[str] = []
+    skipped_latest = False
+    for event in reversed(list(getattr(tracker, "events", None) or [])):
+        if event.get("event") != "user":
+            continue
+        text = event.get("text") or ""
+        if not skipped_latest and text == latest:
+            skipped_latest = True
+            continue
+        texts.append(text)
+        if len(texts) >= limit:
+            break
+    return texts
+
+
+def _portfolio_request(tracker: Tracker) -> Optional[Dict[str, Any]]:
+    """Parsed ranking/filter/stats request, or None when it's not one (or names one project)."""
+    from .portfolio_insights import _has, _norm, parse_followup, parse_portfolio_query
+
+    raw_text = tracker.latest_message.get("text", "") or ""
+    request = parse_portfolio_query(raw_text)
+    if request is None:
+        for previous in _previous_user_texts(tracker):
+            request = parse_followup(raw_text, parse_portfolio_query(previous))
+            if request:
+                break
+    if request is None:
+        return None
+    if _looks_like_specific_project_query(raw_text):
+        if request["kind"] != "rank":
+            return None
+        if not _has(_norm(raw_text), ("your", "you", "1pax", "ever", "portfolio", "projects")):
+            return None
+    return request
+
+
+def _answer_portfolio_insight(dispatcher, tracker: Tracker, lang: Optional[str], force: bool = False):
+    from .portfolio_insights import answer_portfolio_query
+
+    raw_text = tracker.latest_message.get("text", "") or ""
+    request = _portfolio_request(tracker)
+    if request is None and not force:
+        return None
+    subject_key = None
+    if request and request["kind"] == "rank" and _looks_like_specific_project_query(raw_text):
+        subject_key = _fuzzy_match_project(raw_text)
+    result = answer_portfolio_query(
+        raw_text if request else "",
+        _previous_user_texts(tracker) if request else (),
+        subject_key=subject_key,
+        default_overview=force,
+    )
+    if not result:
+        return None
+    text, keys, resolved = result
+    message: Dict[str, Any] = {"text": translate_response(text, lang)}
+    if keys:
+        message["json_message"] = {"project_cards": _project_cards_for_keys(keys[:_PROJECT_RESULT_LIMIT])}
+    dispatcher.utter_message(**message)
+    if resolved.get("kind") == "rank" and keys:
+        return [SlotSet("project_name", keys[0])]
+    return []
+
+
 # ── Actions ──────────────────────────────────────────────────────────────────
 
 class ActionAnswerProjectQuery(Action):
@@ -1779,12 +2071,26 @@ class ActionAnswerProjectQuery(Action):
         if schedule_events is not None:
             return schedule_events
         schedule_reset_events = _schedule_topic_shift_events(tracker)
+        schedule_start_events = _start_schedule_if_requested(dispatcher, tracker, domain)
+        if schedule_start_events is not None:
+            return schedule_reset_events + schedule_start_events
+        team_followup_events = _answer_team_followup_if_requested(dispatcher, tracker, domain)
+        if team_followup_events is not None:
+            return schedule_reset_events + team_followup_events
 
         lang = get_lang(tracker)
-        lang_event = [SlotSet("language", lang)] if lang else []
+        lang_event = [SlotSet("language", lang)]
         raw_text = tracker.latest_message.get("text", "")
         intent_name = tracker.latest_message.get("intent", {}).get("name", "")
         raw_msg = raw_text.lower()
+
+        from .company_actions import ActionAnswerCompanyQuery, looks_like_company_level_question
+
+        if looks_like_company_level_question(raw_text):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
+        if _portfolio_request(tracker) is not None:
+            return ActionListProjects().run(dispatcher, tracker, domain)
 
         if _looks_like_project_geo_query(raw_text):
             return ActionListProjects().run(dispatcher, tracker, domain)
@@ -1793,6 +2099,20 @@ class ActionAnswerProjectQuery(Action):
         project_key, project = _resolve_project(tracker)
 
         if not project_key:
+            from .company_actions import _custom_company_answer
+
+            if _custom_company_answer(raw_text):
+                from .company_actions import ActionAnswerCompanyQuery
+
+                return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
+            if intent_name == "ask_project_partners" and not entity_value:
+                from .company_inquiries import build_inquiry_answer
+
+                for part in build_inquiry_answer("partners", raw_text) or []:
+                    dispatcher.utter_message(text=translate_response(part, lang))
+                return schedule_reset_events + lang_event
+
             if entity_value:
                 dispatcher.utter_message(text=translate_response(
                     random.choice([
@@ -1914,18 +2234,70 @@ class ActionListProjects(Action):
         if schedule_events is not None:
             return schedule_events
         schedule_reset_events = _schedule_topic_shift_events(tracker)
+        schedule_start_events = _start_schedule_if_requested(dispatcher, tracker, domain)
+        if schedule_start_events is not None:
+            return schedule_reset_events + schedule_start_events
+        team_followup_events = _answer_team_followup_if_requested(dispatcher, tracker, domain)
+        if team_followup_events is not None:
+            return schedule_reset_events + team_followup_events
 
         lang = get_lang(tracker)
-        lang_event = [SlotSet("language", lang)] if lang else []
+        lang_event = [SlotSet("language", lang)]
         raw_msg = tracker.latest_message.get("text", "")
+
+        intent_name = tracker.latest_message.get("intent", {}).get("name", "")
+        portfolio_events = _answer_portfolio_insight(
+            dispatcher,
+            tracker,
+            lang,
+            force=intent_name in _PORTFOLIO_INTENTS and not _looks_like_project_geo_query(raw_msg),
+        )
+        if portfolio_events is not None:
+            return schedule_reset_events + portfolio_events + lang_event
+
+        from .company_actions import ActionAnswerCompanyQuery, _custom_company_answer
+
+        if _custom_company_answer(raw_msg):
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
+        service_filter = _infer_project_service_filter(raw_msg)
+        if service_filter and any(
+            marker in _ascii_norm(raw_msg)
+            for marker in (
+                "proposal", "provide", "offer", "service", "consultation",
+                "supervision", "can you design", "we need", "we want",
+                "looking for", "hire 1pax",
+            )
+        ):
+            from .services_actions import ActionAnswerServicesQuery
+
+            return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
 
         if _looks_like_specific_project_query(raw_msg):
             return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         geo_result = _project_geo_result(raw_msg)
         if geo_result:
+            project_keys = geo_result.get("project_keys", [])[:_PROJECT_RESULT_LIMIT]
+            message = {
+                "text": translate_response(_format_geo_project_list(geo_result), lang),
+            }
+            if project_keys:
+                message["json_message"] = {
+                    "project_cards": _project_cards_for_keys(project_keys),
+                }
+            dispatcher.utter_message(**message)
+            return schedule_reset_events + lang_event
+
+        service_info_type = _infer_project_service_filter(raw_msg)
+        service_project_keys = _project_service_keys(service_info_type)
+        if service_project_keys:
             dispatcher.utter_message(
-                text=translate_response(_format_geo_project_list(geo_result), lang)
+                text=translate_response(
+                    _format_service_project_list(service_info_type, service_project_keys),
+                    lang,
+                ),
+                json_message={"project_cards": _project_cards_for_keys(service_project_keys)},
             )
             return schedule_reset_events + lang_event
 
@@ -2007,7 +2379,10 @@ def _language_capability_text() -> str:
         "I identify the language you are using, translate your question into "
         "English for the 1PAX knowledge model, and translate my reply back to "
         "that language. If you want to switch languages later, just send a "
-        "message in the new language."
+        "message in the new language.\n\n"
+        "The 1PAX team itself collectively speaks **13 languages** across offices in "
+        "Paris, Belgrade, Shanghai, Barcelona, and Lima, with English as the shared "
+        "working language."
     )
 
 
@@ -2029,7 +2404,7 @@ class ActionHandleOutOfScope(Action):
     ) -> List[Dict[Text, Any]]:
 
         lang = get_lang(tracker)
-        lang_event = [SlotSet("language", lang)] if lang else []
+        lang_event = [SlotSet("language", lang)]
 
         user_text = tracker.latest_message.get("text", "")
         lower_text = user_text.lower()
@@ -2040,6 +2415,12 @@ class ActionHandleOutOfScope(Action):
         if schedule_events is not None:
             return schedule_events
         schedule_reset_events = _schedule_topic_shift_events(tracker)
+        schedule_start_events = _start_schedule_if_requested(dispatcher, tracker, domain)
+        if schedule_start_events is not None:
+            return schedule_reset_events + schedule_start_events
+        team_followup_events = _answer_team_followup_if_requested(dispatcher, tracker, domain)
+        if team_followup_events is not None:
+            return schedule_reset_events + team_followup_events
 
         # ── Greeting safety net: production can occasionally route greetings
         # through nlu_fallback while the model is warming or degraded.
@@ -2053,6 +2434,10 @@ class ActionHandleOutOfScope(Action):
             or any(greeting_text.startswith(f"{sig} ") for sig in _GREETING_SIGNALS)
         ):
             return schedule_reset_events + ActionGreet().run(dispatcher, tracker, domain)
+
+        goodbye_words = set(_ascii_norm(user_text).split())
+        if goodbye_words & {"bye", "goodbye"}:
+            return schedule_reset_events + ActionGoodbye().run(dispatcher, tracker, domain)
 
         # ── Company overview safety net: short translated prompts like
         # "cime se bavite" often arrive as "What do you do?", and production
@@ -2078,6 +2463,16 @@ class ActionHandleOutOfScope(Action):
             )
             return schedule_reset_events + [SlotSet("project_name", None)] + lang_event
 
+        generic_company_topic = _ascii_norm(user_text).strip(" .!?,;:")
+        if generic_company_topic in {
+            "innovation", "innovations", "your innovation", "your innovations",
+            "tell me about innovation", "tell me about innovations",
+            "tell me about your innovations", "show me your innovations",
+        }:
+            from .company_actions import ActionAnswerCompanyQuery
+
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         # ── Capability question: "what can you do", "what else can you do", etc. ─
         _CAP_SIGNALS = {"what can you do", "what else can you do", "what do you offer",
                         "what are you capable of", "what do you know", "what can you help",
@@ -2099,7 +2494,13 @@ class ActionHandleOutOfScope(Action):
                     "• Ask *'show me all projects'* to browse by category\n"
                     "• Ask about any project by name, city, or airport code\n"
                     "• For any project: location, year, client, budget, design concept, "
-                    "key challenge, sustainability, team, highlights, and more\n\n"
+                    "key challenge, sustainability, team, highlights, and more\n"
+                    "• Rankings and filters: *'biggest project'*, *'which projects are built?'*, "
+                    "*'competition wins'*, *'projects grouped by budget'*\n\n"
+                    "**Working with 1PAX:**\n"
+                    "• Partners and engineering, languages, local presence, project size, "
+                    "project stages, and how to start a project\n"
+                    "• The paid Graduate Fellowship for emerging architects\n\n"
                     "**Scheduling:**\n"
                     "• Ask me to *schedule a meeting* and I can help find a Calendly time.\n\n"
                     "Try: _'Tell me about 1PAX'_, _'who founded the studio?'_, _'tell me about Sofia Airport'_, "
@@ -2110,6 +2511,18 @@ class ActionHandleOutOfScope(Action):
             )
             return schedule_reset_events + [SlotSet("project_name", None)] + lang_event
 
+        # ── Portfolio ranking/filtering and client due-diligence safety nets:
+        # "biggest project", "which are built", partners, engineering, fellowship…
+        if _portfolio_request(tracker) is not None:
+            return ActionListProjects().run(dispatcher, tracker, domain)
+
+        from .company_inquiries import infer_inquiry_type
+
+        if infer_inquiry_type(user_text):
+            from .company_actions import ActionAnswerCompanyQuery
+
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         # ── Careers/applicant safety net: "join your team" and CV questions
         # can otherwise drift into team-roster answers when NLU is uncertain.
         from .company_actions import ActionAnswerCompanyQuery, looks_like_career_question
@@ -2117,10 +2530,39 @@ class ActionHandleOutOfScope(Action):
         if looks_like_career_question(user_text):
             return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
+        # Active project detail follow-ups should beat broad company/client
+        # catch-alls. Otherwise "who was the client?" after a project answer
+        # turns into a general client-base response.
+        active_project_key, _ = _resolve_project(tracker)
+        if active_project_key and _looks_like_project_detail_followup(
+            user_text,
+            has_project_context=True,
+        ):
+            return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
+
         # ── Company fact safety net: MTM-0040 queries like "what are your
         # patents?", "main clients", or "phone number" should never fall
         # through to a generic out-of-scope response.
         _COMPANY_FACT_SIGNALS = {
+            "award",
+            "awards",
+            "recognition",
+            "honors",
+            "honours",
+            "nda",
+            "non disclosure",
+            "non-disclosure",
+            "confidential",
+            "privacy",
+            "personal data",
+            "data protection",
+            "press images",
+            "press photos",
+            "media kit",
+            "journalist",
+            "partnership",
+            "investor",
+            "joint venture",
             "patent",
             "patents",
             "patented",
@@ -2178,7 +2620,15 @@ class ActionHandleOutOfScope(Action):
             "drone network",
             "drone networks",
         }
-        if any(sig in lower_text for sig in _COMPANY_FACT_SIGNALS):
+        _SHORT_COMPANY_FACT_WORDS = {"nda"}
+        _LONG_COMPANY_FACT_SIGNALS = _COMPANY_FACT_SIGNALS - _SHORT_COMPANY_FACT_WORDS
+        if (
+            any(sig in lower_text for sig in _LONG_COMPANY_FACT_SIGNALS)
+            or any(
+                re.search(rf"\b{re.escape(sig)}\b", lower_text)
+                for sig in _SHORT_COMPANY_FACT_WORDS
+            )
+        ):
             return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
         # ── Production safety net: route core project browse/detail flows from raw text.
@@ -2209,10 +2659,18 @@ class ActionHandleOutOfScope(Action):
 
         _PERSON_SIGNALS = {"mabel", "miranda", "ceo", "chief executive"}
         _FOUNDER_PERSON_SIGNALS = {"who is founder", "who is the founder", "tell me about founder", "tell me about the founder"}
-        from .team_actions import ActionAnswerTeamQuery, has_known_person_reference
+        from .team_actions import (
+            ActionAnswerTeamQuery,
+            has_known_person_reference,
+            looks_like_person_detail_followup,
+        )
 
         if (
             has_known_person_reference(user_text)
+            or (
+                tracker.get_slot("person_name")
+                and looks_like_person_detail_followup(user_text)
+            )
             or any(sig in lower_text for sig in _PERSON_SIGNALS)
             or any(sig in lower_text for sig in _FOUNDER_PERSON_SIGNALS)
         ):
@@ -2231,12 +2689,36 @@ class ActionHandleOutOfScope(Action):
 
             return run_calendly_scheduling(dispatcher, tracker, domain)
 
+        service_info_type = _infer_project_service_filter(user_text)
+        if service_info_type and any(
+            sig in lower_text
+            for sig in (
+                "project",
+                "projects",
+                "portfolio",
+                "examples",
+                "work on",
+                "worked on",
+                "infrastructure",
+                "designed",
+                "delivered",
+            )
+        ):
+            return ActionListProjects().run(dispatcher, tracker, domain)
+
         _SERVICE_SIGNALS = {
             "service",
             "services",
             "offer",
             "provide",
             "capabilities",
+            "price",
+            "pricing",
+            "fee",
+            "fees",
+            "cost",
+            "charge",
+            "charges",
             "bim",
             "urbanism",
             "masterplan",
@@ -2247,6 +2729,10 @@ class ActionHandleOutOfScope(Action):
             "hospital",
             "hospitals",
             "healthcare",
+            "proposal",
+            "supervision",
+            "consulting",
+            "consultation",
         }
         if any(sig in lower_text for sig in _SERVICE_SIGNALS):
             from .services_actions import ActionAnswerServicesQuery
@@ -2263,6 +2749,8 @@ class ActionHandleOutOfScope(Action):
             "employee",
             "employees",
             "leadership",
+            "director",
+            "management",
             "architects",
             "specialists",
             "who works",
@@ -2284,6 +2772,13 @@ class ActionHandleOutOfScope(Action):
             from .team_actions import ActionAnswerTeamQuery
 
             return ActionAnswerTeamQuery().run(dispatcher, tracker, domain)
+
+        from .company_actions import _looks_like_office_location_query
+
+        if _looks_like_office_location_query(user_text):
+            from .company_actions import ActionAnswerCompanyQuery
+
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
 
         _COMPANY_LOCATION_SIGNALS = {
             "where is the company located",
@@ -2307,7 +2802,6 @@ class ActionHandleOutOfScope(Action):
         # or "what was the budget" can land in nlu_fallback on older models.
         # Route them through the normal project action so active slot context is
         # still respected, or so the user is asked which project if none exists.
-        active_project_key, _ = _resolve_project(tracker)
         if _looks_like_project_detail_followup(
             user_text,
             has_project_context=bool(active_project_key),
@@ -2323,6 +2817,12 @@ class ActionHandleOutOfScope(Action):
             "mission",
             "offices",
             "clients",
+            "values",
+            "value",
+            "about us",
+            "ethics",
+            "culture",
+            "purpose",
             "sustainability",
             "careers",
         }
