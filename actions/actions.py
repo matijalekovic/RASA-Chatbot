@@ -2289,6 +2289,13 @@ class ActionListProjects(Action):
             dispatcher.utter_message(**message)
             return schedule_reset_events + lang_event
 
+        # "What kind of projects do you do?" wants a general description for someone
+        # discovering 1PAX, not the full 57-project catalogue.
+        from .company_inquiries import infer_inquiry_type
+
+        if infer_inquiry_type(raw_msg) in {"project_types", "fit", "client_types"}:
+            return ActionAnswerCompanyQuery().run(dispatcher, tracker, domain)
+
         service_info_type = _infer_project_service_filter(raw_msg)
         service_project_keys = _project_service_keys(service_info_type)
         if service_project_keys:
@@ -2806,6 +2813,12 @@ class ActionHandleOutOfScope(Action):
             user_text,
             has_project_context=bool(active_project_key),
         ):
+            # "passenger flow principles in retail design" is a service topic, not a
+            # project field question, when no project is being discussed.
+            if not active_project_key and _infer_project_service_filter(user_text):
+                from .services_actions import ActionAnswerServicesQuery
+
+                return ActionAnswerServicesQuery().run(dispatcher, tracker, domain)
             return ActionAnswerProjectQuery().run(dispatcher, tracker, domain)
 
         _COMPANY_SIGNALS = {

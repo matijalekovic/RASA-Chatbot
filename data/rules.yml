@@ -560,3 +560,25 @@ rules:
   steps:
     - intent: ask_company_track_record
     - action: action_answer_company_query
+
+# ── Client fit assessment ────────────────────────────────────────────────────
+
+- rule: Handle ask_company_project_types
+  steps:
+    - intent: ask_company_project_types
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_fit
+  steps:
+    - intent: ask_company_fit
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_client_types
+  steps:
+    - intent: ask_company_client_types
+    - action: action_answer_company_query
+
+- rule: Handle ask_company_delivery
+  steps:
+    - intent: ask_company_delivery
+    - action: action_answer_company_query

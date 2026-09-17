@@ -26,6 +26,10 @@ from .projects_data import CATEGORIES, PROJECTS
 
 INQUIRY_TYPES = (
     "fellowship",
+    "project_types",
+    "fit",
+    "client_types",
+    "delivery",
     "languages",
     "local_presence",
     "engineering",
@@ -221,6 +225,66 @@ _TRACK_RECORD_CUES = (
 )
 
 
+_PROJECT_TYPES_CUES = (
+    "what kind of projects", "what type of projects", "what types of projects", "what sort of projects",
+    "what kinds of projects", "what projects do you do", "what projects do you work on",
+    "what projects do you take on", "what projects does 1pax do", "what kind of work", "what type of work",
+    "what sort of work", "what do you design", "what do you usually design", "what does 1pax design",
+    "what kind of buildings", "what type of buildings", "what types of buildings", "what sectors",
+    "which sectors", "what kind of architecture", "what type of architecture", "what fields do you",
+    "what areas do you work", "what do you work on", "what kind of infrastructure", "typical projects",
+    "typical project", "what does 1pax work on", "what kind of jobs", "what jobs do you take",
+    "what kind of design work", "what s your specialty", "what is your specialty",
+)
+_LIST_CUES = ("list", "show me all", "all your projects", "all projects", "full list", "every project",
+              "catalogue", "catalog", "all of your projects")
+_FIT_CUES = (
+    "good fit", "right fit", "a fit for", "fit for us", "fit for our", "fit for my", "best fit",
+    "suit our", "suitable for our", "suitable for my", "suitable for us", "right partner for",
+    "right firm for", "right studio for", "right architect for", "should we hire", "should i hire",
+    "should we work with you", "should we choose you", "is my project", "is our project",
+    "we are planning", "we re planning", "we are developing", "we re developing", "we are building",
+    "we are looking for an architect", "looking for an architect", "we need an architect",
+    "need an architecture firm", "looking for an architecture firm", "what can you do for us",
+    "what can you do for me", "what can 1pax do for", "how can 1pax help us", "how can you help us",
+    "how could you help us", "how could 1pax help", "what value do you bring", "what value would you",
+    "what do we get", "benefit of working with", "benefits of working with", "would you be interested in our",
+    "would you take our project", "can you handle our project", "are you the right",
+)
+_CLIENT_TYPE_CUES = (
+    "what kind of clients", "what type of clients", "what types of clients", "what type of client",
+    "what kind of client", "what sort of clients", "what kinds of clients", "typical client",
+    "typical clients", "who do you work for", "who do you usually work for", "who hires you",
+    "who are your clients usually", "who usually hires 1pax", "who commissions your work",
+    "what clients do you usually", "who are your typical customers", "what kind of customers",
+)
+_DELIVERY_CUES = (
+    "on time", "on budget", "within budget", "over budget", "cost overrun", "cost overruns",
+    "cost control", "control costs", "keep costs", "manage costs", "budget control", "schedule control",
+    "meet deadlines", "missed deadlines", "avoid delays", "delays", "keep the project on track",
+    "deliver on schedule", "on schedule", "quality control", "quality assurance", "risk management",
+    "how do you manage projects", "project management approach", "how do you control",
+)
+_DELIVERY_CONTEXT = ("deliver", "delivery", "project", "projects", "1pax", "your", "you", "design")
+
+
+def _looks_like_project_types(norm_text: str, text: str) -> bool:
+    if not _has(norm_text, _PROJECT_TYPES_CUES) or _has(norm_text, _LIST_CUES):
+        return False
+    from .portfolio_insights import _category_filter
+
+    if _category_filter(norm_text):
+        return False
+    try:
+        from .actions import _find_geo_target
+
+        if _find_geo_target(text):
+            return False
+    except Exception:  # pragma: no cover - defensive
+        pass
+    return True
+
+
 def infer_inquiry_type(text: str) -> str:
     """Conservative raw-text detector for fallback paths."""
     norm_text = _norm(text)
@@ -228,6 +292,16 @@ def infer_inquiry_type(text: str) -> str:
         return ""
     if looks_like_fellowship_question(text):
         return "fellowship"
+    if _has(norm_text, _FIT_CUES):
+        return "fit"
+    if _has(norm_text, _CLIENT_TYPE_CUES):
+        return "client_types"
+    if (
+        _has(norm_text, _DELIVERY_CUES)
+        and _has(norm_text, _DELIVERY_CONTEXT)
+        and not _has(norm_text, ("flight", "train", "bus", "my order"))
+    ):
+        return "delivery"
     if _has(norm_text, _PARTNER_CUES) or (
         find_partner_in_text(text)
         and _has(norm_text, ("worked with", "work with", "partner", "collaborate", "know"))
@@ -245,6 +319,8 @@ def infer_inquiry_type(text: str) -> str:
         _building_type(norm_text) and _has(norm_text, _BUILDING_TYPE_VERBS)
     ):
         return "beyond_airports"
+    if _looks_like_project_types(norm_text, text):
+        return "project_types"
     if _has(norm_text, _STAGES_CUES):
         return "project_stages"
     if _has(norm_text, _CERTIFICATION_CUES) and not _has(norm_text, ("5 star", "five star", "breeam", "hqe", "leed")):
@@ -632,7 +708,156 @@ def _track_record(text: str) -> List[str]:
     ]
 
 
+def _category_counts() -> Dict[str, int]:
+    return {cat: len(keys) for cat, keys in CATEGORIES.items()}
+
+
+def _project_types(text: str) -> List[str]:
+    counts = _category_counts()
+    stats = portfolio_stats()
+    return [
+        ("**In short: 1PAX designs the places where people move — and the buildings and spaces around "
+         "them.** We are an architecture and innovation studio specialised in airports and mobility "
+         "infrastructure, and we bring that expertise to other complex, high-footfall buildings where the "
+         "user experience really matters."),
+        ("**The kinds of projects we do:**\n\n"
+         f"• **Airports & transport hubs** — our core ({counts.get('Airports and Transportation', 0)} projects): "
+         "new terminals, expansions and refurbishments of live airports, landside and airport masterplans, and "
+         "design for concession bids — e.g. the new Velana terminal (Maldives), Sofia Airport Terminal 3, "
+         "Belgrade Airport\n"
+         f"• **Future mobility** ({counts.get('Future of Mobility', 0)}): vertiports and heliports — including "
+         "Europe's first operational vertiport in Cergy-Pontoise — plus metro stations and depots in Belgrade, "
+         "Lima, and Doha\n"
+         f"• **Aviation & operational buildings** ({counts.get('Industrial Buildings', 0)}): air traffic control "
+         "towers, airport fire stations, hangars, and baggage buildings\n"
+         f"• **Working & living** ({counts.get('Working and Living', 0)}): offices, headquarters, and embassies — "
+         "e.g. the European Commission Delegation in Tokyo\n"
+         f"• **Interiors & passenger experience** ({counts.get('Interior Design', 0)}): food halls, retail "
+         "concepts, wayfinding systems, and a nationwide bank-branch design\n"
+         "• **Strategy & consultancy:** feasibility studies, operational diagnostics, design and value-engineering "
+         "reviews, BIM management, and our own patented products (PAX cart, Ecoport vertiport)"),
+        ("**Scale, stage and reach:** from a 120 m² vertiport to terminals of over 100,000 m²; from early "
+         "feasibility to design follow-up during construction; "
+         f"{stats['total']} projects in {len(stats['countries'])} countries and territories.\n\n"
+         "**Who we work for:** airport operators and concessionaires, governments and transport authorities, "
+         "international institutions, developers and corporate clients, retailers, and contractors or "
+         "engineering firms who need an architecture partner.\n\n"
+         "**Likely a good fit if** your project is about moving people — or any building where flows, "
+         "operations, and the visitor experience are critical. Tell me your project type, location, size, and "
+         "stage and I'll point you to similar work — or ask to **see all projects**."),
+    ]
+
+
+def _fit(text: str) -> List[str]:
+    norm_text = _norm(text)
+    from .portfolio_insights import _category_filter
+
+    parts = [
+        ("**1PAX is usually a strong fit when your project involves:**\n\n"
+         "• **Airports, stations, and mobility hubs** — our specialism since 2016: terminals, expansions, "
+         "masterplans, control towers, vertiports, and metro stations\n"
+         "• **Complex public buildings with heavy footfall** where passenger flow, wayfinding, and operations "
+         "drive the design — offices, embassies, commercial interiors\n"
+         "• **Work on live, operating facilities** that needs careful construction phasing\n"
+         "• **International or multi-country projects** — 23 countries so far, five offices across time zones, "
+         "13 languages in the team\n"
+         "• **Competitions, tenders, or concession bids** where you need a design partner with a track record\n"
+         "• **Any size** — from a 900 m² lounge extension to 100,000 m²+ terminals"),
+        ("**What you get:** an architecture-led, human-centered design team that coordinates engineering "
+         "partners for you, works in BIM, thinks about sustainability from day one, and stays involved from "
+         "feasibility through construction support.\n\n"
+         "**Probably not the right fit if** you need a pure engineering firm, standalone site supervision, or a "
+         "building type far from our experience (such as hospitals, schools, stadiums, or private houses) — "
+         "although we're always happy to discuss projects that share mobility-style challenges."),
+    ]
+
+    category = _category_filter(norm_text)
+    building = _building_type(norm_text)
+    if building:
+        kind, label, keys = building
+        if kind == "portfolio":
+            examples = ", ".join(short_name(PROJECTS[k]) for k in keys[:4])
+            parts.append(f"**Relevant experience for {label.lower()}:** {examples}.")
+        elif kind == "service_only":
+            parts.append(f"**{label.capitalize()}** are part of our Working & Living service line, though the "
+                         "public portfolio doesn't yet include a completed project of that exact type.")
+        else:
+            parts.append(f"**{label.capitalize()}** are not in our current portfolio — describe your project "
+                         "and the team will tell you honestly whether it's a fit.")
+    elif category:
+        keys = CATEGORIES.get(category, [])
+        realized = [k for k in keys if FACTS[k]["status"] in ("built", "under_construction")] or keys
+        examples = ", ".join(short_name(PROJECTS[k]) for k in realized[:4])
+        parts.append(f"**Relevant experience ({category}):** {len(keys)} projects, including {examples}.")
+
+    parts.append(
+        "**Quickest way to check the fit:** tell me the project type, location, approximate size, current "
+        "stage, and timeline — or schedule a short meeting with the team."
+    )
+    return parts
+
+
+def _client_types(text: str) -> List[str]:
+    vinci = len(partner_projects(("vinci airports",)))
+    adp = len(partner_projects(("groupe adp",)))
+    return [
+        ("**Who 1PAX works for — and how each typically works with us:**\n\n"
+         "• **Airport operators & concessionaires** — VINCI Airports, Groupe ADP, SOF Connect, Maldives Airport "
+         "Company, Lima Airport Partners, Cabo Verde Airports. Usually direct commissions for terminals, "
+         "expansions, and masterplans, or design support for concession bids.\n"
+         "• **Governments, public & transport authorities** — City of Belgrade, ATU and AATE in Lima, Airport "
+         "Authority of India, DGAC. Typically through competitions, tenders, or studies.\n"
+         "• **International & diplomatic institutions** — the European Commission and the French Ministry of "
+         "Foreign Affairs (delegation and embassy buildings).\n"
+         "• **Engineering firms & contractors** — EGIS, SETEC, EDEIS COLAS, VINCI Construction, BRIAND. 1PAX "
+         "joins as the architecture partner in design teams, consortia, or design-and-build bids.\n"
+         "• **Future-mobility operators** — Skyports and Groupe ADP for vertiports.\n"
+         "• **Commercial & corporate clients** — Lagardère Travel Retail, AIK Bank, Qatar Airways Investments: "
+         "interiors, retail concepts, and branch networks."),
+        (f"**Long-term relationships matter to us:** for example, {vinci} projects linked to VINCI Airports "
+         f"and {adp} with Groupe ADP.\n\n"
+         "Tell me what kind of organisation you are and what you're planning, and I can show you the most "
+         "relevant projects — or ask about any client by name."),
+    ]
+
+
+def _delivery(text: str) -> List[str]:
+    vinci = len(partner_projects(("vinci airports",)))
+    return [
+        ("**How 1PAX keeps projects on time, on budget, and under control:**\n\n"
+         "• **Right-sizing early** — capacity, passenger-flow, and functional programming studies before design "
+         "locks in, so the building isn't over- or under-built\n"
+         "• **BIM coordination and clash detection** across architecture, structure, and MEP to catch issues "
+         "before they reach site (the Velana terminal was developed entirely in BIM)\n"
+         "• **Construction phasing for live operations** — keeping airports running while they are extended or "
+         "refurbished (Sofia, Belgrade, Nice)\n"
+         "• **Value engineering and design reviews** to optimise cost and performance (e.g. the Kigali terminal "
+         "roof and envelope review)\n"
+         "• **A rigorous methodology aligned with global best practices**, with integrated engineering partners\n"
+         "• **Responsiveness** — five offices across time zones give near 24/7 working hours"),
+        (f"Clients come back: {vinci} projects are linked to VINCI Airports alone. I don't have a published "
+         "on-time statistic, so for references on schedule and budget performance, ask the team in a meeting."),
+    ]
+
+
+def inquiry_buttons(info_type: str, lang: Optional[str]) -> List[Dict[str, str]]:
+    from .fellowship_data import fellowship_buttons
+    from .meeting_prompts import meeting_buttons
+
+    if info_type == "fellowship":
+        return fellowship_buttons()
+    if info_type == "project_types":
+        return [{"title": "Show all projects", "payload": "show me all projects"}] + meeting_buttons(lang)
+    if info_type in {"languages", "awards"}:
+        return []
+    return meeting_buttons(lang)
+
+
 _BUILDERS = {
+    "project_types": _project_types,
+    "fit": _fit,
+    "client_types": _client_types,
+    "delivery": _delivery,
     "languages": _languages,
     "local_presence": _local_presence,
     "engineering": _engineering,

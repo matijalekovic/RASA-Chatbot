@@ -103,6 +103,10 @@ intents:
   - cancel_schedule_booking
   # ── Other ─────────────────────────────────────────────────────────────────
   - out_of_scope
+  - ask_company_project_types
+  - ask_company_fit
+  - ask_company_client_types
+  - ask_company_delivery
   - ask_projects_ranking
   - ask_projects_filter
   - ask_company_awards

@@ -650,6 +650,11 @@ def looks_like_company_level_question(raw_text: str) -> bool:
     if not explicit_company:
         return False
 
+    if _has_any(normalized, ("1pax", "your company", "your studio", "your firm")) and _has_any(
+        normalized, ("clients", "customers", "experience with", "track record", "partners")
+    ):
+        return True
+
     return _has_any(normalized, (
         "where are they based",
         "where are you based",
@@ -1256,12 +1261,12 @@ class ActionAnswerCompanyQuery(Action):
         from .actions import _previous_user_texts
         from .fellowship_data import fellowship_topic
 
+        from .fellowship_data import is_followup_topic
+        from .company_inquiries import inquiry_buttons
+
         fellowship_followup = (
             len(raw_text.split()) <= 9
-            and fellowship_topic(raw_text) in {
-                "eligibility", "dates", "pay", "apply", "selection", "jury", "research",
-                "visa", "mentorship", "after", "vs_internship",
-            }
+            and is_followup_topic(fellowship_topic(raw_text))
             and any(looks_like_fellowship_question(t) for t in _previous_user_texts(tracker))
         )
         mentions_internships = _has_any(_client_norm(raw_text), ("intern", "interns", "internship", "internships"))
@@ -1275,11 +1280,11 @@ class ActionAnswerCompanyQuery(Action):
 
         inquiry_parts = build_inquiry_answer(inquiry_type, raw_text) if inquiry_type else None
         if inquiry_parts:
-            with_cta = inquiry_type not in {"fellowship", "languages", "awards"}
+            buttons = inquiry_buttons(inquiry_type, lang)
             translated = translate_responses(inquiry_parts, lang)
             for index, msg in enumerate(translated):
-                if with_cta and index == len(translated) - 1:
-                    dispatcher.utter_message(text=msg, buttons=meeting_buttons(lang))
+                if buttons and index == len(translated) - 1:
+                    dispatcher.utter_message(text=msg, buttons=buttons)
                 else:
                     dispatcher.utter_message(text=msg)
             return schedule_reset_events + company_context_events + lang_event

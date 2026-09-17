@@ -149,7 +149,8 @@ def test_fellowship_topics_and_deadline():
     assert fellowship_topic("is the fellowship paid?") == "pay"
     before = "\n".join(answer_fellowship("when is the deadline", now=datetime(2026, 9, 14, tzinfo=timezone.utc)))
     after = "\n".join(answer_fellowship("when is the deadline", now=datetime(2026, 10, 2, tzinfo=timezone.utc)))
-    assert "open until" in before and "closed" in after
+    assert "applications close" in before and "closed on" in after
+    assert "1pax-fellowship-portal.vercel.app" in before and "1pax-fellowship-portal.vercel.app" in after
     jury = "\n".join(answer_fellowship("who is on the jury"))
     assert "Cristiano Ceccato" in jury and "Jean-Charles Content" in jury
 
@@ -210,7 +211,79 @@ def test_story_suite_regressions_after_nlu_moves():
     assert any(w in dispatcher.text.lower() for w in ("government", "public", "ministry"))
 
 
+def test_every_fellowship_answer_links_the_portal():
+    from actions.fellowship_data import _TOPICS
+
+    for question in ["tell me about the fellowship"] + [
+        f"fellowship {markers[0]}" for _, _, markers in _TOPICS
+    ]:
+        text = "\n".join(answer_fellowship(question))
+        assert "https://1pax-fellowship-portal.vercel.app/" in text, question
+    assert fellowship_topic("did you receive my fellowship application?") == "status"
+    overview = "\n".join(answer_fellowship("what is the 1PAX fellowship?"))
+    assert "Talent is universal" in overview and "Paris office" in overview
+
+    dispatcher, _ = _run(ActionAnswerCompanyQuery, "tell me about the fellowship", "ask_company_fellowship")
+    buttons = [b for m in dispatcher.messages for b in (m.get("buttons") or [])]
+    assert any(b.get("url") == "https://1pax-fellowship-portal.vercel.app/" for b in buttons)
+
+    dispatcher, _ = _run(ActionAnswerCompanyQuery, "do you have open positions", "ask_company_open_roles")
+    assert "1pax-fellowship-portal.vercel.app" in dispatcher.text
+
+
+def test_fit_assessment_answers():
+    cases = {
+        "what kind of projects do you do?": "project_types",
+        "what do you design?": "project_types",
+        "what kind of projects do you have in France?": "",
+        "what kind of airport projects do you do?": "",
+        "show me a list of all your projects": "",
+        "are you a good fit for our project?": "fit",
+        "we are planning a new metro station, can you help?": "fit",
+        "what kind of clients do you work with?": "client_types",
+        "what is 1PAX's experience with government clients?": "",
+        "how do you keep projects on budget?": "delivery",
+        "is my flight on time?": "",
+    }
+    for text, expected in cases.items():
+        assert infer_inquiry_type(text) == expected, (text, infer_inquiry_type(text))
+
+    # Screenshot case: NLU sends it to the project list; answer must be a general description.
+    dispatcher, _ = _run(ActionListProjects, "what kind of projects do you do?", "ask_projects_list")
+    assert "designs the places where people move" in dispatcher.text
+    assert "These are all 57" not in dispatcher.text
+    buttons = [b for m in dispatcher.messages for b in (m.get("buttons") or [])]
+    assert any(b.get("payload") == "show me all projects" for b in buttons)
+
+    # A ranking answer stores a project in the slot; company-level client questions must not become project follow-ups.
+    tracker = _Tracker("what is 1PAX's experience with government clients?", "ask_company_clients",
+                       slots={"project_name": "sofia_airport"})
+    dispatcher = _Dispatcher()
+    ActionAnswerCompanyQuery().run(dispatcher, tracker, {})
+    assert "SOF Connect" not in dispatcher.text and "public" in dispatcher.text.lower()
+
+    from actions.services_actions import ActionAnswerServicesQuery
+
+    dispatcher, _ = _run(ActionAnswerServicesQuery, "we are planning a new metro station, can you help?",
+                         "ask_service_airports")
+    assert "strong fit" in dispatcher.text and "Belgrade Metro" in dispatcher.text
+    assert fellowship_topic("give me the link to the fellowship") == "link"
+
+    # S17-08: nlu_fallback service question with no active project must not ask "which project?".
+    dispatcher, _ = _run(ActionHandleOutOfScope, "what are the passenger flow principles in retail design?",
+                         "nlu_fallback")
+    assert "Which project" not in dispatcher.text
+    assert any(w in dispatcher.text.lower() for w in ("retail", "interior", "wayfinding"))
+
+    fit = "\n".join(build_inquiry_answer("fit", "we are planning a new metro station, can you help?"))
+    assert "Belgrade Metro" in fit
+    assert "VINCI Airports" in "\n".join(build_inquiry_answer("client_types", "who do you work for?"))
+    assert "BIM" in "\n".join(build_inquiry_answer("delivery", "how do you keep projects on budget?"))
+
+
 if __name__ == "__main__":
+    test_every_fellowship_answer_links_the_portal()
+    test_fit_assessment_answers()
     test_every_project_has_classified_status_and_procurement()
     test_biggest_project_answer_separates_built_from_competitions_and_budget()
     test_smallest_and_followup_inherit_context()

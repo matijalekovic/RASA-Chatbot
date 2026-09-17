@@ -201,11 +201,8 @@ nlu:
     - you do airports?
     - airport work?
     - anything airport related?
-    - what types of projects do you do?
     - do you work on airports in general?
-    - what kind of buildings do you design?
     - do you do transport infrastructure?
-    - what sectors do you work in?
     - do you have vertiport projects
     - do you do eVTOL infrastructure
     - any electric aviation projects
@@ -2173,9 +2170,7 @@ nlu:
   examples: |
     - what does 1PAX specialize in?
     - what are 1PAX's areas of expertise?
-    - what type of projects does 1PAX do?
     - what does 1PAX design?
-    - what kind of buildings does 1PAX work on?
     - does 1PAX do airports?
     - what is 1PAX known for professionally?
     - what does 1PAX focus on?
@@ -2184,9 +2179,7 @@ nlu:
     - what is 1PAX's specialty?
     - does 1PAX work on vertiports?
     - does 1PAX do interior design?
-    - what sectors does 1PAX work in?
     - does 1PAX do eVTOL terminals?
-    - what kind of infrastructure does 1PAX design?
     - do you work on metro stations?
     - what types of transportation projects does 1PAX do?
     - what is 1PAX's area of expertise?
@@ -2526,7 +2519,6 @@ nlu:
     - how do you take on a new project
     - what happens from brief to delivery
     - how do you structure your work
-    - how do you deliver on time
     - how do you manage quality
     - what's your working style
     - from concept to construction — what's your process
@@ -2558,7 +2550,6 @@ nlu:
     - clients and partners
     - list your clients
     - show me your client list
-    - what kind of clients does 1PAX work with?
     - does 1PAX work with governments?
     - does 1PAX work with airports?
     - who does 1PAX work for?
@@ -2571,7 +2562,6 @@ nlu:
     - what companies work with 1PAX?
     - does 1PAX work with transit authorities?
     - does 1PAX work with urban developers?
-    - what type of client does 1PAX partner with?
     - do you have government clients?
     - who are the stakeholders that 1PAX works with?
     - who has hired 1PAX?
@@ -2830,12 +2820,9 @@ nlu:
     - is 1PAX better suited for niche or complex projects
     - do you offer more attention to the project than a large firm would
     - is 1PAX flexible and responsive
-    - what is 1PAX's record of delivering on time?
-    - does 1PAX deliver projects on time?
     - what is 1PAX's track record for on-time delivery?
     - how does 1PAX perform on project delivery?
     - is 1PAX reliable for delivering on schedule?
-    - can 1PAX be trusted to deliver on time and on budget?
     - what is your delivery track record?
     - what's the advantage of a specialized studio like 1PAX
     - what's most unique about the firm?
@@ -4279,6 +4266,21 @@ nlu:
 
 - intent: ask_company_fellowship
   examples: |
+    - did you receive my fellowship application?
+    - I already applied for the fellowship, what now?
+    - what will I gain from the fellowship?
+    - what are the benefits of the fellowship?
+    - what focus areas can I choose in the fellowship?
+    - what file formats does the fellowship application accept?
+    - where is the fellowship application form?
+    - give me the link to the fellowship
+    - fellowship link
+    - where can I apply for the fellowship?
+    - is the fellowship open to people outside Europe?
+    - am I too old for the fellowship?
+    - does the fellowship include a visit to Paris?
+    - what is the mission of the 1PAX fellowship?
+    - why did 1PAX create the fellowship?
     - what is the 1PAX fellowship?
     - tell me about the graduate fellowship
     - tell me about the 1PAX Graduate Fellowship 2026
@@ -4620,6 +4622,123 @@ nlu:
     - company profile for due diligence
     - what makes 1PAX credible for big infrastructure?
     - since when has 1PAX been operating?
+
+
+# ── Client fit assessment (2026-09-17) ──────────────────────────────────────
+
+- intent: ask_company_project_types
+  examples: |
+    - what kind of projects do you do?
+    - what types of projects do you do?
+    - what type of projects does 1PAX do?
+    - what kind of projects does 1PAX work on?
+    - what sort of projects do you take on?
+    - what kind of work do you do?
+    - what type of work does your studio do?
+    - what do you design?
+    - what does 1PAX usually design?
+    - what kind of buildings do you design?
+    - what kind of buildings does 1PAX work on?
+    - what sectors do you work in?
+    - what sectors does 1PAX work in?
+    - what kind of infrastructure does 1PAX design?
+    - what are your typical projects?
+    - what does a typical 1PAX project look like?
+    - what kind of architecture do you do?
+    - I just found your website, what kind of projects do you do?
+    - what fields do you work in?
+    - what areas of architecture do you cover?
+    - what's your specialty?
+    - so what do you guys design
+    - what kind of stuff do you build
+    - what kind of jobs do you take
+    - what kind of design work does 1PAX do?
+    - what is your core business in terms of projects?
+    - what building typologies do you work on?
+    - what market sectors does 1PAX serve?
+    - which asset classes do you design?
+
+- intent: ask_company_fit
+  examples: |
+    - are you a good fit for our project?
+    - is 1PAX the right fit for us?
+    - would 1PAX be a good fit for my project?
+    - are you the right firm for our airport expansion?
+    - is our project a good fit for 1PAX?
+    - we are planning a new regional terminal, can you help?
+    - we're planning a metro station, are you the right partner?
+    - we are developing a mixed-use building, would you be suitable?
+    - we are looking for an architect for our airport
+    - we need an architect for a control tower, is that something for you?
+    - why should we hire 1PAX for our project?
+    - should we work with you on our terminal?
+    - what can you do for us?
+    - how can 1PAX help our organisation?
+    - what value do you bring to a project like ours?
+    - what do we get by working with 1PAX?
+    - what are the benefits of working with 1PAX?
+    - would you take on our project?
+    - can you handle our project?
+    - how do I know if 1PAX is right for my project?
+    - is my project something you would do?
+    - would 1PAX be interested in our project?
+    - we are an airport operator, can you help us?
+    - we are a developer with a hospitality project, is 1PAX a fit?
+    - we're a city government planning a transport hub, can you help us?
+    - looking for an architecture firm for an airport, are you a match?
+    - is 1PAX suitable for a small airport project?
+    - tell me if you are a good match for us
+    - i have a project, could you be the right studio?
+    - would we be a good client for you?
+
+- intent: ask_company_client_types
+  examples: |
+    - what kind of clients does 1PAX work with?
+    - what type of client does 1PAX partner with?
+    - what kind of clients do you work with?
+    - what type of clients do you usually have?
+    - who are your typical clients?
+    - who do you work for?
+    - who do you usually work for?
+    - who usually hires you?
+    - who commissions your work?
+    - what sort of organisations do you work for?
+    - do you work for private or public clients?
+    - do you work mostly with airport operators?
+    - what kinds of customers does 1PAX have?
+    - who are 1PAX's typical customers?
+    - what kind of organisations hire you?
+    - are your clients mainly governments or companies?
+    - who is your ideal client?
+    - what is your client base like?
+    - do you work with developers, operators or governments?
+    - what types of organisations commission 1PAX?
+    - who buys your services?
+
+- intent: ask_company_delivery
+  examples: |
+    - do you deliver projects on time?
+    - does 1PAX deliver projects on time?
+    - what is 1PAX's record of delivering on time?
+    - can 1PAX be trusted to deliver on time and on budget?
+    - how do you deliver on time
+    - how do you keep projects on budget?
+    - how do you avoid cost overruns?
+    - how do you control costs during design?
+    - how do you manage project risks?
+    - how do you keep a project on schedule?
+    - what is your approach to project management?
+    - how do you ensure quality control?
+    - what quality assurance process do you follow?
+    - how do you avoid delays on live airport projects?
+    - how do you manage budget and schedule?
+    - will our project stay within budget?
+    - how do you make sure deadlines are met?
+    - what happens if the project goes over budget?
+    - how do you keep the design coordinated with engineers?
+    - how do you minimise disruption to airport operations during works?
+    - do your projects usually finish on time?
+    - how reliable are you with deadlines?
 
 # ── Entity synonyms (maps extracted values to canonical project key) ─────────
 

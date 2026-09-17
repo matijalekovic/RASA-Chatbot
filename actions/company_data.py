@@ -1001,7 +1001,7 @@ COMPANY_INFO = {
             "• Real responsibility on major infrastructure projects\n"
             "• Flexible and remote-work policies where the role and project setup allow it\n"
             "• A collaborative, international, multicultural studio environment\n"
-            "• A Graduate Fellowship Program for students and recent graduates\n\n"
+            "• A paid, remote Graduate Fellowship for students and recent graduates — [1pax-fellowship-portal.vercel.app](https://1pax-fellowship-portal.vercel.app/)\n\n"
             "To apply, send your details through the 1PAX contact page: "
             "[www.1pax.com/contact](https://www.1pax.com/contact)."
         ),
@@ -1151,7 +1151,7 @@ COMPANY_INFO = {
             "We trust our people with meaningful challenges and provide the guidance they need to advance.\n\n"
             "For students and recent graduates, we offer the **1PAX Graduate Fellowship** — a paid, remote "
             "six-month programme with an academic and a professional mentor, real project work, and an "
-            "independent research project. "
+            "independent research project — details at [1pax-fellowship-portal.vercel.app](https://1pax-fellowship-portal.vercel.app/). "
             "At 1PAX, your ideas and your voice matter, regardless of your background."
         ),
         (
@@ -1167,7 +1167,7 @@ COMPANY_INFO = {
             "fully remote, six-month programme for recent architecture graduates and final-year students "
             "(20–28 years old, from any country) that combines real project work with an independent "
             "research project. Two fellows are selected each year; ask me about the fellowship for "
-            "eligibility, dates, and how to apply.\n\n"
+            f"eligibility, dates, and how to apply, or visit [1pax-fellowship-portal.vercel.app](https://1pax-fellowship-portal.vercel.app/).\n\n"
             "Students, recent graduates, junior architects, planners, designers, and innovation-minded "
             "candidates can also express interest in other opportunities even if they are early in their career."
         ),
@@ -1189,7 +1189,7 @@ COMPANY_INFO = {
             "• 3D & Graphic Design\n"
             "• Innovation\n\n"
             "We welcome forward-thinking individuals at all career stages. Students and recent graduates "
-            "should explore our **Graduate Fellowship Program**, and experienced candidates can express "
+            "should explore our **Graduate Fellowship** — a paid, remote six-month programme; applications are open until September 30, 2026 at [1pax-fellowship-portal.vercel.app](https://1pax-fellowship-portal.vercel.app/). Experienced candidates can express "
             "interest for senior or specialist roles even when a perfect vacancy is not listed in the chatbot. "
             "For current opportunities or speculative applications, visit "
             "[www.1pax.com/contact](https://www.1pax.com/contact)."
